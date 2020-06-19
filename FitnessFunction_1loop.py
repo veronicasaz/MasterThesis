@@ -33,24 +33,18 @@ class Fitness:
         # Choose odd number to compare easily in middle point
         self.Nimp = kwargs.get('Nimp', 35) 
 
-    def DecV_O(self, DecV_O):
-        # DecV of the outer loop
-        self.v0 = np.array(DecV_O[0:3])
-        self.vf = np.array(DecV_O[3:6])
-        self.t0, mf = DecV_O[6:]
-        self.m0  = mf + self.Spacecraft.m_dry
-
     def objFunction(self, m_fuel, Error):
-        f0 = m_fuel / self.Spacecraft.m_dry
-        fc1 = (np.linalg.norm(Error[0:3]) - 1e4)/1e4
+        f0 = m_fuel 
+        fc1 = (np.linalg.norm(Error[0:3]) - 1e8)/1e8
         fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
         
         # Penalization functions
+        # print("obje", f0, fc1, fc2)
         f = f0 + fc1 + fc2
         # print("mass",m_fuel, "Error", Error)
         return f
 
-    def calculateFitness(self, DecV_I, optMode = True, plot = False):
+    def calculateFitness(self, DecV, optMode = True, plot = False):
         """
         calculateFitness: obtain the value of the fitness function
         INPUTS:
@@ -60,12 +54,15 @@ class Fitness:
                             with the 3D impulse between 0 and 1 
                             (will be multiplied by the max DeltaV)
         """        
-        # DecV inner
-        self.t_t = DecV_I[0]
+        # DecV 
+        self.v0 = np.array(DecV[0:3]) #vector, to be multiplied by the magnitude
+        self.vf = np.array(DecV[3:6])
+        self.t0, mf, self.t_t = DecV[6:9]
+        self.m0  = mf + self.Spacecraft.m_dry
         if optMode == True:
-            self.DeltaV_list = np.array(DecV_I[1:]).reshape(-1,3) # make a Nimp x 3 matrix
+            self.DeltaV_list = np.array(DecV[9:]).reshape(-1,3) # make a Nimp x 3 matrix
         else:
-            self.DeltaV_list = DecV_I[1:][0]
+            self.DeltaV_list = DecV[9:][0]
 
         # = Thrust for segment
         self.DeltaV_max = self.Spacecraft.T / self.m0 * self.t_t/self.Nimp
@@ -77,8 +74,15 @@ class Fitness:
         r_p0, v_p0 = self.earthephem.eph(self.t0)
         r_p1, v_p1 = self.marsephem.eph(t_1.JD_0)
         
-        SV_0 = np.append(r_p0, self.v0)
-        SV_1 = np.append(r_p1, -self.vf) # - to propagate backwards
+        # Use the velocity of the corresponding planet as bounds
+        v0_correct = np.multiply(self.v0, v_p0)  # limit is the velocity of the planet
+        vf_correct = np.multiply(self.vf, v_p1) 
+        # print("kdfjldskjfdsklfsj")
+        # print(self.v0, self.vf)
+        # print(v0_correct, vf_correct)
+
+        SV_0 = np.append(r_p0, v0_correct)
+        SV_1 = np.append(r_p1, -vf_correct) # - to propagate backwards
 
         # Sims-Flanagan
         SV_list_forw = self.__SimsFlanagan(SV_0, saveState=True)
@@ -90,6 +94,7 @@ class Fitness:
 
         
         # Compare state at middle point
+        # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
 
         # Calculate mass used
@@ -100,8 +105,11 @@ class Fitness:
             self.plot(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
         # Return fitness function
-        f = self.objFunction(self.m_fuel, self.Error)
-        return f
+        self.f = self.objFunction(self.m_fuel, self.Error)
+        return self.f
+
+    def printResult(self):
+        print("Mass of fuel", self.m_fuel, "Error", self.Error)
 
     def __propagateMass(self):
         """
@@ -110,7 +118,7 @@ class Fitness:
         """
         m_current = self.m0
         for imp in range(self.Nimp):
-            dv_current = np.linalg.norm( self.DeltaV_list[imp] )
+            dv_current = np.linalg.norm( self.DeltaV_list[imp]*self.DeltaV_max ) 
             m_current = self.Spacecraft.MassChange(m_current, dv_current)
 
         return m_current
