@@ -60,19 +60,34 @@ def f(DecV):
     return Fitness.calculateFitness(DecV, plot = False)
     
 
-# Optimize outer loop
-start_time = time.time()
-f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = 1000, max_iter = 10, max_iter_success = 4 )
-t = (time.time() - start_time) 
+# # Optimize outer loop
+# start_time = time.time()
+# f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = 1000, max_iter = 10, max_iter_success = 4 )
 
-print("Min")
-print(f_min)
-Fitness.calculateFitness(f_min, plot = False)
-AL_BF.writeData(f_min, 'w', 'Solution.txt')
+# t = (time.time() - start_time) 
+
+# print("Min")
+# print(f_min)
+# AL_BF.writeData(f_min, 'w', 'Solution.txt')
+
+
+# Coordinate search opt
+f_min = np.loadtxt("Solution2.txt")
+stepsize = np.zeros(len(f_min)) + 0.1
+stepsize[0:6] = 5e3 # Velocities
+stepsize[6] = 15 # initial time
+stepsize[7] = 10 # mass
+stepsize[8] = AL_BF.days2sec(10) # transfer time
+
+# f_min2, Best2 = AL_OPT.coordinateSearch(f, f_min, bnds, stepsize, x_add = False,max_iter = 10)
+# print("Min2")
+# print(f_min2)
+# AL_BF.writeData(f_min2, 'w', 'Solution2.txt')
 
 
 # Test: Not optimize. Or load solution from file
-DecV_I = np.loadtxt("Solution.txt")
+DecV_I = np.loadtxt("Solution2.txt")
+
 f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
 Fitness.printResult()
 print(f) 

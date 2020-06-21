@@ -43,7 +43,7 @@ class Fitness:
     def objFunction(self, m_fuel, Error):
         f0 = m_fuel / self.Spacecraft.m_dry
         fc1 = (np.linalg.norm(Error[0:3]) - 1e4)/1e4
-        fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+        fc2 = (np.linalg.norm(Error[3:])- 1e0)/1e0
         
         # Penalization functions
         f = f0 + fc1 + fc2

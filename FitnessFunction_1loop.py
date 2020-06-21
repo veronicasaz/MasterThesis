@@ -35,7 +35,7 @@ class Fitness:
 
     def objFunction(self, m_fuel, Error):
         f0 = m_fuel 
-        fc1 = (np.linalg.norm(Error[0:3]) - 1e8)/1e8
+        fc1 = (np.linalg.norm(Error[0:3]) - 1e4)/1e4
         fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
         
         # Penalization functions
@@ -184,4 +184,9 @@ class Fitness:
         ax.scatter(x_b[-1],y_b[-1],z_b[-1], '^',c = bodies[2].color)
 
         AL_Plot.set_axes_equal(ax)
+
+        dpi = kwargs.get('dpi', 200) 
+        layoutSave = kwargs.get('layout', 'tight')
+        plt.savefig('resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+
         plt.show()
