@@ -37,20 +37,16 @@ transfertime = 250
 # print(v1, v2)
 
 # Bounds of the outer loop
-mag = 30e3
-bnd_v = (0., 1.)
+bnd_v = (0., 1.1)
 bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
 bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
 bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(600) )
-bnd_deltavmag = (0., 1.) # magnitude
+bnd_deltavmag = (-1., 1.) # magnitude
 
 bnds = (bnd_v, bnd_v, bnd_v, bnd_v, bnd_v, bnd_v, bnd_t0, bnd_m0, bnd_t_t)
 
 for i in range(Nimp): # 3 times because impulses are 3d vectors
     bnds += (bnd_deltavmag, bnd_deltavmag, bnd_deltavmag)
-
-# DeltaV_list = np.zeros((Nimp, 3))
-# DecV_I = [AL_BF.days2sec(transfertime), DeltaV_list]
 
 
 ########################
@@ -60,35 +56,73 @@ def f(DecV):
     return Fitness.calculateFitness(DecV, plot = False)
     
 
-# # Optimize outer loop
-# start_time = time.time()
-# f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = 1000, max_iter = 10, max_iter_success = 4 )
+def optimize():
+    # Optimize outer loop
+    # ind = 100
+    # iterat = 100
+    ind = 100
+    iterat = 100
+    start_time = time.time()
+    f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = ind, max_iter = iterat, max_iter_success = 10 )
+    t = (time.time() - start_time) 
 
-# t = (time.time() - start_time) 
+    print("Time", t)
+    print("Min", f_min)    
+    AL_BF.writeData(f_min, 'w', 'SolutionEA.txt')
 
-# print("Min")
-# print(f_min)
-# AL_BF.writeData(f_min, 'w', 'Solution.txt')
+def coordS():
+    # Coordinate search opt
+    f_min = np.loadtxt("SolutionEA.txt")
+    stepsize = np.zeros(len(f_min)) + 0.1
+    stepsize[0:6] = 5e3 # Velocities
+    stepsize[6] = 15 # initial time
+    stepsize[7] = 10 # mass
+    stepsize[8] = AL_BF.days2sec(10) # transfer time
+
+    f_min2, Best2 = AL_OPT.coordinateSearch(f, f_min, bnds, stepsize, x_add = False,max_iter = 10)
+    print("Min2")
+    print(f_min2)
+    AL_BF.writeData(f_min2, 'w', 'SolutionCoord.txt')
+
+# def MBH():
+#     mytakestep = AL_OPT.MyTakeStep(0.5)
+
+#     cons = []
+#     for factor in range(len(DecV)):
+#         lower, upper = bnds[factor]
+#         l = {'type': 'ineq',
+#             'fun': lambda x, a=lower, i=factor: x[i] - a}
+#         u = {'type': 'ineq',
+#             'fun': lambda x, b=upper, i=factor: b - x[i]}
+#         cons.append(l)
+#         cons.append(u)
+        
+#     minimizer_kwargs = dict(args = [Nimp,deltav_magn], method="COBYLA",constraints=(cons),options={'disp': False,  'maxiter': 100})#T
+
+#     start_time = time.time()
+#     DecV_optimized2 = spy.basinhopping(EOF.mainOpt_Simple, DecV, niter = 50, minimizer_kwargs=minimizer_kwargs,niter_success = 50,take_step=mytakestep,callback=print_fun)
+#     # DecV_optimized2 = spy.basinhopping(main, DecV, niter=20, minimizer_kwargs=minimizer_kwargs,niter_success = 5,callback=print_fun)
+#     # DecV_optimized2 = basinhopping(Problem, DecV, niter=2, minimizer_kwags=minimizer_kwargs,take_step=mytakestep,callback=print_fun)
+#     t[4] = (time.time() - start_time) 
+#     x[4,1:] = DecV_optimized2.x
 
 
-# Coordinate search opt
-f_min = np.loadtxt("Solution2.txt")
-stepsize = np.zeros(len(f_min)) + 0.1
-stepsize[0:6] = 5e3 # Velocities
-stepsize[6] = 15 # initial time
-stepsize[7] = 10 # mass
-stepsize[8] = AL_BF.days2sec(10) # transfer time
 
-# f_min2, Best2 = AL_OPT.coordinateSearch(f, f_min, bnds, stepsize, x_add = False,max_iter = 10)
-# print("Min2")
-# print(f_min2)
-# AL_BF.writeData(f_min2, 'w', 'Solution2.txt')
+def propagateSol():
+    DecV_I = np.loadtxt("SolutionEA.txt")
 
+    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    Fitness.printResult()
+    print(f) 
 
-# Test: Not optimize. Or load solution from file
-DecV_I = np.loadtxt("Solution2.txt")
+    # Test: Not optimize. Or load solution from file
+    DecV_I = np.loadtxt("SolutionCoord.txt")
 
-f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
-Fitness.printResult()
-print(f) 
+    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    Fitness.printResult()
+    print(f) 
 
+if __name__ == "__main__":
+    # optimize()
+    coordS()
+    propagateSol()

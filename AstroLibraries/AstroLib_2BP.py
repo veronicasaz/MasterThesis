@@ -161,7 +161,7 @@ class BodyOrbit:
             self.N_mag = np.linalg.norm(self.N)
             
             #Keplerian elements
-            self.a = 1 / (2/self.r_mag-self.v_mag**2/Body.mu) #semi-major axis
+            self.a = 1 / (2/self.r_mag-self.v_mag**2/Body.mu) #semi-major axis. Negative if e>1
             self.e_vec = np.cross(self.v,self.h)/Body.mu - self.r/self.r_mag #eccentricity vector
             self.e = np.linalg.norm(self.e_vec) #eccentricity of the orbit
 
@@ -187,7 +187,10 @@ class BodyOrbit:
                 if (np.dot(np.cross(self.e_vec,self.r),self.h)) <= 0: 
                     self.theta = -self.theta
 
-            self.theta, self.E, self.M = Kepler(self.theta,self.e,'True') #Mean anomaly
+            if self.e < 1:
+                self.theta, self.E, self.M = Kepler(self.theta,self.e,'True') #Mean anomaly
+            else:
+                self.theta, self.E, self.M = Keplerh(self.theta,self.e,'True') #Mean anomaly
             
         else:
             print('Warning: Specify the type of elements')
@@ -259,11 +262,13 @@ class BodyOrbit:
         Outputs: 
             M: new mean anomaly
         """
-                
         self.M += self.n*t # Propagate in time
         self.M = AL_BF.correctAngle(self.M, 'rad') # Correct for more than 306deg
             
-        self.theta, self.E, self.M = Kepler(self.M, self.e,'Mean')
+        if self.e < 1:
+            self.theta, self.E, self.M = Kepler(self.M, self.e,'Mean')
+        else:
+            self.theta, self.E, self.M = Keplerh(self.M, self.e,'Mean')
         # self.theta = Kepler(self.M, self.e,'Mean')[0]
         
         x = np.array([self.a,self.e,self.i,self.RAAN,self.omega,self.M,self.theta])
@@ -274,6 +279,37 @@ class BodyOrbit:
             x = self.Kepl2Cart(givenElements = x)
             return x
     
+    def atPeriapsis(self):
+        self.rp, self.vp = VisVivaEq(self.CentralBody, self.a, r = self.rp)
+        self.tp = self.M / self.n # time since passage through periapsis
+
+    # def solveKeplerUniversal(self, Xi, x_add):
+    #     [t, alpha] = x_add
+    #     self.atPeriapsis() 
+    #     r0 = self.rp
+    #     vr0 = self.vp
+    #     t0 = self.tp
+    #     f = - np.sqrt(self.CentralBody.mu) * (t + t0) + \
+    #         r0*vr0 / np.sqrt(self.CentralBody.mu) * Xi**2 * Stumpff_C(alpha* Xi**2) +\
+    #         (1 - alpha* r0) * Xi**3 * Stumpff_S( alpha* Xi**2) +\
+    #         r0 * Xi
+    #     return f
+
+    # def PropagationUniversal(self, t, typeParam, *args, **kwargs):
+    #     """
+    #     Propagation: propagate the mean anomaly M in time. Valid for ellipses, hyperbola, parabola
+    #     Inputs: 
+    #         t: time in seconds at which the position wants to be known with
+    #             respect to the given state in the init
+    #     Outputs: 
+    #         M: new mean anomaly
+    #     """
+    #     # Find value of XI: universal anomaly
+    #     alpha = 1/self.a 
+    #     Xi_0 = np.sqrt(self.CentralBody.mu) * abs(alpha) * t
+    #     Xi = spy.fsolve(self.solveKeplerUniversal, Xi_0, args = [t, alpha, ])
+    
+
     def PlotOrbit(self):
         """
         PlotOrbit: plot the relative position of the planets at a given date for each one
@@ -331,6 +367,26 @@ class BodyOrbit:
         plt.show()
 
 
+################################################################################
+# STUMPFF FUNCTIONS
+################################################################################
+def Stumpff_C(z):
+    if z > 0:
+        f = ( 1 - np.cos(np.sqrt(z)) ) / z
+    elif z == 0:
+        f = 1/2
+    else:
+        f = ( np.cosh(np.sqrt(-z)) - 1 ) / (-z)
+    return f
+
+def Stumpff_S(z): 
+    if z > 0:
+        f = ( np.sqrt(z) - np.sin(np.sqrt(z)) ) / z**(3/2)
+    elif z == 0:
+        f = 1/6
+    else:
+        f = ( np.sinh(np.sqrt(-z)) - np.sqrt(-z)  ) / (-z)**(3/2)
+    return f
 
 ################################################################################
 # PROPAGATE ALONG ORBIT FG PARAMS
@@ -473,7 +529,7 @@ def VisVivaEq(Body,a,*args,**kwargs):
     return r,v
 
 
-def KeplerSolve(E0,x):
+def KeplerSolve(E0, x):
     """
     Kepler: function to solve Kepler's equation knowing the mean anomaly. To obtain the eccentric anomaly.
     Inputs:
@@ -490,13 +546,8 @@ def KeplerSolve(E0,x):
 
     #Equation to solve
     F = E0-e*np.sin(E0)-M
-    F = F*180/np.pi #Change from radians to degrees
+    F = AL_BF.correctAngle(F, 'rad')
 
-    if abs(F) > 360: #Correct in case it is larger than 360 degrees.
-        a = F//360 #How many entire groups of 360 degrees are
-        F = F-360*a
-
-    F *= np.pi/180 #Change to radians again
     return F
 
 
@@ -537,6 +588,68 @@ def Kepler(angle,e,name):
         E = 2*np.arctan(np.sqrt((1-e)/(1+e))*np.tan(theta/2)) #Calculate eccentric anomaly
         M = E-e*np.sin(E) #Kepler's equation
         return(theta,E,M)
+    
+    else:
+        print('Warning: Include a valid name for the angle given')
+
+
+
+def KeplerhSolve(E0, x):
+    """
+    Kepler: function to solve Kepler's equation knowing the mean anomaly. To obtain the eccentric anomaly.
+    Inputs:
+        E0: initial guess of the solution
+        x: vector containing other parameters of the equation:
+            x[0]: Mean anomaly (rad)
+            x[1]: Eccentricity
+    Outputs:
+        F: function to solve (rad)
+    """
+    #Parametrs of the equation
+    M = x[0]
+    e = x[1]
+
+    #Equation to solve
+    F = e*np.sinh(E0) - E0- M
+    F = AL_BF.correctAngle(F, 'rad')
+    return F
+
+def Keplerh(angle, e, name):
+    """
+    Keplerh: function to calculate true, eccentric and mean anomaly given one of them and the 
+    eccentricity of the orbit. For an orbit of e >= 1
+    Inputs:
+        angle: initial angle known. It can be any of the three mentioned
+        e: eccentricity of the orbit (magnitude)
+        name: specify which the initial angle given is:
+            'Mean': mean anomaly
+            'True': true anomaly
+            'Eccentric': eccentric anomaly
+    Outputs: 
+        theta: true anomaly
+        E: eccentric anomaly
+        M: mean anomaly
+    """
+    print("Hyperbola")
+
+    if name == 'Mean':
+        M = angle
+        E = spy.fsolve(KeplerhSolve, M, [M,e]) #Solve Kepler's equation
+        E = E[0] 
+        theta = 2*np.arctan( np.sqrt( (e+1) / (e-1) ) * np.tan(E/2) )
+        return(theta, E, M)
+
+    elif name == 'Eccentric':
+        E = angle 
+        theta = 2 * np.arctan( np.sqrt( (e+1) / (e-1) ) * np.tan(E/2) ) #Calculate true anomaly
+        M = e * np.sinh(E) - E #Kepler's equation
+        return(theta, E, M)
+    
+    elif name == 'True':
+        theta = angle
+        E = 2 * np.arctanh( np.sqrt( (e-1) / (e+1) ) * np.tan(theta/2) ) #Calculate eccentric anomaly
+        M = e * np.sinh(E) - E #Kepler's equation
+        return(theta, E, M)
     
     else:
         print('Warning: Include a valid name for the angle given')

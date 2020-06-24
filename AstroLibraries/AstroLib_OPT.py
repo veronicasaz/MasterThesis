@@ -9,34 +9,21 @@ import scipy.optimize as spy
 
 import time
 
-# # Monotonic Basin hopping 
-# Configuration for scipy.optimize.basinhopping()
 
-# In[2]:
-
-
+###############################################
+# MONOTONIC BASIN HOPPING
+###############################################
 # Function to change step in basin hoping
 class MyTakeStep(object):
-    def __init__(self, stepsize):
-        self.stepsize = stepsize
+    def __init__(self):
+        None
     def __call__(self, x):
-        s = self.stepsize
         x[0] += np.random.normal(0, 0.1e4, 1)[0]
         x[1] += np.random.normal(0, 1e3, 2)[0]
-        x[2:2+Nimp] += np.random.normal(0, 50, np.shape(x[5:5+Nimp]))
-        x[2+Nimp:] += np.random.normal(0, 0.3, np.shape(x[5+Nimp:]))
-
+        x[2:2+Nimp] += np.random.normal(0, 0.1, np.shape(x[2:2+Nimp]))
+        x[2+Nimp:] += np.random.normal(0, 0.3, np.shape(x[2+Nimp:]))
         
-#         for i in range(len(x)):
-#             x[i] += x[i]*p[i]
-#         print('aft',x)
         return x
-
-mytakestep = MyTakeStep(0.5)
-
-
-# In[3]:
-
 
 def print_fun(x, f, accepted):
     """
@@ -50,18 +37,13 @@ def print_fun(x, f, accepted):
     print("#####################################################################")
     print("Change iteration",accepted)
     print('t',time.time() - start_time)
-#     print(x)
-#     print("#####################################################################")
-
 
 # # Initial problem investigation
 
-# # Evolutionary algorithm
-# 
+###############################################
+# EVOLUTIONARY ALGORITHM
+###############################################
 # Random initialization--> fitness calculation--> offspring creation --> immigration, mutation --> convergence criterion
-
-# In[6]:
-
 
 def EvolAlgorithm(f, bounds, *args, **kwargs):
     """
@@ -99,7 +81,6 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
     ###############################################
     if x_add == False: # No additional arguments needed
         for i in range(ind):
-            aaa = f(pop_0[i,1:])
             pop_0[i,0] = f(pop_0[i,1:])
     else:
         for i in range(ind):
@@ -116,7 +97,7 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
     counter = 0
     lastMin = minVal
     
-    Best = np.zeros([100,len(bounds)+1])
+    Best = np.zeros([max_iter+1,len(bounds)+1])
     while noImprove <= max_iter_success and counter <= max_iter :
         
         ###############################################
@@ -165,9 +146,7 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
         minVal = min(Sol[:,0])
 
         ###############################################
-        #Check convergence
-        counter += 1 #Count generations 
-        
+        #Check convergence        
         if  minVal >= lastMin: 
             noImprove += 1
 #         elif abs(lastMin-minVal)/lastMin > tol:
@@ -179,13 +158,14 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
             noImprove = 0
             Best[counter,:] = Sol[0,:] 
         
-        print(counter, "Minimum: ", minVal)
+        # print(counter, "Minimum: ", minVal)
+        counter += 1 #Count generations 
         
     print("minimum:", lastMin)
     print("Iterations:", counter)
     print("Iterations with no improvement:", noImprove)
     
-    return x_minVal, Best
+    return x_minVal, lastMin
 
 
 # In[7]:
@@ -207,8 +187,9 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
 # x
 
 
-# In[8]:
-
+###############################################
+# OTHERS
+###############################################
 
 def randomJump(f,x,bounds,*args, **kwargs):
     x_add = kwargs.get('x_add', None)
@@ -256,27 +237,32 @@ def coordinateSearch(f,x,bounds,h,*args, **kwargs):
 
     while  improvement > tol and counter< max_iter and counter_success< max_iter_success:
         for i in range(len(x)): #Go through all variables
-                x_plus = np.copy(x0)
-                x_plus[i] += step[i]
-                x_minus = np.copy(x0)
-                x_minus[i] -= step[i]
+            x_plus = np.copy(x0)
+            x_plus[i] += step[i]
+            x_minus = np.copy(x0)
+            x_minus[i] -= step[i]
 
-                #Adjust to bounds
-                if x_plus[i] >= bounds[i][1]:
-                    x_plus[i] = x0[i]
-                if x_minus[i] <= bounds[i][0]:
-                    x_minus[i] = x0[i]
+            #Adjust to bounds
+            if x_plus[i] >= bounds[i][1]:
+                x_plus[i] = x0[i]
+            if x_minus[i] <= bounds[i][0]:
+                x_minus[i] = x0[i]
 
-                #Evaluate
+            #Evaluate
+            if x_add == False: # No additional arguments needed
+                fx = f(x0)
+                fx_plus = f(x_plus)
+                fx_minus = f(x_minus)
+            else:
                 fx = f(x0,x_add)
                 fx_plus = f(x_plus,x_add)
                 fx_minus = f(x_minus,x_add)
 
-                Min = min([fx,fx_plus,fx_minus])
-                if Min == fx_plus:
-                    x0 = x_plus
-                elif Min == fx_minus:
-                    x0 = x_minus
+            Min = min([fx,fx_plus,fx_minus])
+            if Min == fx_plus:
+                x0 = x_plus
+            elif Min == fx_minus:
+                x0 = x_minus
 
         improvement = abs(Prev_Min - Min)/Min 
         if improvement == 0:
@@ -286,6 +272,7 @@ def coordinateSearch(f,x,bounds,h,*args, **kwargs):
             counter_success = 0
         
         counter += 1
+        print("Iteration", counter)
         step *= percentage
 #         step = abs(Prev_Min-Min)/Prev_Min * step
         
@@ -418,6 +405,7 @@ def SteepestDescentDirection(f,x,stepSize,alpha, *args, **kwargs):
         counter += 1
         
     return x
+
 
 
 # In[14]:

@@ -35,8 +35,9 @@ class Fitness:
 
     def objFunction(self, m_fuel, Error):
         f0 = m_fuel 
-        fc1 = (np.linalg.norm(Error[0:3]) - 1e4)/1e4
-        fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+        fc1 = (np.linalg.norm(Error[0:3]) - 1e6)/1e6
+        # fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+        fc2 = np.linalg.norm(Error[3:])
         
         # Penalization functions
         # print("obje", f0, fc1, fc2)
@@ -65,8 +66,8 @@ class Fitness:
             self.DeltaV_list = DecV[9:][0]
 
         # = Thrust for segment
-        self.DeltaV_max = self.Spacecraft.T / self.m0 * self.t_t/self.Nimp
-        
+        self.DeltaV_max = self.Spacecraft.T / self.m0 * self.t_t / (self.Nimp + 1) 
+
         # Times and ephemeris
         # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
         t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
@@ -102,7 +103,7 @@ class Fitness:
 
         if plot == True:
             # print(np.flipud(SV_list_back))
-            self.plot(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
+            self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
         # Return fitness function
         self.f = self.objFunction(self.m_fuel, self.Error)
@@ -177,13 +178,46 @@ class Fitness:
         y_b = SV_b[:,1]
         z_b = SV_b[:,2]
 
-        ax.plot(x_f, y_f, z_f, '-', c = bodies[1].color)
-        ax.plot(x_b, y_b, z_b, '-', c = bodies[2].color)
+        ax.plot(x_f, y_f, z_f, '^-', c = bodies[1].color)
+        ax.plot(x_b, y_b, z_b, '^-', c = bodies[2].color)
 
         ax.scatter(x_f[-1],y_f[-1],z_f[-1], '^',c = bodies[1].color)
         ax.scatter(x_b[-1],y_b[-1],z_b[-1], '^',c = bodies[2].color)
 
         AL_Plot.set_axes_equal(ax)
+
+        dpi = kwargs.get('dpi', 200) 
+        layoutSave = kwargs.get('layout', 'tight')
+        plt.savefig('resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+
+        plt.show()
+
+    def plot2D(self, SV_f, SV_b, bodies, *args, **kwargs):
+        # fig = plt.figure()
+        fig, ax = plt.subplots()
+        
+        # plot planets
+        ax.scatter(0, 0,  color = bodies[0].color, marker = 'o', s = 180, alpha = 0.5)
+        ax.scatter(SV_f[0,0], SV_f[0,1], c = bodies[1].color, marker = 'o', s = 150, alpha = 0.5)
+        ax.scatter(SV_b[0,0], SV_b[0,1], c = bodies[2].color, marker = 'o', s = 150, alpha = 0.5)
+
+        x_f = SV_f[:,0]
+        y_f = SV_f[:,1]
+        z_f = SV_f[:,2]
+
+        x_b = SV_b[:,0]
+        y_b = SV_b[:,1]
+        z_b = SV_b[:,2]
+
+        ax.plot(x_f, y_f, '^-', c = bodies[1].color)
+        ax.plot(x_b, y_b, '^-', c = bodies[2].color)
+
+        ax.scatter(x_f[-1], y_f[-1], marker ='^', c = bodies[1].color)
+        ax.scatter(x_b[-1], y_b[-1], marker ='^', c = bodies[2].color)
+
+        plt.axis('equal')
+        plt.grid(alpha = 0.5)
+        # AL_Plot.set_axes_equal(ax)
 
         dpi = kwargs.get('dpi', 200) 
         layoutSave = kwargs.get('layout', 'tight')
