@@ -37,7 +37,13 @@ transfertime = 250
 # print(v1, v2)
 
 # Bounds of the outer loop
-bnd_v = (0., 1.1)
+
+# Initial approx of velocity for the launch at the Earth
+v_Hohm = np.sqrt( 2*AL_BF.mu_S * (1/AL_BF.AU - 1/(2*227940e6)) )
+
+bnd_v0 = (0., 1.)
+bnd_v0_angle = (0., 2*np.pi)
+bnd_vf_angle = (0., 2*np.pi)
 bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
 bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
 bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(600) )
