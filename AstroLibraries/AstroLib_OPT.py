@@ -18,10 +18,17 @@ class MyTakeStep(object):
     def __init__(self):
         None
     def __call__(self, x):
-        x[0] += np.random.normal(0, 0.1e4, 1)[0]
-        x[1] += np.random.normal(0, 1e3, 2)[0]
-        x[2:2+Nimp] += np.random.normal(0, 0.1, np.shape(x[2:2+Nimp]))
-        x[2+Nimp:] += np.random.normal(0, 0.3, np.shape(x[2+Nimp:]))
+        x[0] += np.random.normal(0, 0.1e4, 1)[0] # velocity magnitude
+        x[1:3] += np.random.normal(0, 0.5, 1)[0] # angle
+        x[3] += np.random.normal(0, 1e4, 1)[0] # velocity magnitude
+        x[4:6] += np.random.normal(0, 0.5, 1)[0] # angle
+        x[6] += np.random.normal(0, 10, 1)[0] # time in days
+        x[7] += np.random.normal(0, 10, 1)[0] # initial mass
+        x[8] += np.random.normal(0, AL_BF.days2sec(10), 1)[0] # transfer time 
+        for i in range(Nimp):
+            x[9+i*3] += np.random.normal(0, 0.1, 1)[0]
+            x[9+i*3+1 : 9+i*3+3] += np.random.normal(0, 0.2, 2)
+            x[2+Nimp:] += np.random.normal(0, 0.3, np.shape(x[2+Nimp:]))
         
         return x
 

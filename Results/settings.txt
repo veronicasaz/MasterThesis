@@ -1,0 +1,7 @@
+f1 = m_fuel + fc1 = (np.linalg.norm(Error[0:3]) - 1e4)/1e4 + fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+
+
+f2 = m_fuel + fc1 = (np.linalg.norm(Error[0:3]) - 1e6)/1e6 + fc2 = np.linalg.norm(Error[3:])
+
+
+
