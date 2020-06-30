@@ -9,43 +9,8 @@ import scipy.optimize as spy
 
 import time
 
+import AstroLibraries.AstroLib_Basic as AL_BF 
 
-###############################################
-# MONOTONIC BASIN HOPPING
-###############################################
-# Function to change step in basin hoping
-class MyTakeStep(object):
-    def __init__(self):
-        None
-    def __call__(self, x):
-        x[0] += np.random.normal(0, 0.1e4, 1)[0] # velocity magnitude
-        x[1:3] += np.random.normal(0, 0.5, 1)[0] # angle
-        x[3] += np.random.normal(0, 1e4, 1)[0] # velocity magnitude
-        x[4:6] += np.random.normal(0, 0.5, 1)[0] # angle
-        x[6] += np.random.normal(0, 10, 1)[0] # time in days
-        x[7] += np.random.normal(0, 10, 1)[0] # initial mass
-        x[8] += np.random.normal(0, AL_BF.days2sec(10), 1)[0] # transfer time 
-        for i in range(Nimp):
-            x[9+i*3] += np.random.normal(0, 0.1, 1)[0]
-            x[9+i*3+1 : 9+i*3+3] += np.random.normal(0, 0.2, 2)
-            x[2+Nimp:] += np.random.normal(0, 0.3, np.shape(x[2+Nimp:]))
-        
-        return x
-
-def print_fun(x, f, accepted):
-    """
-    print_fun: choose what to print after each iteration
-    INPUTS: 
-        x: current value of the decision vector
-        f: function value
-        accepted: iteration improves the function = TRUE. Otherwise FALSE.
-    OUTPUTS: none
-    """
-    print("#####################################################################")
-    print("Change iteration",accepted)
-    print('t',time.time() - start_time)
-
-# # Initial problem investigation
 
 ###############################################
 # EVOLUTIONARY ALGORITHM
@@ -414,16 +379,127 @@ def SteepestDescentDirection(f,x,stepSize,alpha, *args, **kwargs):
     return x
 
 
+###############################################
+# MONOTONIC BASIN HOPPING
+###############################################
+# Function to change step in basin hoping
+class MyTakeStep(object):
+    def __init__(self, Nimp, bnds):
+        self.Nimp = Nimp
+        self.bnds = bnds
+        None
+    def __call__(self, x):
+        self.call(x)
+        return x
 
-# In[14]:
+    def call(self, x):
+        x2 = np.zeros(len(x))
+        for j in range(len(x)):
+            x2[j] = x[j] + np.random.uniform(self.bnds[j][0] - x[j], \
+                                    self.bnds[j][1] - x[j], 1)[0]
+
+        # x[0] += np.random.normal(-1e3, 1e3, 1)[0] # velocity magnitude
+        # x[1:3] += np.random.normal(-0.2, 0.2, 1)[0] # angle
+        # x[3] += np.random.normal(-1e3, 1e3, 1)[0] # velocity magnitude
+        # x[4:6] += np.random.normal(-0.2, 0.2, 1)[0] # angle
+        # x[6] += np.random.normal(-30, 30, 1)[0] # time in days
+        # x[7] += np.random.normal(-30, 30, 1)[0] # initial mass
+        # x[8] += np.random.normal(- AL_BF.days2sec(30), AL_BF.days2sec(30), 1)[0] # transfer time 
+        # for i in range(self.Nimp):
+        #     x[9+i*3] += np.random.normal(-0.1, 0.1, 1)[0]
+        #     x[9+i*3+1 : 9+i*3+3] += np.random.normal(-0.5, 0.5, 2)
+        
+        return x2
+
+def print_fun(f, x, accepted):
+    """
+    print_fun: choose what to print after each iteration
+    INPUTS: 
+        x: current value of the decision vector
+        f: function value
+        accepted: iteration improves the function = TRUE. Otherwise FALSE.
+    OUTPUTS: none
+    """
+    print("#####################################################################")
+    print("Change iteration",accepted)
+    # print('t',time.time() - start_time)
 
 
-# def f(x,y):
-#     return x[1]**2+x[2]**2+x[0]**2
+def print_sol(Best, bestMin, n_itercounter, niter_success):
+    """
+    print_sol: 
+    INPUTS: 
+        
+    OUTPUTS: none
+    """
+    print("#####################################################################")
+    print("Number of iterations", n_itercounter)
+    print("Number of iterations with no success", niter_success)
+    print("Minimum", bestMin)
+    print("x", Best)
 
-# x = np.array([1.,1.,1])
 
-# stepSize = np.array([0.1,0.1,0.1])
-# alpha = np.copy(stepSize)
-# SteepestDescentDirection(f,x,stepSize,alpha,np.array([1,1,1]))
+def check_feasibility(x, bnds):
+    feasible = True
+    for j in range(len(x)): 
+        if ( x[j] < 1.05*bnds[j][0] ) or ( x[j] > 1.05*bnds[j][1] ): # 1.05* to have tolerance
+            feasible = False
+            print(j, "Within bounds?", "min", bnds[j][0], "value",x[j], "max",bnds[j][1])
+    # print(feasible)
 
+    return feasible
+
+
+def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
+
+    niter = kwargs.get('niter', 100)
+    niter_success = kwargs.get('niter_success', 50)
+    niter_local = kwargs.get('niter_local', 50)
+    bnds = kwargs.get('bnds', None)
+    cons =  kwargs.get('cons', None)
+
+    n_itercounter = 1
+    n_noimprove = 0
+    previousMin =  f(x)
+
+    while n_itercounter < niter and n_noimprove < niter_success:
+        n_itercounter += 1
+        
+        # Change decision vector to find one within the bounds
+        feasible = False
+        while feasible == False and bnds != None:
+            x_test = take_step.call(x)
+            feasible = check_feasibility(x_test, bnds)
+        x = x_test
+
+        # Local optimization 
+        # solutionLocal = spy.minimize(f, x, method = 'COBYLA', constraints = cons, options = {'maxiter': niter_local} )
+        solutionLocal = spy.minimize(f, x, method = 'SLSQP', tol = 1e4, bounds = bnds, options = {'maxiter': niter_local} )
+        currentMin = f( solutionLocal.x )
+        feasible = check_feasibility(solutionLocal.x, bnds)        
+
+        # Check improvement
+        if currentMin > previousMin: # No improvement in this iteration
+            niter_success += 1
+            accepted = False
+        elif feasible == True: # Minimum improves and it is feasible
+            # Jump from current minimum. Otherwise jump from previous feasible
+            x = solutionLocal.x
+
+            # Save best trajectory
+            Best = x
+            bestMin = currentMin
+            n_noimprove = 0
+            accepted = True
+        else:
+            accepted = False
+        # if it improves but it is unfeasible, jump from there 
+        # but not accept the solution
+
+        print("iter", n_itercounter)
+        print_fun(f, x, accepted)
+
+    # Print solution 
+    print_sol(Best, bestMin, n_itercounter, niter_success)
+    return Best, bestMin
+        

@@ -1,5 +1,6 @@
 import numpy as np
 import pykep as pk
+import scipy.optimize as spy
 
 from FitnessFunction_1loop import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
@@ -97,7 +98,11 @@ def coordS():
     AL_BF.writeData(f_min2, 'w', 'SolutionCoord.txt')
 
 def MBH():
-    mytakestep = AL_OPT.MyTakeStep(0.5)
+    mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
+
+    DecV = np.zeros(len(bnds))
+    for i in range(len(bnds)):
+        DecV[i] = ( bnds[i][0] + bnds[i][1] ) /2
 
     cons = []
     for factor in range(len(DecV)):
@@ -112,31 +117,85 @@ def MBH():
     minimizer_kwargs = dict(method="COBYLA", constraints=(cons),options={'disp': False,  'maxiter': 100})#T
 
     start_time = time.time()
-    fmin_3 = spy.basinhopping(EOF.mainOpt_Simple, DecV, niter = 50, minimizer_kwargs=minimizer_kwargs,niter_success = 50,take_step= mytakestep,callback=AL_OPT.print_fun)
+    fmin_3 = spy.basinhopping(f, DecV, niter = 10, minimizer_kwargs=minimizer_kwargs,niter_success = 50,take_step= mytakestep,callback=AL_OPT.print_fun)
     # DecV_optimized2 = spy.basinhopping(main, DecV, niter=20, minimizer_kwargs=minimizer_kwargs,niter_success = 5,callback=print_fun)
     # DecV_optimized2 = basinhopping(Problem, DecV, niter=2, minimizer_kwags=minimizer_kwargs,take_step=mytakestep,callback=print_fun)
     t = (time.time() - start_time) 
 
     print("Min3")
-    AL_BF.writeData(fmin_3, 'w', 'SolutionMBH.txt')
+    AL_BF.writeData(fmin_3.x, 'w', 'SolutionMBH.txt')
+
+def MBH_self():
+    mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
+
+    DecV = np.zeros(len(bnds))
+    for i in range(len(bnds)):
+        DecV[i] = ( bnds[i][0] + bnds[i][1] ) /2
+
+    cons = []
+    for factor in range(len(DecV)):
+        lower, upper = bnds[factor]
+        l = {'type': 'ineq',
+            'fun': lambda x, a=lower, i=factor: x[i] - a}
+        u = {'type': 'ineq',
+            'fun': lambda x, b=upper, i=factor: b - x[i]}
+        cons.append(l)
+        cons.append(u)
+
+    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = 100, niter_local = 20, bnds = bnds, cons = cons)
+    print("Min4", fmin_4)
+    AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
 
 
 def propagateSol():
+    print("#######################################")
+    print("Evolutionary Algorithm")
+    print("#######################################") 
     DecV_I = np.loadtxt("SolutionEA.txt")
 
     f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
     Fitness.printResult()
     print(f) 
 
-    # Test: Not optimize. Or load solution from file
+    print("#######################################")
+    print("EA + coord search")
+    print("#######################################") 
     DecV_I = np.loadtxt("SolutionCoord.txt")
 
     f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
     Fitness.printResult()
     print(f) 
 
+    print("#######################################")
+    print("MBH scipy")
+    print("#######################################") 
+    DecV_I = np.loadtxt("SolutionMBH.txt")
+
+    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    Fitness.printResult()
+    print(f) 
+    feasibility = True
+    for j in range(len(DecV_I)):
+        if ( DecV_I[j] < bnds[j][0] ) or ( DecV_I[j] > bnds[j][1] ):
+            # print(j, "Within bounds?", "min", bnds[j][0], "value",DecV_I[j], "max",bnds[j][1])
+            feasibility = False
+    print("Constraints:",feasibility)
+
+    print("#######################################")
+    print("MBH self implemented")
+    print("#######################################")    
+    DecV_I = np.loadtxt("SolutionMBH_self.txt")
+
+    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    Fitness.printResult()
+    print(f) 
+    for j in range(len(DecV_I)):
+        if ( DecV_I[j] < bnds[j][0] ) or ( DecV_I[j] > bnds[j][1] ):
+            print(j, "Within bounds?", "min", bnds[j][0], "value",DecV_I[j], "max",bnds[j][1])
+
 if __name__ == "__main__":
     # optimize()
     # coordS()
     # MBH()
+    # MBH_self()
     propagateSol()
