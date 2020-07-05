@@ -1,6 +1,3 @@
-# In[4]:
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as spy
@@ -8,20 +5,44 @@ import pykep as pk
 
 
 # ## Simple functions
-
-# In[20]:
-
-
 def deg2rad(x):
+    """
+    deg2rad: convert from degrees to radians
+    INPUTS:
+        x: angle in degrees
+    OUTPUTS:
+        angle in radians
+    """
     return x*np.pi/180
 
 def rad2deg(x):
+    """
+    rad2deg: convert from radians to degrees
+    INPUTS:
+        x: angle in radians
+    OUTPUTS:
+        angle in degrees
+    """
     return x/np.pi*180
 
 def days2sec(x):
+    """
+    days2sec: convert from days to seconds
+    INPUTS:
+        x: time in days
+    OUTPUTS:
+        time in seconds
+    """
     return x*3600*24
 
 def sec2days(x):
+    """
+    sec2days: convert from seconds to days
+    INPUTS:
+        x: time in seconds
+    OUTPUTS:
+        time in days
+    """
     return x/ (3600*24)
 
 def correctAngle(x, units):  
@@ -32,6 +53,8 @@ def correctAngle(x, units):
         units:
             'deg': degrees
             'rad': radians
+    OUTPUTS:
+        x: corrected angle
     """
     if units == 'deg':
         angle_ref = 360
@@ -48,7 +71,17 @@ def correctAngle(x, units):
 
     
 def convertRange(x, units, minRange, maxRange):
-    "ConvertRange: convert an angle so that it is within the range"
+    """
+    convertRange: convert an angle so that it is within the range
+    INPUTS:
+        x: angle to be converted
+        units: units of the input angle
+        minRange: minimum value of the range
+        maxRange: maximum value of the range
+
+    OUTPUTS:
+        angleCorrected: corrected angle
+    """
 
     if units == 'deg':
         angle_ref = 360
@@ -65,8 +98,6 @@ def convertRange(x, units, minRange, maxRange):
     return angleCorrected
 
 
-# In[6]:
-
 def writeData(data, mode, title):
     """
     writeData: write data into file
@@ -74,20 +105,17 @@ def writeData(data, mode, title):
         data: data to be written (use np.concatenate and append)
         mode: type of file mode: w (write), a+(append), r (read)
         title: filename
-    OUTPUTS:
     """
     str_data = '  '.join(str(i) for i in data)
     with open(title, mode) as fo:
         fo.write(str_data)
         fo.write("\n")
 
+################################################################################
+## Tables of constants
+################################################################################
 
-# ## Tables of constants
-
-# In[7]:
-
-
-#pykep Constants
+# pykep Constants
 AU = pk.AU
 mu_S = pk.MU_SUN
 mu_E = pk.MU_EARTH
@@ -98,10 +126,13 @@ g0 = pk.G0
 #Constants from Books (different than pykep )
 class ConstantsBook:
     """
-    Table of constants taken from  J. R. Wertz, Mission geometry: orbit and constellation design and management: 
-    spacecraft  orbit  and  attitude  systems.    
+    Table of constants taken from  J. R. Wertz, Mission geometry: orbit and 
+    constellation design and management: spacecraft  orbit  and  attitude  systems.    
     """
     def __init__(self):
+        """
+        Constructor:
+        """
         self.G = 6.67408e-11 #m^3kg^-1s^-2 Universal Gravitational parameter
 
         self.AU = 149597870.66 #km Astronomical unit
@@ -135,4 +166,3 @@ class ConstantsBook:
         self.mu_M_m = 4.2832e13 #m^3/s^2 Gravitational parameter Mars
         self.mu_S = 1.327178e11 #km^3/s^2 Gravitational parameter Sun
         self.mu_S_m = 1.327178e20 #m^3/s^2 Gravitational parameter Sun        
-

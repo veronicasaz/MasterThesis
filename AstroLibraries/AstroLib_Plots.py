@@ -6,11 +6,15 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
 
 class Plot:
+    """
+    Plot: create a plot 
+    """
     def __init__(self, titleFig, nrows = 1, ncols = 1, *args, **kwargs):
-        """          
-        titleFig: title of the figure
-        
-        additional arguments:
+        """    
+        Constructor:
+        INPUTS      
+            titleFig: title of the figure
+            nrows: number of rows of the subplots
         """
        # Number of of the subplots
         self.n = nrows
@@ -23,11 +27,16 @@ class Plot:
         self.titleFig = titleFig
 
         # Markers
-        self.colors = ['black','red', 'blue', 'green','orange','yellow','magenta','cyan']
+        self.colors = ['black','red', 'blue', 'green','orange','yellow',\
+            'magenta','cyan']
         self.marker = ['x','o','-','v','^','s','h','+']
         self.line = ['-','--','-.',':'] 
 
     def createPlot(self, *args, **kwargs):
+        """
+        createPlot: create the main plot
+
+        """
         self.titleSize = kwargs.get('titleSize',15)
         
         self.h_space = kwargs.get('hspace',0.4)
@@ -41,23 +50,34 @@ class Plot:
         # Create fig and subplots
         self.fig, self.ax = plt.subplots(self.n, self.m, figsize=(self.h, self.v))    
         self.fig.suptitle(self.titleFig, size = self.titleSize )
-        self.fig.subplots_adjust(top=self.top_margin, bottom=self.bot_margin, left=self.left_margin, right=self.right_margin, hspace=self.h_space, wspace=self.w_space)
+        self.fig.subplots_adjust(top=self.top_margin, bottom=self.bot_margin,\
+            left=self.left_margin, right=self.right_margin, \
+            hspace=self.h_space, wspace=self.w_space)
 
         self.listSubplot = dict()
 
     def size(self, *args, **kwargs):
+        """
+        size: determine the size of the plot elements
+        """
         self.titleSize = kwargs.get('titleSize',15)
         self.axisSize = kwargs.get('axisSize',15)
         self.legendSize = kwargs.get('legendSize',10)
         self.ticksLabel = kwargs.get('ticksLabel',10)
 
     def addSubplot(self, name, titleFig, order, *args, **kwargs):
+        """
+        addSubplot: add subplot ot the plot list
+        """
         # Type plot
         self.name = name
         self.titleFig = titleFig
         self.listSubplot[order] = plt.subplot(self.n, self.m, order)
 
     def plot(self, x, y, order, *args, **kwargs):
+        """
+        plot: plot the data
+        """
         # Data
         self.x = x
         self.y = y
@@ -85,18 +105,27 @@ class Plot:
             if type(x) == 'list':
                 if type(y) == 'list':
                     for i in range(len(x)):
-                        ax.scatter(self.x[i] , self.y[i], label = self.labels[i], marker = self.markersSubpl[i] , color = self.colorsSubpl[i])
+                        ax.scatter(self.x[i] , self.y[i], label = self.labels[i],\
+                            marker = self.markersSubpl[i] , \
+                            color = self.colorsSubpl[i])
                 else:
                     for i in range(len(x)):
-                        ax.scatter(self.x[i] , self.y, label = self.labels[i], marker = self.markersSubpl[i] , color = self.colorsSubpl[i])
+                        ax.scatter(self.x[i] , self.y, label = self.labels[i],\
+                            marker = self.markersSubpl[i] , \
+                            color = self.colorsSubpl[i])
             else:
                 if type(y) == 'list':
                     for i in range(len(y)):
-                        ax.scatter(self.x , self.y[i], label = self.labels[i], marker = self.markersSubpl[i] , color = self.colorsSubpl[i])
+                        ax.scatter(self.x , self.y[i], label = self.labels[i],\
+                            marker = self.markersSubpl[i] , \
+                            color = self.colorsSubpl[i])
                 else:  
-                    ax.scatter(self.x , self.y, label = self.labels, marker = self.markersSubpl[0] , color = self.colorsSubpl[0])
+                    ax.scatter(self.x , self.y, label = self.labels, \
+                        marker = self.markersSubpl[0] , \
+                        color = self.colorsSubpl[0])
         else:
-                ax.plot(x , y ,label = self.labels, linestyle = self.line[0] , color = self.colorsSubpl[0])
+                ax.plot(x , y ,label = self.labels, linestyle = self.line[0] , \
+                    color = self.colorsSubpl[0])
         
 
         ax.set_title(self.titleFig, size = self.titleSize)
@@ -112,28 +141,34 @@ class Plot:
     #     plt.show()
 
     def save(self, name, *args, **kwargs):
+        """
+        save: save figure to file
+        INPUTS:
+            name: name of the saved figure.
+        """
         self.dpi = kwargs.get('dpi', 200) 
         self.layoutSave = kwargs.get('layout', 'tight')
         plt.savefig(name, dpi = self.dpi, bbox_inches = self.layoutSave)
 
     def show(self):
+        """
+        show: show plot    
+        """
         plt.show()
 
 
-
-
-    
-
 def TransferPlot(r_E, r_M):
     """
-    FinalPlot: plot of the trajectory with the impulses
-    Inputs: 
-        SMatrx_E: matrix containing [x,y,z,vx,vy,vz,m,ind] of the propagation from the Earth
-        SMatrx_M: matrix containing [x,y,z,vx,vy,vz,m,ind] of the propagation from Mars
-    Outputs:
-        -
+    TransferPlot: plot of the transfer between planets
+    INPUTS:
+        r_E: position of the first planet
+        r_M: position of the second planet
+        SMatrx_E: matrix containing [x,y,z,vx,vy,vz,m,ind] of the propagation
+        from the Earth
+        SMatrx_M: matrix containing [x,y,z,vx,vy,vz,m,ind] of the propagation
+        from Mars
+    OUTPUTS:
     """
-
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(r_E[0], r_E[1], r_E[2], color = 'blue') #, s=50, color="dodgerblue",marker="*") # Plot trajectory from the Earth
@@ -156,14 +191,15 @@ def TransferPlot(r_E, r_M):
 
 
 def set_axes_equal(ax):
-    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
-    cubes as cubes, etc..  This is one possible solution to Matplotlib's
-    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+    """
+    set_axes_equal: make axes of 3D plot have equal scale so that spheres appear
+    as spheres, cubes as cubes, etc..  
+    This is one possible solution to Matplotlib's ax.set_aspect('equal') and
+    ax.axis('equal') not working for 3D.
 
-    Input
+    INPUTS:
       ax: a matplotlib axis, e.g., as output from plt.gca().
-    '''
-
+    """
     x_limits = ax.get_xlim3d()
     y_limits = ax.get_ylim3d()
     z_limits = ax.get_zlim3d()

@@ -1,52 +1,55 @@
-# In[1]:
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as spy
 
 import time
 
-# import ipynb.fs.full.AstroLibrary_BasicFunctions as AL_BF #Use other ipynb documents
-# import ipynb.fs.full.AstroLibrary_2BodyProblem as AL_2B #Use other ipynb documents
-# import ipynb.fs.full.AstroLibrary_SphericalTriangles as AL_ST #Use other ipynb documents
 from . import AstroLib_Basic as AL_BF
 from . import AstroLib_2BP as AL_2BP
 from . import AstroLib_Ephem as AL_Eph
 
-# In[4]:
-
-
 class SystemBodies:
     """ 
-    : calculate the general parameters for a Hohmann orbit as an 
+    SystemBodies: calculate the general parameters for a Hohmann orbit as an 
     approximation using the information of the orbital parameters. 
-    Inputs: 
-        Planets: matrix with the different bodies. In order from lower orbit to higher
-        Planet2: orbital elements of Mars: [a,e,i,Omega, varpi, L]
-
-    Outputs:
-        T_syn: synodic time
-        a_t: semi-major axis
-        timeflight: time to arrive from one planet to the other. 
     """
     def __init__(self, Planet, *args, **kwargs):
-    
+        """
+        Constructor
+        INPUTS: 
+            Planet: matrix with the different bodies. In order from lower 
+            orbit to higher
+        OUTPUTS:
+            T_syn: synodic time
+            a_t: semi-major axis
+            timeflight: time to arrive from one planet to the other. 
+        """
         self.centerBody = Planet[0].orb.CentralBody #Valid if same central body
         self.Planets = Planet
 #         self.PlanetsOrbit = PlanetOrbit
 
     def SynodicPeriod(self, units = 'sec'):
+        """
+        SynodicPeriod: calculate the synodic period of two planets
+        INPUTS:
+            units: units of time. 'sec', 'day'
+        OUTPUTS:
+            T_syn: synodic period
+        """
         self.T_syn = 2*np.pi / abs(self.Planets[0].orb.n - self.Planets[1].orb.n)
         if units == 'day':
             self.T_syn = AL_BF.sec2days(self.T_syn)
         return self.T_syn
 
-    def findDateWith180deg(self, date0, transfertime, planetEphem = None, usingCircular = False):
+    def findDateWith180deg(self, date0, transfertime, planetEphem = None, \
+        usingCircular = False):
         """
+        findDateWith180deg: find the date at which the planets are 180 deg
         INPUTS:
-            initialDate: date to start to look
+            date0: initial date to start looking
+            transfertime: time of transfer between the planets
             planetEphem: list with planet ephemeris
+            usingCircular: using circular orbits
         """
         if usingCircular == False:
             continueLoop = False
@@ -59,10 +62,12 @@ class SystemBodies:
                 r_0, v_0 = planetEphem[0].eph(t)
                 r_1, v_1 = planetEphem[1].eph(t + transfertime)
 
-                orbit_0 = AL_2BP.BodyOrbit(np.append(r_0, v_0), 'Cartesian', self.centerBody)
+                orbit_0 = AL_2BP.BodyOrbit(np.append(r_0, v_0), 'Cartesian', \
+                    self.centerBody)
                 self.Planets[0].addOrbit(orbit_0)
 
-                orbit_1 = AL_2BP.BodyOrbit(np.append(r_1, v_1), 'Cartesian', self.centerBody)
+                orbit_1 = AL_2BP.BodyOrbit(np.append(r_1, v_1), 'Cartesian', \
+                    self.centerBody)
                 self.Planets[1].addOrbit(orbit_1)
 
                 # Hohman transfer between Earth and Mars
@@ -93,7 +98,8 @@ class SystemBodies:
     
         # Time of the trajectory between the Earth and Mars
         # Half of the period of an elliptical orbit
-        self.timeflight_H = np.pi * self.a_H**(3/2) / np.sqrt(self.centerBody.mu) #sHohmann time. 
+        # Hohmann time:
+        self.timeflight_H = np.pi * self.a_H**(3/2) / np.sqrt(self.centerBody.mu)  
     
         #Mean motion, period of the orbit
         self.n_H = np.sqrt(self.centerBody.mu / self.a_H**3) 
@@ -111,26 +117,26 @@ class SystemBodies:
     
 def difTAnom(state):
     """
-    difTrueAnomaly: get the difference in true anomaly of the planets to see if both have the right angle
-            for the problem.
-    Inputs:
+    difTrueAnomaly: get the difference in true anomaly of the planets to see 
+    if both have the right angle for the problem.
+    INPUTS:
         state: position and velocity of the planets 
-    Outputs:
+    OUTPUTS:
         deltanu: difference in true anomaly            
     """
     r_1 = state[0]
     r_2 = state[1]
     
-    if r_1[1] >= 0 and r_1[0] <= 0: #Second quadrant
+    if r_1[1] >= 0 and r_1[0] <= 0: # Second quadrant
         deltanu_1 = np.arctan(r_1[1]/r_1[0])+np.pi
-    elif r_1[1] < 0 and r_1[0] < 0: #Third quadrant
+    elif r_1[1] < 0 and r_1[0] < 0: # Third quadrant
         deltanu_1 = np.arctan(r_1[1]/r_1[0])+np.pi
     else:
         deltanu_1 = np.arctan(r_1[1]/r_1[0])
 
-    if r_2[1] >= 0 and r_2[0] <= 0: #Second quadrant
+    if r_2[1] >= 0 and r_2[0] <= 0: # Second quadrant
         deltanu_2 = np.arctan(r_2[1]/r_2[0])+np.pi
-    elif r_2[1] < 0 and r_2[0] < 0: #Third quadrant
+    elif r_2[1] < 0 and r_2[0] < 0: # Third quadrant
         deltanu_2 = np.arctan(r_2[1] / r_2[0]) + np.pi
     else:
         deltanu_2 = np.arctan(r_2[1] / r_2[0])
@@ -140,10 +146,17 @@ def difTAnom(state):
     
 
 class Lambert:
+    """
+    Lambert: Lambert transfer between two points
+    """
     def __init__(self, r_0, r_1, transfertime, centerbody_mu):
         """
+        Constructor
         INPUTS:
-            transfertime: in sec
+            r_0: initial position
+            r_1: final position
+            transfertime: time of transfer between positions
+            centerbody_mu: gravitational parameter of the central body
         """
         self.r_0 = r_0
         self.r_1 = r_1
@@ -157,14 +170,19 @@ class Lambert:
         am = (c + mr_0 + mr_1)/4 # semi-major axis for minimum energy
         s = 2*am
         betam = 2*np.arcsin( np.sqrt((s-c) / (2*am)) )
-        tm = np.sqrt(s**3/8) * (np.pi - betam + np.sin(betam)) / np.sqrt(centerbody_mu)
+        tm = np.sqrt(s**3/8) * (np.pi - betam + np.sin(betam)) / \
+            np.sqrt(centerbody_mu)
         
         #Obtain a
-        self.a_L = spy.optimize.fsolve(self.__LambertKepler, am, [r_0,r_1,c,am,delta, transfertime, tm])
-
-        self.alpha, self.beta = self.__LambertAlphaBeta(2*am, c, self.a_L, delta, transfertime, tm)
+        self.a_L = spy.optimize.fsolve(self.__LambertKepler, am, \
+            [r_0,r_1,c,am,delta, transfertime, tm])
+        self.alpha, self.beta = self.__LambertAlphaBeta(2*am, c, \
+            self.a_L, delta, transfertime, tm)
 
     def TerminalVelVect(self):
+        """
+        TerminalVelVect: calculate the terminal velocity vectors
+        """
         # Terminal velocity vectors
         A = np.sqrt( self.centerbody_mu /(4*self.a_L) ) / np.tan(self.alpha/2)
         if self.beta == 0:
@@ -174,7 +192,8 @@ class Lambert:
         
         u1 = self.r_0 / np.linalg.norm(self.r_0) #unit vector in the direction of r1
         u2 = self.r_1 / np.linalg.norm(self.r_1) #unit vector in the direction of r2
-        uc = (self.r_1-self.r_0)/(np.linalg.norm(self.r_1-self.r_0)) #unit vector associated with the chord
+        # unit vector associated with the chord:
+        uc = (self.r_1-self.r_0)/(np.linalg.norm(self.r_1-self.r_0)) 
         
         v_0 = (B+A)*uc+(B-A)*u1
         v_1 = (B+A)*uc+(A-B)*u2
@@ -182,7 +201,8 @@ class Lambert:
 
     def __LambertKepler(self, a, x):
         """
-        LambertKepler: solve Kepler's equation for the case of the Lambert's problem'
+        LambertKepler: solve Kepler's equation for the case of the Lambert's 
+        problem'
         Inputs:
             a: initial guess of semi-major axis
             x: additional arguments [r1,r2,c,am,nu,t,tm]
@@ -200,8 +220,9 @@ class Lambert:
         s = 2*am # Semiperimeter of the space triangle
         alpha,beta = self.__LambertAlphaBeta(s, c, a, nu, t, tm)
         
-        Func = -(alpha-beta-np.sin(alpha)+np.sin(beta))+np.sqrt(self.centerbody_mu /a**3)*t # Lambert's equation:
-        return(Func)
+        Func = - ( alpha - beta - np.sin(alpha) + np.sin(beta)) +\
+            np.sqrt(self.centerbody_mu / a**3) * t # Lambert's equation:
+        return Func
 
     def __LambertAlphaBeta(self, s, c, a, nu, t, tm):
         """
@@ -217,34 +238,36 @@ class Lambert:
             alpha: angle for the Lambert algorithm
             beta: angle for the Lambert algorithm
         """
-        beta = 2*np.arcsin(np.sqrt((s-c)/(2*a))) 
+        beta = 2 * np.arcsin( np.sqrt(( s - c) / ( 2 * a))) 
     #     if nu > np.pi and nu < (2*np.pi):  #Eliminate correction to go using the shorter side
     #         beta = -beta
 
-        alpha = 2*np.arcsin(np.sqrt(s/(2*a)))
+        alpha = 2 * np.arcsin( np.sqrt( s / ( 2 * a )))
         # Do not correct because we want to go always in the same direction (counterclockwise)
         if t > tm:    # In case is to the direction where is longer
-            alpha = 2*np.pi-alpha
+            alpha = 2 * np.pi - alpha
         
-        return(alpha,beta)
+        return alpha, beta
 
 # # Repeating orbits
 
-# In[3]:
-
-
-# class repitingOrbit:
+# class repitingOrbit: # Review
 #     """
 #     repitingOrbit: contains the parameters necessary to obtain a repiting orbit.
-#         Body: main body about which the orbit is performed
-#         j: Orbital revolutions necessary for repetition
-#         k: Earth days for 1 repiting orbit of the satellite
-#         **kwargs:
-#             a: semi-major axis of the repiting orbit
-#             e: eccentricity of the repiting orbit
-#             i: inclination angle of the repiting orbit
 #     """
-#     def __init__(self, j, k, Body,Cts,*args, **kwargs):
+#     def __init__(self, j, k, Body, Cts,*args, **kwargs):
+#         """
+#         Constructor
+#         INPUTS:
+#             j: Orbital revolutions necessary for repetition
+#             k: Earth days for 1 repiting orbit of the satellite
+#             Body: main body about which the orbit is performed
+#             Cts: list of constants
+#         ADDITIONAL ARGUMENTS:
+#                 a: semi-major axis of the repiting orbit
+#                 e: eccentricity of the repiting orbit
+#                 i: inclination angle of the repiting orbit
+#         """
 #         self.j = j
 #         self.k = k
         
@@ -377,11 +400,24 @@ class Lambert:
 # #         return [self.i]
 
 
-# In[4]:
-
 
 class repeatingOrbit:
-    def __init__(self, Body,Cts,*args, **kwargs):
+    """
+    repeatingOrbit: contains the calculations for a repeating orbit
+    """
+    def __init__(self, Body, Cts, *args, **kwargs):
+        """
+        Constructor
+        INPUTS:
+            Body: main body about which the orbit is performed
+            Cts: list of constants
+        ADDITIONAL ARGUMENTS:
+            j: Orbital revolutions necessary for repetition
+            k: Earth days for 1 repiting orbit of the satellite
+            a: semi-major axis of the repiting orbit
+            e: eccentricity of the repiting orbit
+            i: inclination angle of the repiting orbit
+        """
         self.j = kwargs.get('j', 'No_j') 
         self.k = kwargs.get('k', 'No_k') 
         
@@ -397,10 +433,12 @@ class repeatingOrbit:
         self.Body = Body
         self.Cts = Cts
         
-    def fsolve_Simple(self,x,param):
+    def fsolve_Simple(self, x, param):
         """
-        fsolve_Simple: solve the system of equations to obtain a, e or i. Equations taken from J. R. Wertz, Mission geometry: orbit and constellation design and management: 
-        spacecraft  orbit  and  attitude  systems.
+        fsolve_Simple: solve the system of equations to obtain a, e or i. 
+        Equations taken from J. R. Wertz, Mission geometry: orbit and 
+        constellation design and management: spacecraft  orbit  and  attitude 
+        systems.
         INPUTS:
             x: a, e or i for the initial guess for the solver
             param:
@@ -432,18 +470,19 @@ class repeatingOrbit:
             print('Warning: not enough values')
         
         T = 2*np.pi*np.sqrt(a**3/Body.mu) #Period of the satellite orbit
-        deltaL1 = -2 *np.pi*T / Body.T #rad/rev. Difference in longitude 1
-        deltaL2 = -3*np.pi*Cts.J2*Body.R**2* np.cos(i) / (a**2 * (1-e**2)**2) #rad/rev. Difference in longitude 2
+        deltaL1 = -2 *np.pi * T / Body.T #rad/rev. Difference in longitude 1
+        deltaL2 = -3 * np.pi *Cts.J2 * Body.R**2 * np.cos(i) / \
+            (a**2 * (1-e**2)**2) #rad/rev. Difference in longitude 2
         
         F = self.k_j*2*np.pi - abs(deltaL1 + deltaL2) #Function to solve
         return F
     
     def get_k_j_Simple(self, x0):
         """
-        get_a_Simple: method to solve 'a' given the other two taking into consideration
+        get_k_j_Simple: method to solve 'a' given the other two taking into 
+        consideration
         only the effect of J2 on the right ascension of the ascending node.
         INPUTS: 
-            Body: main body about which the orbit is performed
             x0: initial guess to input for the semi-major axis
         OUTPUTS:
             solution for a
@@ -452,10 +491,10 @@ class repeatingOrbit:
     
     def get_a_Simple(self, x0):
         """
-        get_a_Simple: method to solve 'a' given the other two taking into consideration
-        only the effect of J2 on the right ascension of the ascending node.
+        get_a_Simple: method to solve 'a' given the other two taking into 
+        consideration only the effect of J2 on the right ascension of the 
+        ascending node.
         INPUTS: 
-            Body: main body about which the orbit is performed
             x0: initial guess to input for the semi-major axis
         OUTPUTS:
             solution for a
@@ -467,34 +506,36 @@ class repeatingOrbit:
     
     def get_e_Simple(self, x0):
         """
-        get_e_Simple: method to solve 'e' given the other two taking into consideration
-        only the effect of J2 on the right ascension of the ascending node.
+        get_e_Simple: method to solve 'e' given the other two taking into 
+        consideration only the effect of J2 on the right ascension of the 
+        ascending node.
         INPUTS: 
-            Body: main body about which the orbit is performed
             x0: initial guess to input for the eccentricity
         OUTPUTS:
             solution for e
         """
-        self.e = spy.optimize.fsolve(self.fsolve_Simple,x0,[self.Body,self.Cts,'e'])
+        self.e = spy.optimize.fsolve(self.fsolve_Simple, x0, \
+            [self.Body,self.Cts,'e'])
         return self.e
     
-    def get_i_Simple(self,x0):
+    def get_i_Simple(self, x0):
         """
-        get_i_Simple: method to solve 'i' given the other two taking into consideration
-        only the effect of J2 on the right ascension of the ascending node.
+        get_i_Simple: method to solve 'i' given the other two taking into 
+        consideration only the effect of J2 on the right ascension of the 
+        ascending node.
         INPUTS: 
-            Body: main body about which the orbit is performed
             x0: initial guess to input for the inclination angle
         OUTPUTS:
             solution for i
         """
-        self.i = spy.optimize.fsolve(self.fsolve_Simple,x0,[self.Body,self.Cts,'i'])
+        self.i = spy.optimize.fsolve(self.fsolve_Simple, x0, \
+            [self.Body,self.Cts,'i'])
         return self.i
          
     def Table_Simple(self):
         """
-        Table_Simple: create latex table with the necessary outputs. For the simplified case.
-        (Approach 2).
+        Table_Simple: create latex table with the necessary outputs. 
+        For the simplified case. (Approach 2).
         INPUTS: 
             j: Orbital revolutions necessary for repetition
             k: Earth days for 1 repiting orbit of the satellite
@@ -639,10 +680,6 @@ class dualAxis:
         
         print('\hline')
 
-
-# In[6]:
-
-
 def H_fun(x):
     """
     H_fun: function to decide which angle to be chosen by the acos2.
@@ -652,8 +689,7 @@ def H_fun(x):
         H: sign
     """    
     while x >= 2*np.pi:
-            x -= 2*np.pi
-            
+        x -= 2*np.pi           
     if x>= 0 and x <= np.pi:
         H = 1
     else:
@@ -676,12 +712,20 @@ def acos2(x,H):
         y += 2*np.pi
     return y
 
-
-# In[8]:
-
-
 class satellite:
-    def __init__(self, Body,*args, **kwargs):
+    """
+    satellite: satellite object
+    """
+    def __init__(self, Body, *args, **kwargs):
+        """
+        Constructor
+        INPUTS:
+            Body: central body
+        ADDITIONAL INPUTS:
+            h: height of the satellite
+            lat: latitude
+            long: longitude
+        """
         self.Body = Body
         self.h = kwargs.get('h', 0)
         self.lat = kwargs.get('lat', 0)
@@ -698,14 +742,19 @@ class satellite:
         self.n = 2*np.pi / self.T
         
     def coverageMax(self, Eps_min): #Chapter 9 book
-
+        """
+        coverageMax: calculate maximum coverage
+        INPUTS:
+            Eps_min:
+        """
         self.rho = np.arcsin(self.Body.R/(self.Body.R + self.h))
         self.eta_max = np.arcsin(np.sin(self.rho)*np.cos(Eps_min))
         self.lambda_max = np.pi/2 - Eps_min - self.eta_max
         self.D_max = self.Body.R * np.sin(self.lambda_max) / np.sin(self.eta_max)
         
-    def coverage(self,target):
+    def coverage(self, target):
         """
+        coverage: calculate coverage with target
         INPUTS:
             target: vector with lat and long of target    
         """
@@ -724,6 +773,7 @@ class satellite:
         
     def plotFootprint(self, angle):
         """
+        plotFootprint: plot the footprint of a satellite
         INPUTS:
             angle: vector with the angles around the satellite at
             which coverage wants to be plotted
@@ -761,9 +811,6 @@ class satellite:
 # ax.imshow(img,)
 
 
-# In[ ]:
-
-
 def ConstellationDesign(sat):
     """
     ConstellationDesign: for satellites in the same orbit but with a
@@ -778,20 +825,20 @@ def ConstellationDesign(sat):
 
 
 # # Lambert targetter
-
-# In[5]:
-
-
-class LambertTrajectory:
+class LambertTrajectory: # Review
     """
-    INPUTS:
-        r0: position vector of departure planet
-        rf: position vector of arrival planet
-    ARGS:
-        tf: time of flight
+    LambertTrajectory: 
     """
     def __init__(self, r0, rf, Body, *args, **kwargs):
-        
+        """
+        INPUTS:
+            r0: position vector of departure planet
+            rf: position vector of arrival planet
+            Body: central body
+        ADDITIONAL ARGUMENTS:
+            tflight: time of flight
+            smAxis: semi-major axis
+        """
         self.Body = Body
         self.r0 = r0
         self.rf = rf
@@ -943,8 +990,6 @@ class LambertTrajectory:
 
     
 
-
-# In[6]:
 
 
 # #Trying terminal velocity vectors
@@ -1307,15 +1352,19 @@ class LambertTrajectory:
 #         return v1,v2
 
 
-# # Pork-chop plots
-
-# In[6]:
-
-
-def porkchop3(r,Body,tf, t0, nameFile, orderTransfer):
+################################################################################
+# Pork-chop plots
+################################################################################
+def porkchop3(r, Body, tf, t0, nameFile, orderTransfer):
     """
+    porkchop3
     INPUTS:
+        r:
         Body: central body
+        tf: time of flight
+        t0: launch date
+        nameFile: name of the file to save the picture
+        orderTransfer
     """
     AL_BF.writeData(orderTransfer,'w',nameFile)
     Energy_total = np.zeros([len(tf[:,0]), len(t0)])
@@ -1324,7 +1373,6 @@ def porkchop3(r,Body,tf, t0, nameFile, orderTransfer):
     for x in range(len(t0)): #For each t0
         
         for i in range(len(tf[:,0])):
-
             Energy = 0
 
             for j in range(len(r) - 1): #For each leg
@@ -1349,8 +1397,15 @@ def porkchop3(r,Body,tf, t0, nameFile, orderTransfer):
     X,Y = np.meshgrid(t0,t_total)
     return X,Y,Energy_total
 
-def randomTransferTimes(numberPoints,r,tfi_interval, tfo_interval):
-    
+def randomTransferTimes(numberPoints, r, tfi_interval, tfo_interval):
+    """
+    randomTransferTimes: choose random transfer times
+    INPUTS:
+        numberPoints:
+        r: 
+        tfi_interval:
+        tfo_interval:
+    """
     tf = np.zeros([numberPoints,len(r)])
     for j in range(len(r)-2):
         tf[:,j] = np.random.randint(tfi_interval[0],tfi_interval[-1], size = numberPoints)
@@ -1365,6 +1420,14 @@ def randomTransferTimes(numberPoints,r,tfi_interval, tfo_interval):
     return tf
 
 def randomFlybies(planets):
+    """
+    randomFlybies: create a random set of flybys
+    INPUTS:
+        planets: sequence of planets to be mixed
+    OUTPUTS:
+        r: vector of planets
+        x: number of flybys
+    """
     numberFlybies = np.random.randint(0,4)
 
     r = [r_E]
@@ -1374,12 +1437,14 @@ def randomFlybies(planets):
         r += [planets[int(x[i])]]
     r += [r_J]
 
-    return r , x
+    return r, x
 
-def allPossibleFybies(planets,maxFlybies):
+def allPossibleFybies(planets, maxFlybies):
     """
+    allPossibleFlybies: mix all possible flybys
     INPUTS:
         planets: [r_E,r_V,r_M]
+        maxFlybies: maximum number of flybys
     OUTPUTS:
         r:
         x: order of flybies
@@ -1395,5 +1460,5 @@ def allPossibleFybies(planets,maxFlybies):
             r += [planets[int(x[i])]]
         r += [r_J]
         
-    return r , x
+    return r, x
 

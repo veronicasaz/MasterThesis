@@ -4,13 +4,23 @@ import scipy.optimize as spy
 
 from . import AstroLib_Basic as AL_BF
 
-# import ipynb.fs.full.AstroLibrary_BasicFunctions as AL_BF #Use other ipynb documents
-
 ################################################################################
 # CREATE BODY WITH ITS CHARACTERISTICS
 ################################################################################
 class Spacecraft:
+    """
+    Spacecraft class: create spacecraft with its mass and propulsion parameters 
+    """
     def __init__(self, *args, **kwargs):
+        """
+        Constructor: input the main characteristics
+        INPUTS:
+        ADDITIONAL INPUTS:
+            Isp: specific impulse
+            m_dry: dry mass of the spacecraft
+            T: thrust of the spacecraft
+            g0: acceleration of gravity
+        """
         # Propulsive parameters
         self.Isp = kwargs.get('Isp', 3100)
         self.m_dry = kwargs.get('m_dry', 747)
@@ -19,11 +29,12 @@ class Spacecraft:
 
     def MassChange(self, m, deltav): 
         """
-        MassChange: change (decrease) mass of the spacecraft when an impulse is applied
-        Inputs:
+        MassChange: change (decrease) mass of the spacecraft when an impulse is 
+        applied
+        INPUTS:
             m: current mass of the spacecraft (fuel+drymass)
             deltav: magnitude of the impulse applied
-        Outputs:
+        OUTPUTS:
             mf: final mass
         """
         mf = m * np.exp( -deltav/(self.g0 * self.Isp) )
@@ -31,13 +42,14 @@ class Spacecraft:
 
     def MassChangeInverse(self, m, deltav):  
         """
-        MassChangeInverse: change (increase) the mass to obtaine the mass of the spacecraft before
-                an impulse was applied
-        Inputs: 
+        MassChangeInverse: change (increase) the mass to obtaine the mass of the
+            spacecraft before
+            an impulse was applied
+        IMPUTS: 
             m: current mass of the spacecraft (fuel+drymass)
             deltav: magnitude of the impulse applied
-        Outputs:
-            mf: final mass
+        OUTPUTS:
+            mi: final mass
         """
         mi = m/np.exp( -deltav /(self.g0 * self.Isp) )
         return mi
@@ -45,25 +57,34 @@ class Spacecraft:
 class Body:
     """
     Body: contains the main characteristics of a celestial body.
-        name: name of the body.
-        mass: mass of the body
-        radius: radius of the body
-        color: color to plot the body
-        
-        Additional parameters:
-            mu: gravitational parameter of the body. If it is not given, it is calculated as G*Mass
     """
-    def __init__(self, name, color, Mass = 0, radius = 0, *args, **kwargs):
+    def __init__(self, name, color = 'black', Mass = 0, radius = 0, *args, **kwargs):
+        """
+        Constructor: 
+        INPUTS:
+            name: name of the body.
+        ADDITIONAL INPUTS:
+            Mass: mass of the body
+            radius: radius of the body
+            color: color to plot the body
+            mu = gravitational parameter of the body. If it is not given, it
+            is calculated as G*Mass
+            orb: orbit of the body. Orbit is an object.
+        """
         self.name = name
         self.R = radius
         self.M = Mass
         self.color = color
-        self.mu = kwargs.get('mu', self.M * AL_BF.ConstantsBook().G) #if it is not given, it is calculated with the mass
-        self.orb = kwargs.get('orbit', 'No information of the orbit') # Orbit of the body
+        #if mu it is not given, it is calculated with the mass:
+        self.mu = kwargs.get('mu', self.M * AL_BF.ConstantsBook().G) 
+        # Orbit of the body:
+        self.orb = kwargs.get('orbit', 'No information of the orbit') 
 
-    def addOrbit(self,orbit):
+    def addOrbit(self, orbit):
         """
-
+        addOrbit: include an orbit to the body
+        INPUTS: 
+            orbit: orbit object
         """
         self.orb = orbit
 
@@ -73,7 +94,18 @@ class Body:
 # Valid for an elliptical orbit. Application of the 2 Body Problem.
 ################################################################################
 class CircularOrbit:
+    """
+    CircularOrbit: creation of a circular object around a central body.
+    """
     def __init__(self, a, CentralBody, *args, **kwargs):
+        """
+        Constructor:
+        INPUTS:
+            a: semi-major axis of the orbit. Same as the radius of the orbit. 
+            CentralBody: central body about which the orbit is performed.
+        ADDITIONAL INPUTS:
+            Body: body object that is orbitting.
+        """
         self.a = a
         self.CentralBody = CentralBody
         self.Body = kwargs.get('Body', 'Unknown')
@@ -86,29 +118,36 @@ class CircularOrbit:
 #Review Kepler 2000: not working
 class BodyOrbit:
     """
-    orbitParam: contains the main characteristics of an ELLIPTICAL orbit. Application of the 2 Body problem. 
-        Body: main body about which the orbit is performed
-        x: Two main cases are possible:
-            Keplerian elements as inputs:
-                a: semi-major axis (m)
-                e: eccentricity of the orbit
-                i: inclination of the orbit
-                RAAN: right ascension of the ascending node
-                omega: argument of the periapsis
-                M: mean anomaly
-                units: 'deg' indicates that the angles have to be transformed to radians
-            Cartesian elements:
-                x,y,z,xdot,ydot,zdot: position and velocity at a given time
-        typeParam:
-            'Keplerian_J2000': x is a matrix with:
-                row 0: Keplerian elements at J2000
-                row 1: centennial rates of change of those elements
-                row 2: date in Julian centuries
-            'Keplerian': to use Keplerian parameters as inputs
-            'Cartesian': to use Cartesian parameters as inputs
+    BodyOrbit: creation of an orbit object around a central body. Contains the 
+    main characteristics of an ELLIPTICAL orbit. Application of the 2 Body problem. 
     """
     def __init__(self, x, typeParam, Body, *args, **kwargs):
-        
+        """
+        Constructor: 
+        INPUTS:
+            x: Two main cases are possible:
+                Keplerian elements as inputs:
+                    a: semi-major axis (m)
+                    e: eccentricity of the orbit
+                    i: inclination of the orbit
+                    RAAN: right ascension of the ascending node
+                    omega: argument of the periapsis
+                    M: mean anomaly
+                    units: 'deg' indicates that the angles have to be 
+                    transformed to radians
+                Cartesian elements:
+                    x,y,z,xdot,ydot,zdot: position and velocity at a given time
+            typeParam:
+                'Keplerian_J2000': x is a matrix with:
+                    row 0: Keplerian elements at J2000
+                    row 1: centennial rates of change of those elements
+                    row 2: date in Julian centuries
+                'Keplerian': to use Keplerian parameters as inputs
+                'Cartesian': to use Cartesian parameters as inputs
+            Body: central Body of the orbit
+        ADDITIONAL INPUTS:
+            unitsI: units of the angles of x: 'rad' or 'deg'
+    """
         self.CentralBody = Body
         
         ######################################
@@ -133,7 +172,8 @@ class BodyOrbit:
         if typeParam == 'Keplerian' or typeParam == 'Keplerian_J2000':
             
             if units_input == 'deg': #Operations are done in radians
-                [self.i,self.RAAN,self.omega,self.M] = [AL_BF.deg2rad(angle) for angle in [self.i,self.RAAN,self.omega,self.M]]
+                [self.i,self.RAAN,self.omega,self.M] = [AL_BF.deg2rad(angle) \
+                for angle in [self.i,self.RAAN,self.omega,self.M]]
 
             #Obtain the eccentric and true anomaly
             self.theta, self.E, self.M = Kepler(self.M, self.e,'Mean')
@@ -161,8 +201,10 @@ class BodyOrbit:
             self.N_mag = np.linalg.norm(self.N)
             
             #Keplerian elements
-            self.a = 1 / (2/self.r_mag-self.v_mag**2/Body.mu) #semi-major axis. Negative if e>1
-            self.e_vec = np.cross(self.v,self.h)/Body.mu - self.r/self.r_mag #eccentricity vector
+            #semi-major axis. Negative if e>1:
+            self.a = 1 / (2/self.r_mag-self.v_mag**2/Body.mu) 
+            #eccentricity vector:
+            self.e_vec = np.cross(self.v,self.h)/Body.mu - self.r/self.r_mag 
             self.e = np.linalg.norm(self.e_vec) #eccentricity of the orbit
 
             self.i = np.arccos(self.h[2]/self.h_mag) #inclination of the orbit
@@ -171,26 +213,31 @@ class BodyOrbit:
             if N_xy == 0.:
                 self.RAAN = 0
             else:
-                self.RAAN = np.arctan2(self.N[1]/N_xy , self.N[0]/N_xy) #right ascension of the ascending node
+                #right ascension of the ascending node:
+                self.RAAN = np.arctan2(self.N[1]/N_xy , self.N[0]/N_xy) 
 
             if self.e == 0.0 or self.N_mag == 0.0: 
                 self.omega = 0.0
             else:
-                self.omega = np.arccos(np.dot(self.e_vec/self.e , self.N/self.N_mag)) #argument of the perihelium
+                #argument of the perihelium:
+                self.omega = np.arccos(np.dot(self.e_vec/self.e , self.N/self.N_mag)) 
                 if (np.dot(np.cross(self.N/self.N_mag , self.e_vec),self.h)) <= 0: 
                     self.omega = -self.omega
             
             if self.r_mag == 0.0 or self.e == 0.0:
                 self.theta = 0.0
             else:
-                self.theta = np.arccos(np.dot(self.r/self.r_mag , self.e_vec/self.e)) #true anomaly
+                 #true anomaly:
+                self.theta = np.arccos(np.dot(self.r/self.r_mag , self.e_vec/self.e))
                 if (np.dot(np.cross(self.e_vec,self.r),self.h)) <= 0: 
                     self.theta = -self.theta
 
             if self.e < 1:
-                self.theta, self.E, self.M = Kepler(self.theta,self.e,'True') #Mean anomaly
+                #Mean anomaly:
+                self.theta, self.E, self.M = Kepler(self.theta,self.e,'True') 
             else:
-                self.theta, self.E, self.M = Keplerh(self.theta,self.e,'True') #Mean anomaly
+                #Mean anomaly:
+                self.theta, self.E, self.M = Keplerh(self.theta,self.e,'True') 
             
         else:
             print('Warning: Specify the type of elements')
@@ -220,15 +267,21 @@ class BodyOrbit:
     def Kepl2Cart(self, *args, **kwargs):
         """
         Kepl2Cart: transform from Keplerian elements to cartesian coordinates.
-        Inputs: 
-        Outputs:
-            [x,y,z,xdot,ydot,zdot]: state of the body given by its position and velocity vectors.
+        INPUTS: 
+        ADDITIONAL INPUTS:
+            givenElements: option to input a vector to be transformed. If false,
+            the elements from the class are used. 
+
+        OUTPUTS:
+            [x,y,z,xdot,ydot,zdot]: state of the body given by its position and 
+            velocity vectors.
         """
         givenElements = kwargs.get('givenElements', 'False') 
         if type(givenElements) != str:
             [a,e,i,RAAN,omega,M,theta] = givenElements
         else:
-            [a,e,i,RAAN,omega,M,theta] = np.array([self.a,self.e,self.i,self.RAAN,self.omega,self.M,self.theta]) 
+            [a,e,i,RAAN,omega,M,theta] = np.array([self.a,self.e,self.i, \
+                self.RAAN,self.omega,self.M,self.theta]) 
 
         l1 = np.cos(RAAN)*np.cos(omega) - np.sin(RAAN)*np.sin(omega)*np.cos(i)
         l2 = -np.cos(RAAN)*np.sin(omega) - np.sin(RAAN)*np.cos(omega)*np.cos(i)
@@ -237,8 +290,10 @@ class BodyOrbit:
         n1 = np.sin(omega)*np.sin(i)
         n2 = np.cos(omega)*np.sin(i)
 
-        H = np.sqrt(self.CentralBody.mu*a*(1-e**2)) #magnitude of the angular momentum
-        r = a*(1-e*np.cos(self.E)) #magnitude of the position vector at a given moment
+        #magnitude of the angular momentum:
+        H = np.sqrt(self.CentralBody.mu*a*(1-e**2)) 
+        #magnitude of the position vector at a given moment:
+        r = a*(1-e*np.cos(self.E)) 
 
         #Position vector
         x = l1*r*np.cos(theta) + l2*r*np.sin(theta) 
@@ -253,13 +308,14 @@ class BodyOrbit:
         return [x,y,z,xdot,ydot,zdot]
 
     
-    def Propagation(self,t, typeParam, *args, **kwargs):
+    def Propagation(self, t, typeParam, *args, **kwargs):
         """
         Propagation: propagate the mean anomaly M in time.
-        Inputs: 
+        INPUTS: 
             t: time in seconds at which the position wants to be known with
                 respect to the given state in the init
-        Outputs: 
+            typeParam: type fo the elements: "Keplerian", "Cartesian".
+        OUTPUTS: 
             M: new mean anomaly
         """
         self.M += self.n*t # Propagate in time
@@ -280,6 +336,10 @@ class BodyOrbit:
             return x
     
     def atPeriapsis(self):
+        """
+        atPeriapsis: find the radius of the periapsis, velocity at periapsis and
+        time since passage through periapsis
+        """
         self.rp, self.vp = VisVivaEq(self.CentralBody, self.a, r = self.rp)
         self.tp = self.M / self.n # time since passage through periapsis
 
@@ -297,7 +357,8 @@ class BodyOrbit:
 
     # def PropagationUniversal(self, t, typeParam, *args, **kwargs):
     #     """
-    #     Propagation: propagate the mean anomaly M in time. Valid for ellipses, hyperbola, parabola
+    #     Propagation: propagate the mean anomaly M in time. Valid for ellipses, 
+    #     hyperbola, parabola
     #     Inputs: 
     #         t: time in seconds at which the position wants to be known with
     #             respect to the given state in the init
@@ -312,10 +373,11 @@ class BodyOrbit:
 
     def PlotOrbit(self):
         """
-        PlotOrbit: plot the relative position of the planets at a given date for each one
-        Inputs: 
+        PlotOrbit: plot the relative position of the planets at a given date for
+         each one
+        INPUTS: 
             Body: central Body
-        Outputs:
+        OUTPUTS:
             xEl_E: x coordinate of the ellipse that represents the orbit
             yEl_E: y coordinate of the ellipse that represents the orbit
         """
@@ -340,10 +402,13 @@ class BodyOrbit:
         fig, ax = plt.subplots(1,1, figsize = (9,8))
         # Plot orbit
         plt.plot(xEl_E,yEl_E,color = 'black',linestyle = '--') # Plot ellipse
-        plt.plot([self.r[0],0],[self.r[1],0],color = 'black') #Plot line from planet to the Sun
-        plt.plot(self.r[0],self.r[1], marker = "o",markersize = 20, color = 'black', alpha = 0.5,label = 'Position') # Plot planet
+        # Plot line from planet to the Sun:
+        plt.plot([self.r[0],0],[self.r[1],0],color = 'black') 
+        plt.plot(self.r[0],self.r[1], marker = "o",markersize = 20, \
+             color = 'black', alpha = 0.5,label = 'Position') # Plot planet
 
-        plt.plot(0,0,Markersize = 695508/15000,color= self.CentralBody.color,marker="o")
+        plt.plot(0, 0, Markersize = 695508/15000, color= self.CentralBody.color,\
+             marker="o")
         
         plt.title('2D Trajectory',size = 22)
 
@@ -360,7 +425,8 @@ class BodyOrbit:
         text = ax.yaxis.get_offset_text()
         text.set_size(15) #
 
-#         lgnd = plt.legend(bbox_to_anchor=(0.5, 0), loc='lower left',ncol=2, mode="expand", borderaxespad=0.,fontsize=16)
+#         lgnd = plt.legend(bbox_to_anchor=(0.5, 0), loc='lower left',ncol=2, \
+#               mode="expand", borderaxespad=0.,fontsize=16)
 #         lgnd.legendHandles[0]._legmarker.set_markersize(20)
         
     #     plt.savefig("_%i.png"%i,dpi=200,bbox_inches='tight')
@@ -371,6 +437,13 @@ class BodyOrbit:
 # STUMPFF FUNCTIONS
 ################################################################################
 def Stumpff_C(z):
+    """
+    Stumpff_C: Stumpff function C for the propagation with universal variables
+    INPUTS: 
+        z: Stumpff variable
+    OUTPUTS:
+        f: value of the function
+    """
     if z > 0:
         f = ( 1 - np.cos(np.sqrt(z)) ) / z
     elif z == 0:
@@ -380,6 +453,13 @@ def Stumpff_C(z):
     return f
 
 def Stumpff_S(z): 
+    """
+    Stumpff_S: Stumpff function S for the propagation with universal variables
+    INPUTS: 
+        z: Stumpff variable
+    OUTPUTS:
+        f: value of the function
+    """
     if z > 0:
         f = ( np.sqrt(z) - np.sin(np.sqrt(z)) ) / z**(3/2)
     elif z == 0:
@@ -394,7 +474,7 @@ def Stumpff_S(z):
 def fgSolveE(E,x):
     """
     fgSolveE: solve Kepler's equation to obtain the Eccentric anomaly
-    Inputs: 
+    INPUTS: 
         E: initial guess of the eccentric anomaly
         x: arguments to put in the equation
             x[0]: E0. Initial eccentric anomaly of the spacecraft
@@ -411,14 +491,15 @@ def fgSolveE(E,x):
                 vz : velocity in the z axis
                 m0: mass at that point
                 ind: indicator to know if there is an impulse
-    Outputs:
+    OUTPUTS:
         f: function to solve
     """
     [E0,M0,M,e,a,SV,mu] = x
     r = np.linalg.norm(SV[0:3])
     
     sigma0 = np.dot(SV[0:3],SV[3:6])/np.sqrt(mu) # Value to put in next equation
-    f = E-E0-(1-r/a)*np.sin(E-E0)+sigma0/np.sqrt(a)*(1-np.cos(E-E0))-(M-M0) # Modified Kepler's equation
+    # Modified Kepler's equation:
+    f = E-E0-(1-r/a)*np.sin(E-E0)+sigma0/np.sqrt(a)*(1-np.cos(E-E0))-(M-M0) 
     # for the case in which we are not in perigee
     return f
             
@@ -426,7 +507,7 @@ def fgSolveE(E,x):
 def fgPropagate(orbit,SV,t): 
     """
     fgPropagate: propagate the mean anomaly M in time.
-    Inputs: 
+    INPUTS: 
         param: list of parameters. [a,e,E0,nu0,M0,n]
             E0: previous eccentric anomaly
             nu0: previous true anomaly
@@ -440,21 +521,23 @@ def fgPropagate(orbit,SV,t):
                 vy : velocity in the y axis
                 vz : velocity in the z axis
         t: difference in time from the previous point
-    Outputs: 
+    OUTPUTS: 
             E: new eccentric anomaly
             M: new mean anomaly
     """
     
     M = orbit.M + orbit.n * t
-    E = spy.fsolve(fgSolveE,orbit.E,[orbit.E,orbit.M,M,orbit.e,orbit.a,SV,orbit.Body.mu]) # Obtain new E
+    E = spy.fsolve(fgSolveE, orbit.E, [orbit.E, orbit.M, M, orbit.e, orbit.a, \
+        SV, orbit.Body.mu]) # Obtain new E
     E = float(E)
     
     return [E,M]
 
 def fgSV(orbit,param,t):
     """
-    fgSV: obtain new state vector from the previous one and the parameters of the orbit.
-    Inputs:
+    fgSV: obtain new state vector from the previous one and the parameters of 
+    the orbit.
+    INPUTS:
         SV0: state vector at the previous point [x,y,z,vx,vy,vz,m,ind]
             x: position in the x axis
             y: position in the y axis
@@ -473,7 +556,7 @@ def fgSV(orbit,param,t):
             M: new mean anomaly
             n: proper motion
         t: difference in time from the previous time
-    Outputs:
+    OUTPUTS:
         SV: new state vector
     """  
     E0 = orbit.E
@@ -484,7 +567,8 @@ def fgSV(orbit,param,t):
     # f and g coefficients
     sigma0 = np.dot(orbit.r,orbit.v)/np.sqrt(orbit.Body.mu)
     f = 1 - orbit.a / r0*(1-np.cos(E-E0))
-    g = (orbit.a * sigma0*(1-np.cos(E-E0)) + r0*np.sqrt(orbit.a)*np.sin(E-E0))/np.sqrt(orbit.Body.mu)
+    g = (orbit.a * sigma0 * (1-np.cos(E-E0)) + r0 * np.sqrt(orbit.a) * \
+        np.sin(E-E0)) / np.sqrt(orbit.Body.mu)
     
     #New position
     SV = np.zeros(6)
@@ -506,14 +590,15 @@ def fgSV(orbit,param,t):
 ################################################################################
 def VisVivaEq(Body,a,*args,**kwargs):
     """
-    VisVivaEq: obtain position from velocity or vice versa with the vis viva or energy equation.
-    inputs:
+    VisVivaEq: obtain position from velocity or vice versa with the vis viva or 
+    energy equation.
+    INPUTS:
         Body: body around which the orbit is performed
         a: semi-major axis of the orbit
         **kwargs:
             r: magnitude of the position vector
             v: magnitude of the velocity vector
-    Outputs: 
+    OUTPUTS: 
         r: magnitude of the position vector
         v: magnitude of the velocity vector
     """
@@ -531,13 +616,14 @@ def VisVivaEq(Body,a,*args,**kwargs):
 
 def KeplerSolve(E0, x):
     """
-    Kepler: function to solve Kepler's equation knowing the mean anomaly. To obtain the eccentric anomaly.
-    Inputs:
+    Kepler: function to solve Kepler's equation knowing the mean anomaly. To 
+    obtain the eccentric anomaly.
+    INPUTS:
         E0: initial guess of the solution
         x: vector containing other parameters of the equation:
             x[0]: Mean anomaly (rad)
             x[1]: Eccentricity
-    Outputs:
+    OUTPUTS:
         F: function to solve (rad)
     """
     #Parametrs of the equation
@@ -550,19 +636,18 @@ def KeplerSolve(E0, x):
 
     return F
 
-
 def Kepler(angle,e,name):
     """
-    Kepler: function to calculate true, eccentric and mean anomaly given one of them and the 
-    eccentricity of the orbit.
-    Inputs:
+    Kepler: function to calculate true, eccentric and mean anomaly given one of 
+    them and the eccentricity of the orbit.
+    INPUTS:
         angle: initial angle known. It can be any of the three mentioned
         e: eccentricity of the orbit (magnitude)
         name: specify which the initial angle given is:
             'Mean': mean anomaly
             'True': true anomaly
             'Eccentric': eccentric anomaly
-    Outputs: 
+    OUTPUTS: 
         theta: true anomaly
         E: eccentric anomaly
         M: mean anomaly
@@ -579,13 +664,15 @@ def Kepler(angle,e,name):
 
     elif name == 'Eccentric':
         E = angle 
-        theta = 2*np.arctan(np.sqrt((1+e)/(1-e))*np.tan(E/2)) #Calculate true anomaly
+        # Calculate true anomaly
+        theta = 2*np.arctan(np.sqrt((1+e)/(1-e))*np.tan(E/2)) 
         M = E-e*np.sin(E) #Kepler's equation
         return(theta,E,M)
     
     elif name == 'True':
         theta = angle
-        E = 2*np.arctan(np.sqrt((1-e)/(1+e))*np.tan(theta/2)) #Calculate eccentric anomaly
+        # Calculate eccentric anomaly:
+        E = 2*np.arctan(np.sqrt((1-e)/(1+e))*np.tan(theta/2)) 
         M = E-e*np.sin(E) #Kepler's equation
         return(theta,E,M)
     
@@ -596,13 +683,14 @@ def Kepler(angle,e,name):
 
 def KeplerhSolve(E0, x):
     """
-    Kepler: function to solve Kepler's equation knowing the mean anomaly. To obtain the eccentric anomaly.
-    Inputs:
+    Kepler: function to solve Kepler's equation knowing the mean anomaly. To 
+    obtain the eccentric anomaly.
+    INPUTS:
         E0: initial guess of the solution
         x: vector containing other parameters of the equation:
             x[0]: Mean anomaly (rad)
             x[1]: Eccentricity
-    Outputs:
+    OUTPUTS:
         F: function to solve (rad)
     """
     #Parametrs of the equation
@@ -616,16 +704,16 @@ def KeplerhSolve(E0, x):
 
 def Keplerh(angle, e, name):
     """
-    Keplerh: function to calculate true, eccentric and mean anomaly given one of them and the 
-    eccentricity of the orbit. For an orbit of e >= 1
-    Inputs:
+    Keplerh: function to calculate true, eccentric and mean anomaly given one of
+    them and the eccentricity of the orbit. For an orbit of e >= 1
+    INPUTS:
         angle: initial angle known. It can be any of the three mentioned
         e: eccentricity of the orbit (magnitude)
         name: specify which the initial angle given is:
             'Mean': mean anomaly
             'True': true anomaly
             'Eccentric': eccentric anomaly
-    Outputs: 
+    OUTPUTS: 
         theta: true anomaly
         E: eccentric anomaly
         M: mean anomaly
@@ -641,13 +729,15 @@ def Keplerh(angle, e, name):
 
     elif name == 'Eccentric':
         E = angle 
-        theta = 2 * np.arctan( np.sqrt( (e+1) / (e-1) ) * np.tan(E/2) ) #Calculate true anomaly
+        # Calculate true anomaly:
+        theta = 2 * np.arctan( np.sqrt( (e+1) / (e-1) ) * np.tan(E/2) ) 
         M = e * np.sinh(E) - E #Kepler's equation
         return(theta, E, M)
     
     elif name == 'True':
         theta = angle
-        E = 2 * np.arctanh( np.sqrt( (e-1) / (e+1) ) * np.tan(theta/2) ) #Calculate eccentric anomaly
+        # Calculate eccentric anomaly:
+        E = 2 * np.arctanh( np.sqrt( (e-1) / (e+1) ) * np.tan(theta/2) ) 
         M = e * np.sinh(E) - E #Kepler's equation
         return(theta, E, M)
     
