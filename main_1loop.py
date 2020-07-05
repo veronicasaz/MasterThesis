@@ -73,14 +73,13 @@ def f(DecV):
 
 def optimize():
     # Optimize outer loop
-    ind = 1000
+    ind = 100
     iterat = 100
     start_time = time.time()
     f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = ind, max_iter = iterat, max_iter_success = 10 )
     t = (time.time() - start_time) 
 
-    print("Time", t)
-    print("Min", f_min)    
+    print("Min", f_min,'time',t)    
     AL_BF.writeData(f_min, 'w', 'SolutionEA.txt')
 
 def coordS():
@@ -117,7 +116,7 @@ def MBH():
     minimizer_kwargs = dict(method="COBYLA", constraints=(cons),options={'disp': False,  'maxiter': 100})#T
 
     start_time = time.time()
-    fmin_3 = spy.basinhopping(f, DecV, niter = 10, minimizer_kwargs=minimizer_kwargs,niter_success = 50,take_step= mytakestep,callback=AL_OPT.print_fun)
+    fmin_3 = spy.basinhopping(f, DecV, niter = 30, minimizer_kwargs=minimizer_kwargs, niter_success = 10, take_step= mytakestep,callback=AL_OPT.print_fun)
     # DecV_optimized2 = spy.basinhopping(main, DecV, niter=20, minimizer_kwargs=minimizer_kwargs,niter_success = 5,callback=print_fun)
     # DecV_optimized2 = basinhopping(Problem, DecV, niter=2, minimizer_kwags=minimizer_kwargs,take_step=mytakestep,callback=print_fun)
     t = (time.time() - start_time) 
@@ -126,6 +125,10 @@ def MBH():
     AL_BF.writeData(fmin_3.x, 'w', 'SolutionMBH.txt')
 
 def MBH_self():
+    niter = 100
+    niterlocal = 100
+    niter_success = 15
+
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
 
     DecV = np.zeros(len(bnds))
@@ -142,8 +145,12 @@ def MBH_self():
         cons.append(l)
         cons.append(u)
 
-    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = 100, niter_local = 20, bnds = bnds, cons = cons)
-    print("Min4", fmin_4)
+    start_time = time.time()
+    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = niter, \
+                  niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
+                  cons = cons, jumpMagnitude = 0.01, tolLocal = 1e2, tolGlobal = 1e3)
+    t = (time.time() - start_time) 
+    print("Min4", fmin_4, 'time', t)
     AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
 
 
@@ -197,5 +204,5 @@ if __name__ == "__main__":
     # optimize()
     # coordS()
     # MBH()
-    # MBH_self()
+    MBH_self()
     propagateSol()
