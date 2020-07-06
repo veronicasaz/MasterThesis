@@ -51,14 +51,14 @@ bnd_vf = ( 0.0, 5e3) # Relative to the planet
 # bnd_vf = ( v_escape *0.9, v_escape *1.1)
 bnd_vf_angle = (0., 2*np.pi)
 bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
-bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
+# bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
 bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(600) )
 bnd_deltavmag = (0., 1.) # magnitude
 bnd_deltavang = (-np.pi, np.pi) # angle
 
 bnds = (bnd_v0, bnd_v0_angle, bnd_v0_angle, \
         bnd_vf, bnd_vf_angle, bnd_vf_angle, \
-        bnd_t0, bnd_m0, bnd_t_t)
+        bnd_t0, bnd_t_t)
 
 for i in range(Nimp): # 3 times because impulses are 3d vectors
     bnds += (bnd_deltavmag, bnd_deltavang, bnd_deltavang)
@@ -73,8 +73,8 @@ def f(DecV):
 
 def optimize():
     # Optimize outer loop
-    ind = 100
-    iterat = 100
+    ind = 1
+    iterat = 1
     start_time = time.time()
     f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = ind, max_iter = iterat, max_iter_success = 10 )
     t = (time.time() - start_time) 
@@ -200,9 +200,17 @@ def propagateSol():
         if ( DecV_I[j] < bnds[j][0] ) or ( DecV_I[j] > bnds[j][1] ):
             print(j, "Within bounds?", "min", bnds[j][0], "value",DecV_I[j], "max",bnds[j][1])
 
+def propagateOne():
+    DecV_I = np.loadtxt("SolutionEA.txt")
+
+    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    Fitness.printResult()
+    print(f) 
+
 if __name__ == "__main__":
-    # optimize()
+    optimize()
     # coordS()
     # MBH()
-    MBH_self()
-    propagateSol()
+    # MBH_self()
+    # propagateSol()
+    # propagateOne()

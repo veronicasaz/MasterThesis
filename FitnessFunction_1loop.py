@@ -45,6 +45,8 @@ class Fitness:
         # print("mass",m_fuel, "Error", Error)
         return f
 
+    def adaptDecisionVector(self):
+
     def calculateFitness(self, DecV, optMode = True, plot = False):
         """
         calculateFitness: obtain the value of the fitness function
@@ -56,19 +58,22 @@ class Fitness:
                             (will be multiplied by the max DeltaV)
         """        
         # DecV 
+        # self.adaptDecisionVector
         v0 = np.array(DecV[0:3]) # vector, [magnitude, angle, angle]
         vf = np.array(DecV[3:6]) # vector, [magnitude, angle, angle]
-        self.t0, mf, self.t_t = DecV[6:9]
-        self.m0  = mf + self.Spacecraft.m_dry
+        self.t0, self.t_t = DecV[6:8]
         
         if optMode == True:
-            DeltaV_list = np.array(DecV[9:]).reshape(-1,3) # make a Nimp x 3 matrix
+            DeltaV_list = np.array(DecV[8:]).reshape(-1,3) # make a Nimp x 3 matrix
         else:
-            DeltaV_list = DecV[9:][0]
+            DeltaV_list = DecV[8:][0]
 
-        self.DeltaV_list = np.zeros(np.shape(DeltaV_list))
-
+        ########################################################################
+        # INITIAL CALCULATION OF VARIABLES
+        ########################################################################
         # Modify from magnitude angle angle to cartesian
+        self.DeltaV_list = np.zeros(np.shape(DeltaV_list))
+        DeltaV_sum = np.zeros(len(self.DeltaV_list)) # Magnitude of the impulses
         for i in range(len(self.DeltaV_list)):
             mag = DeltaV_list[i,0]
             angle1 = DeltaV_list[i,1]
@@ -76,10 +81,8 @@ class Fitness:
             self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
             self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
             self.DeltaV_list[i, 2] = mag * np.sin(angle2)
+            DeltaV_sum[i] = np.linalg.norm( self.DeltaV_list[i] )
 
-        # = Thrust for segment
-        self.DeltaV_max = self.Spacecraft.T / self.m0 * self.t_t / (self.Nimp + 1) 
- 
         # Write velocity as x,y,z vector
         v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
                                 np.sin(v0[1])*np.cos(v0[2]),
@@ -88,6 +91,28 @@ class Fitness:
                                 np.sin(vf[1])*np.cos(vf[2]),
                                 np.sin(vf[2]) ])
 
+        # Sum of all the Delta V = DeltaV max * sum Delta V_list
+        # Assumption: the DeltaV_max is calculated as if mass is constant and 
+        # equal to the dry mass as it is the largest contribution. This means 
+        # that the DelaV_max is actually smaller than it will be obtained in this
+        # problem
+        # = Thrust for segment
+        self.DeltaV_max = self.Spacecraft.T / self.Spacecraft.m_dry * \
+            self.t_t / (self.Nimp + 1) 
+
+        # Total DeltaV 
+        DeltaV_total = sum(DeltaV_sum) * self.DeltaV_max
+        print("DeltaV_total", DeltaV_total)
+
+        #Calculate total mass of fuel for the given impulses
+        self.m0 = \
+            self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
+        self.m_fuel = self.m0 - self.Spacecraft.m_dry
+        # self.m0  = mf + self.Spacecraft.m_dry
+
+        ########################################################################
+        # Propagation
+        ########################################################################
         # Times and ephemeris
         # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
         t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
@@ -115,8 +140,9 @@ class Fitness:
         # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
 
-        # Calculate mass used
-        self.m_fuel = self.m0 - self.__propagateMass()
+        # # Calculate mass used
+        # self.m_fuel = self.m0 - self.__propagateMass()
+        # print("Mass of fuel calculated from steps", self.m_fuel)
 
         if plot == True:
             # print(np.flipud(SV_list_back))
@@ -125,6 +151,10 @@ class Fitness:
         # Return fitness function
         self.f = self.objFunction(self.m_fuel, self.Error)
         return self.f
+
+    def calculateFeasibility(self, DecV, optMode = True):
+
+    def calculateMass(self, DecV, optMode = True):
 
     def printResult(self):
         print("Mass of fuel", self.m_fuel, "Error", self.Error)
