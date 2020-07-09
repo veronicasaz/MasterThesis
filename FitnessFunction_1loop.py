@@ -33,36 +33,15 @@ class Fitness:
         # Choose odd number to compare easily in middle point
         self.Nimp = kwargs.get('Nimp', 35) 
 
-    def objFunction(self, m_fuel, Error):
-        f0 = m_fuel 
-        fc1 = (np.linalg.norm(Error[0:3]) - 1e6)/1e6
-        # fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
-        fc2 = np.linalg.norm(Error[3:])
-        
-        # Penalization functions
-        # print("obje", f0, fc1, fc2)
-        f = f0 + fc1 + fc2
-        # print("mass",m_fuel, "Error", Error)
-        return f
-
-    def adaptDecisionVector(self):
-
-    def calculateFitness(self, DecV, optMode = True, plot = False):
+    def adaptDecisionVector(self, DecV, optMode):
+        """ 
+        adaptDecisionVector: modify decision vector to input in the problem
         """
-        calculateFitness: obtain the value of the fitness function
-        INPUTS:
-            DecV_I: decision vector of the inner loop
-                t_t: transfer time for the leg. In seconds
-                DeltaV_list: list of size = Number of impulses 
-                            with the 3D impulse between 0 and 1 
-                            (will be multiplied by the max DeltaV)
-        """        
-        # DecV 
-        # self.adaptDecisionVector
         v0 = np.array(DecV[0:3]) # vector, [magnitude, angle, angle]
         vf = np.array(DecV[3:6]) # vector, [magnitude, angle, angle]
         self.t0, self.t_t = DecV[6:8]
-        
+
+        # Delta V
         if optMode == True:
             DeltaV_list = np.array(DecV[8:]).reshape(-1,3) # make a Nimp x 3 matrix
         else:
@@ -102,13 +81,40 @@ class Fitness:
 
         # Total DeltaV 
         DeltaV_total = sum(DeltaV_sum) * self.DeltaV_max
-        print("DeltaV_total", DeltaV_total)
 
         #Calculate total mass of fuel for the given impulses
         self.m0 = \
             self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
         self.m_fuel = self.m0 - self.Spacecraft.m_dry
-        # self.m0  = mf + self.Spacecraft.m_dry
+
+        return v0_cart, vf_cart
+
+    def objFunction(self, m_fuel, Error):
+        f0 = m_fuel 
+        fc1 = (np.linalg.norm(Error[0:3]) - 1e6)/1e6
+        # fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+        fc2 = np.linalg.norm(Error[3:])
+        
+        # Penalization functions
+        # print("obje", f0, fc1, fc2)
+        f = f0 + fc1 + fc2
+        # print("mass",m_fuel, "Error", Error)
+        return f
+
+    def calculateFitness(self, DecV, optMode = True, plot = False):
+        """
+        calculateFitness: obtain the value of the fitness function
+        INPUTS:
+            DecV_I: decision vector of the inner loop
+                t_t: transfer time for the leg. In seconds
+                DeltaV_list: list of size = Number of impulses 
+                            with the 3D impulse between 0 and 1 
+                            (will be multiplied by the max DeltaV)
+        """        
+                ########################################################################
+        # DecV
+        ########################################################################
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
 
         ########################################################################
         # Propagation
@@ -136,25 +142,75 @@ class Fitness:
         SV_list_back_corrected = np.copy(SV_list_back)
         SV_list_back_corrected[:,3:] *= -1 # change sign of velocity
 
-        # Compare state at middle point
+        ########################################################################
+        # Compare State in middle point
+        ########################################################################
         # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
-
-        # # Calculate mass used
-        # self.m_fuel = self.m0 - self.__propagateMass()
-        # print("Mass of fuel calculated from steps", self.m_fuel)
 
         if plot == True:
             # print(np.flipud(SV_list_back))
             self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
-        # Return fitness function
+        ########################################################################
+        # Return fitness 
+        ########################################################################
         self.f = self.objFunction(self.m_fuel, self.Error)
         return self.f
 
     def calculateFeasibility(self, DecV, optMode = True):
+        """
+        """
+        ########################################################################
+        # DecV
+        ########################################################################
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
+
+        ########################################################################
+        # Propagation
+        ########################################################################
+        # Times and ephemeris
+        # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
+        t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
+
+        r_p0, v_p0 = self.earthephem.eph(self.t0)
+        r_p1, v_p1 = self.marsephem.eph(t_1.JD_0)
+        
+        # Change from relative to heliocentric velocity
+        self.v0 = v0_cart + v_p0 
+        self.vf = vf_cart + v_p1 
+
+        # Create state vector for initial and final point
+        SV_0 = np.append(r_p0, self.v0)
+        SV_1 = np.append(r_p1, -self.vf) # - to propagate backwards
+
+        # Sims-Flanagan
+        SV_list_forw = self.__SimsFlanagan(SV_0, saveState=True)
+        SV_list_back = self.__SimsFlanagan(SV_1, backwards = True, saveState=True)
+
+        # convert back propagation so that the signs of velocity match
+        SV_list_back_corrected = np.copy(SV_list_back)
+        SV_list_back_corrected[:,3:] *= -1 # change sign of velocity
+
+        ########################################################################
+        # Compare State in middle point
+        ########################################################################
+        # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
+        self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
+
+        fc1 = (np.linalg.norm(self.Error[0:3]) - 1e6)/1e6
+        # fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
+        fc2 = np.linalg.norm(self.Error[3:])
+        return fc1 + fc2
+
 
     def calculateMass(self, DecV, optMode = True):
+        ########################################################################
+        # DecV
+        ########################################################################
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
+
+        return self.m_fuel
 
     def printResult(self):
         print("Mass of fuel", self.m_fuel, "Error", self.Error)

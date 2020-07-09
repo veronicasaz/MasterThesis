@@ -13,7 +13,7 @@ import time
 ########################
 # Initial settings
 ########################
-Nimp = 55
+Nimp = 25
 Fitness = Fitness(Nimp = Nimp)
 
 ########################
@@ -45,14 +45,14 @@ v_escape = np.sqrt(2*AL_BF.mu_S / 227940e6) # velocity of a parabola at mars
 
 # Bounds of the outer loop
 # bnd_v0 = (vp_Hohm * 0.2, vp_Hohm *0.6) 
-bnd_v0 = (0, 4e3) # Relative to the planet
+bnd_v0 = (0, 5e3) # Relative to the planet
 bnd_v0_angle = (0., 2*np.pi)
-bnd_vf = ( 0.0, 5e3) # Relative to the planet
+bnd_vf = ( 0.0, 9e3) # Relative to the planet
 # bnd_vf = ( v_escape *0.9, v_escape *1.1)
 bnd_vf_angle = (0., 2*np.pi)
 bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
 # bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
-bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(600) )
+bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(900) )
 bnd_deltavmag = (0., 1.) # magnitude
 bnd_deltavang = (-np.pi, np.pi) # angle
 
@@ -68,28 +68,34 @@ for i in range(Nimp): # 3 times because impulses are 3d vectors
 # Calculate fitness
 ########################
 def f(DecV):
-    return Fitness.calculateFitness(DecV, plot = False)
+    return Fitness.calculateFeasibility(DecV)
     
 
 def optimize():
     # Optimize outer loop
-    ind = 1
-    iterat = 1
+    ind = 1000
+    iterat = 1000
+    itersuccess = 200 # At some point it takes a lot of time to find a better one
+    elitism = 0.01
+    mutat = 0.001
     start_time = time.time()
-    f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = ind, max_iter = iterat, max_iter_success = 10 )
+    f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, \
+        ind = ind, max_iter = iterat, max_iter_success = itersuccess,
+        elitism = elitism, mutation = mutat )
     t = (time.time() - start_time) 
 
     print("Min", f_min,'time',t)    
     AL_BF.writeData(f_min, 'w', 'SolutionEA.txt')
+    Fitness.calculateFitness(f_min, plot = True)
+    Fitness.printResult()
 
 def coordS():
     # Coordinate search opt
     f_min = np.loadtxt("SolutionEA.txt")
-    stepsize = np.zeros(len(f_min)) + 0.1
-    stepsize[0:6] = 5e3 # Velocities
+    stepsize = np.zeros(len(f_min)) 
+    stepsize[0:6] = 1e3 # Velocities
     stepsize[6] = 15 # initial time
-    stepsize[7] = 10 # mass
-    stepsize[8] = AL_BF.days2sec(10) # transfer time
+    stepsize[7] = AL_BF.days2sec(10) # transfer time
 
     f_min2, Best2 = AL_OPT.coordinateSearch(f, f_min, bnds, stepsize, x_add = False,max_iter = 10)
     print("Min2")
@@ -125,9 +131,9 @@ def MBH():
     AL_BF.writeData(fmin_3.x, 'w', 'SolutionMBH.txt')
 
 def MBH_self():
-    niter = 100
+    niter = 1e4
     niterlocal = 100
-    niter_success = 15
+    niter_success = 50
 
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
 
@@ -148,10 +154,12 @@ def MBH_self():
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = niter, \
                   niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
-                  cons = cons, jumpMagnitude = 0.01, tolLocal = 1e2, tolGlobal = 1e3)
+                  cons = cons, jumpMagnitude = 0.005, tolLocal = 1e2, tolGlobal = 1e2)
     t = (time.time() - start_time) 
     print("Min4", fmin_4, 'time', t)
     AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
+    Fitness.calculateFitness(fmin_4, plot = True)
+    Fitness.printResult()
 
 
 def propagateSol():
@@ -203,14 +211,14 @@ def propagateSol():
 def propagateOne():
     DecV_I = np.loadtxt("SolutionEA.txt")
 
-    f = Fitness.calculateFitness(DecV_I, optMode = True, plot = True)
+    f = Fitness.calculateFeasibility(DecV_I)
     Fitness.printResult()
     print(f) 
 
 if __name__ == "__main__":
-    optimize()
+    # optimize()
     # coordS()
     # MBH()
-    # MBH_self()
+    MBH_self()
     # propagateSol()
     # propagateOne()
