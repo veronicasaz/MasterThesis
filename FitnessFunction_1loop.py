@@ -312,6 +312,16 @@ class Fitness:
         y_b = SV_b[:,1]
         z_b = SV_b[:,2]
 
+        dv1 = self.DeltaV_list[0:len(x_f), :]*1e11
+        dv2 = self.DeltaV_list[1:len(x_b), :]*1e11
+
+        for i in range(len(dv1)):
+            plt.arrow(x_f[i], y_f[i], dv1[i, 0], dv1[i, 1], length_includes_head=True,
+          head_width=5e9, head_length=5e9, fc='k', ec='k')
+        for i in range(len(dv2)):
+            plt.arrow(x_b[i], y_b[i], dv2[i, 0], dv2[i, 1], length_includes_head=True,
+          head_width=5e9, head_length=5e9, fc='k', ec='k')
+
         ax.plot(x_f, y_f, '^-', c = bodies[1].color)
         ax.plot(x_b, y_b, '^-', c = bodies[2].color)
 
