@@ -473,8 +473,6 @@ def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
     bestMin =  f(x)
     jumpMagnitude = 1
 
-    previousMin = bestMin
-
     while n_itercounter < niter:
         n_itercounter += 1
         
@@ -496,12 +494,8 @@ def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
 
         # Check te current point from which to jump: after doing a long jump or
         # when the solution is improved        
-        if jumpMagnitude == 1:
-            bestMinArea = currentMin # Jump from the best minimum in the area
+        if jumpMagnitude == 1 or currentMin < previousMin:
             x = solutionLocal.x
-        elif currentMin < bestMinArea: # Best minimum found in the area
-            x = solutionLocal.x
-            bestMinArea = currentMin
             
         # Check improvement      
         if currentMin < bestMin and feasible == True: # Improvement            
