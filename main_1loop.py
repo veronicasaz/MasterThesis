@@ -2,7 +2,7 @@ import numpy as np
 import pykep as pk
 import scipy.optimize as spy
 
-from FitnessFunction_1loop import Fitness
+from FitnessFunction_normalized import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_Ephem as AL_Eph
@@ -13,7 +13,7 @@ import time
 ########################
 # Initial settings
 ########################
-Nimp = 25
+Nimp = 5
 Fitness = Fitness(Nimp = Nimp)
 
 ########################
@@ -37,11 +37,10 @@ transfertime = 250
 # # DecV_O = [v1, np.array(v_M), date0, m0]
 # print(v1, v2)
 
-
-# Initial approx of velocity for the launch at the Earth
-vp_Hohm = np.sqrt( 2*AL_BF.mu_S * (1/AL_BF.AU - 1/(227940e6 + AL_BF.AU) ) )
-va_Hohm = np.sqrt( 2*AL_BF.mu_S * (1/227940e6 - 1/(227940e6 + AL_BF.AU) ) )
-v_escape = np.sqrt(2*AL_BF.mu_S / 227940e6) # velocity of a parabola at mars
+# # Initial approx of velocity for the launch at the Earth
+# vp_Hohm = np.sqrt( 2*AL_BF.mu_S * (1/AL_BF.AU - 1/(227940e6 + AL_BF.AU) ) )
+# va_Hohm = np.sqrt( 2*AL_BF.mu_S * (1/227940e6 - 1/(227940e6 + AL_BF.AU) ) )
+# v_escape = np.sqrt(2*AL_BF.mu_S / 227940e6) # velocity of a parabola at mars
 
 # Bounds of the outer loop
 # bnd_v0 = (vp_Hohm * 0.2, vp_Hohm *0.6) 
@@ -70,7 +69,6 @@ for i in range(Nimp): # 3 times because impulses are 3d vectors
 def f(DecV):
     return Fitness.calculateFeasibility(DecV)
     
-
 def optimize():
     # Optimize outer loop
     ind = 1000
@@ -131,7 +129,7 @@ def MBH():
     AL_BF.writeData(fmin_3.x, 'w', 'SolutionMBH.txt')
 
 def MBH_self():
-    niter = 1e4
+    niter = 10
     niterlocal = 100
     niter_success = 50
 
@@ -209,11 +207,10 @@ def propagateSol():
             print(j, "Within bounds?", "min", bnds[j][0], "value",DecV_I[j], "max",bnds[j][1])
 
 def propagateOne():
-    DecV_I = np.loadtxt("SolutionEA.txt")
+    DecV_I = np.loadtxt("SolutionMBH_self.txt")
 
-    f = Fitness.calculateFeasibility(DecV_I)
-    Fitness.printResult()
-    print(f) 
+    # f = Fitness.calculateFeasibility(DecV_I)
+    Fitness.calculateFitness(DecV_I, plot = True)
 
 if __name__ == "__main__":
     # optimize()
@@ -221,4 +218,4 @@ if __name__ == "__main__":
     # MBH()
     MBH_self()
     # propagateSol()
-    # propagateOne()
+    propagateOne()
