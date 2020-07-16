@@ -466,7 +466,7 @@ def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
     cons =  kwargs.get('cons', None)
     jumpMagnitude_default =  kwargs.get('jumpMagnitude', 0.1) # Small jumps to search around the minimum
     tolLocal = kwargs.get('tolLocal', 1e2)
-    tolGlobal = kwargs.get('tolGobal', 500)
+    tolGlobal = kwargs.get('tolGobal', 1e-5)
     
     n_itercounter = 1
     n_noimprove = 0

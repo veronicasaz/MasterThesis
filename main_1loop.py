@@ -129,9 +129,9 @@ def MBH():
     AL_BF.writeData(fmin_3.x, 'w', 'SolutionMBH.txt')
 
 def MBH_self():
-    niter = 10
+    niter = 1e4
     niterlocal = 100
-    niter_success = 50
+    niter_success = 20
 
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
 
@@ -152,7 +152,7 @@ def MBH_self():
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = niter, \
                   niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
-                  cons = cons, jumpMagnitude = 0.005, tolLocal = 1e2, tolGlobal = 1e2)
+                  cons = cons, jumpMagnitude = 0.005, tolLocal = 1e-2, tolGlobal = 1e-5)
     t = (time.time() - start_time) 
     print("Min4", fmin_4, 'time', t)
     AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
@@ -216,6 +216,7 @@ if __name__ == "__main__":
     # optimize()
     # coordS()
     # MBH()
-    MBH_self()
+    # MBH_self()
     # propagateSol()
     propagateOne()
+

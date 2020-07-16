@@ -110,8 +110,8 @@ class Fitness:
                 DeltaV_list: list of size = Number of impulses 
                             with the 3D impulse between 0 and 1 
                             (will be multiplied by the max DeltaV)
-        """        
-                ########################################################################
+        """
+        ########################################################################
         # DecV
         ########################################################################
         v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
@@ -200,8 +200,8 @@ class Fitness:
 
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
-        print(fc1, fc2)
-        return fc1 + fc2
+        # print(fc1, fc2)
+        return fc1* 1e2 + fc2 # *1000 so that in tol they are in same order of mag
 
 
     def calculateMass(self, DecV, optMode = True):
