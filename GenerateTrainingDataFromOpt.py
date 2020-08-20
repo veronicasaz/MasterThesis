@@ -135,13 +135,14 @@ class Fitness:
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
         # print(fc1, fc2)
 
-        self.__savetoFile()
         return fc1* 1e2 + fc2 # *1000 so that in tol they are in same order of mag
 
+    def printResult(self):
+        print("Error", self.Error)
 
-    def __savetoFile(self):
+    def savetoFile(self):
         """
-        __savetoFile:
+        savetoFile:
 
         Append to file
         save in different columns. 
@@ -179,8 +180,8 @@ class Fitness:
         # Feasibility
         # if np.linalg.norm(self.Error[0:3]) <= 100e3 and \
         #     np.linalg.norm(self.Error[3:]) <= 100: # Feasible trajectory
-        if np.linalg.norm(self.Error[0:3]) <= 1e6 and \
-            np.linalg.norm(self.Error[3:]) <= 1e3: # TODO: change. Too much
+        if np.linalg.norm(self.Error[0:3]) <= 1e7 and \
+            np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
             feasible = 1
         else:
             feasible = 0
@@ -243,7 +244,7 @@ if __name__ == "__main__":
     ########################
     # Initial settings
     ########################
-    Nimp = 5
+    Nimp = 10
     Fitness = Fitness(Nimp = Nimp)
     date0 = np.array([15,6,2019,0])
     t0 = AL_Eph.DateConv(date0,'calendar') #To JD
@@ -278,44 +279,53 @@ if __name__ == "__main__":
     Heading = [ "Label", "t_t", "m_0", "|Delta_a |", \
         "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
         "Delta_omega", "Delta_theta"]
-    with open(feasibilityFileName, "w+") as myfile:
+    with open(feasibilityFileName, "w") as myfile:
         for i in Heading:
             myfile.write(i +"   ")
         myfile.write("\n")
     myfile.close()
-    with open(massFileName, "w+") as myfile:
+    with open(massFileName, "w") as myfile:
         for i in Heading:
             myfile.write(i +"   ")
         myfile.write("\n")
     myfile.close()
 
     ####################
-    # OPTIMIZATION
+    # CREATION OF RANDOM POPULATION
     ####################
-    niter = 1e3 # To test it
+    nsamples = 1000 # number of training samples. TODO: increase
+    sample_inputs = np.zeros((nsamples, len(bnds)))
+    for decv in range(len(bnds)): 
+        sample_inputs[:, decv] = np.random.uniform(low = bnds[decv][0], \
+            high = bnds[decv][1], size = nsamples)
+
+    ####################
+    # EVALUATION OF EACH SAMPLE
+    # The idea is to use each sample and optimize it so that it is easier to 
+    # find feasible trajectories
+    # Only the initial and the optimized trajectory will be saved
+    ####################
+    niter = 50
     niterlocal = 100
-    niter_success = 20 # To avoid having all the training data around the same point
-
+    niter_success = 50
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
-
-    DecV = np.zeros(len(bnds))
-    for i in range(len(bnds)):
-        DecV[i] = ( bnds[i][0] + bnds[i][1] ) /2
-
-    cons = []
-    for factor in range(len(DecV)):
-        lower, upper = bnds[factor]
-        l = {'type': 'ineq',
-            'fun': lambda x, a=lower, i=factor: x[i] - a}
-        u = {'type': 'ineq',
-            'fun': lambda x, b=upper, i=factor: b - x[i]}
-        cons.append(l)
-        cons.append(u)
-
-    start_time = time.time()
-    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, niter = niter, \
-                    niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
-                    cons = cons, jumpMagnitude = 0.005, tolLocal = 1e-2, tolGlobal = 1e-5)
-    t = (time.time() - start_time) 
-    print("Min4", fmin_4, 'time', t)
-    # AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
+    
+    for i_sample in range(nsamples):
+        print("-------------------------------")
+        print("Sample %i"%i_sample)
+        print("-------------------------------")
+        sample = sample_inputs[i_sample, :]
+        fvalue = f(sample)
+        Fitness.savetoFile() # saves the current values
+        
+        Fitness.printResult()
+        
+        # optimize starting from sample
+        xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep, niter = niter, \
+                  niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
+                  jumpMagnitude = 0.005, tolLocal = 1e-2, tolGlobal = 1e-5)
+            
+        fvalue = f(xmin)
+        Fitness.savetoFile()
+        Fitness.printResult()
+        
