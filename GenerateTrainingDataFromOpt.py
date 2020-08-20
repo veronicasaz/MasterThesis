@@ -53,21 +53,24 @@ class Fitness:
         self.DeltaV_list = np.zeros(np.shape(DeltaV_list))
         DeltaV_sum = np.zeros(len(self.DeltaV_list)) # Magnitude of the impulses
         for i in range(len(self.DeltaV_list)):
-            mag = DeltaV_list[i,0]
-            angle1 = DeltaV_list[i,1]
-            angle2 = DeltaV_list[i,2]
-            self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
-            self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
-            self.DeltaV_list[i, 2] = mag * np.sin(angle2)
+            # mag = DeltaV_list[i,0]
+            # angle1 = DeltaV_list[i,1]
+            # angle2 = DeltaV_list[i,2]
+            self.DeltaV_list[i, :] = AL_BF.convert3dvector(DeltaV_list[i,:], "polar")
+            # self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
+            # self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
+            # self.DeltaV_list[i, 2] = mag * np.sin(angle2)
             DeltaV_sum[i] = np.linalg.norm( self.DeltaV_list[i] )
 
         # Write velocity as x,y,z vector
-        v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
-                                np.sin(v0[1])*np.cos(v0[2]),
-                                np.sin(v0[2]) ])
-        vf_cart = vf[0] *np.array([ np.cos(vf[1])*np.cos(vf[2]) , \
-                                np.sin(vf[1])*np.cos(vf[2]),
-                                np.sin(vf[2]) ])
+        v0_cart = AL_BF.convert3dvector(v0, "polar")
+        vf_cart = AL_BF.convert3dvector(vf, "polar")
+        # v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
+        #                         np.sin(v0[1])*np.cos(v0[2]),
+        #                         np.sin(v0[2]) ])
+        # vf_cart = vf[0] *np.array([ np.cos(vf[1])*np.cos(vf[2]) , \
+        #                         np.sin(vf[1])*np.cos(vf[2]),
+        #                         np.sin(vf[2]) ])
 
         # Sum of all the Delta V = DeltaV max * sum Delta V_list
         # Assumption: the DeltaV_max is calculated as if mass is constant and 
@@ -293,11 +296,51 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 1000 # number of training samples. TODO: increase
+    nsamples = 10 # number of training samples. TODO: increase
     sample_inputs = np.zeros((nsamples, len(bnds)))
-    for decv in range(len(bnds)): 
+    # for decv in range(len(bnds)): 
+    #     sample_inputs[:, decv] = np.random.uniform(low = bnds[decv][0], \
+    #         high = bnds[decv][1], size = nsamples)
+
+    ####################
+    # CREATION OF RANDOM POPULATION WITH LAMBERT
+    ####################
+    for decv in range(6,8): 
         sample_inputs[:, decv] = np.random.uniform(low = bnds[decv][0], \
             high = bnds[decv][1], size = nsamples)
+    
+    # Lambert for calculation of the velocity vectors 
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
+    for i in range(nsamples):
+        t_0 = sample_inputs[i, 6]
+        t_t = sample_inputs[i, 7]
+
+        r_0, vE = earthephem.eph(t_0)
+        r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
+
+        
+        lambert = AL_TR.Lambert(np.array(r_0), np.array(r_1), t_t, Fitness.sun.mu)
+        v1_h, v2_h = lambert.TerminalVelVect()
+        v1 = v1_h- vE
+        v2 = v2_h- vM
+
+        print("velocity", v1, v1_h,v2)
+        print(bnds[0:6])
+        for bound in range(3):
+            if v1[bound] >= bnds[bound][0] and  v1[bound] <= bnds[bound][1] and \
+               v2[bound] >= bnds[bound+3][0] and  v2[bound] <= bnds[bound+3][1]:
+                None
+            else:
+                sample_inputs[i,:] = np.zeros(len(bnds))
+                # set all to zero to recognise them
+
+        sample_inputs[i, 0:3] = AL_BF.convert3dvector(v1, "cartesian")
+        sample_inputs[i, 3:6] = AL_BF.convert3dvector(v2, "cartesian")
+
+
+        # if velocity out of bounds it should be eliminated in the optimization
+
 
     ####################
     # EVALUATION OF EACH SAMPLE
@@ -305,9 +348,9 @@ if __name__ == "__main__":
     # find feasible trajectories
     # Only the initial and the optimized trajectory will be saved
     ####################
-    niter = 50
+    niter = 20
     niterlocal = 100
-    niter_success = 50
+    niter_success = 20
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
     
     for i_sample in range(nsamples):
