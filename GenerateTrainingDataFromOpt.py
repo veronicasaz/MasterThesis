@@ -193,14 +193,20 @@ class Fitness:
         vectorFeasibility = np.append(feasible, inputs)
         with open(feasibilityFileName, "a") as myfile:
             for value in vectorFeasibility:
-                myfile.write(str(value) +"    ")
+                if value != vectorFeasibility[-1]:
+                    myfile.write(str(value) +" ")
+                else:
+                    myfile.write(str(value))
             myfile.write("\n")
         myfile.close()
 
         vectorMass = np.append(self.m_fuel, inputs)
         with open(massFileName, "a") as myfile:
             for value in vectorMass:
-                myfile.write(str(value) +"    ")
+                if value != vectorMass[-1]:
+                    myfile.write(str(value) +" ")
+                else:
+                    myfile.write(str(value))
             myfile.write("\n")
         myfile.close()
 
@@ -279,7 +285,7 @@ if __name__ == "__main__":
     ####################
     feasibilityFileName = "trainingData_Feas.txt"
     massFileName = "trainingData_Opt.txt"
-    Heading = [ "Label", "t_t", "m_0", "|Delta_a |", \
+    Heading = [ "Label", "t_t", "m_0", "|Delta_a|", \
         "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
         "Delta_omega", "Delta_theta"]
     with open(feasibilityFileName, "w") as myfile:
