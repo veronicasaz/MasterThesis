@@ -30,7 +30,7 @@ class Fitness:
         ## Sims-Flanagan settings
 
         # Choose odd number to compare easily in middle point
-        self.Nimp = kwargs.get('Nimp', 35) 
+        self.Nimp = kwargs.get('Nimp', 10) 
 
     def adaptDecisionVector(self, DecV, optMode):
         """ 
@@ -133,12 +133,11 @@ class Fitness:
         # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
 
-
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
         # print(fc1, fc2)
 
-        return fc1* 1e2 + fc2 # *1000 so that in tol they are in same order of mag
+        return fc1* 1e1 + fc2 # *1000 so that in tol they are in same order of mag
 
     def printResult(self):
         print("Error", self.Error)
@@ -183,8 +182,10 @@ class Fitness:
         # Feasibility
         # if np.linalg.norm(self.Error[0:3]) <= 100e3 and \
         #     np.linalg.norm(self.Error[3:]) <= 100: # Feasible trajectory
-        if np.linalg.norm(self.Error[0:3]) <= 5e7 and \
-            np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
+        # if np.linalg.norm(self.Error[0:3]) <= 5e7 and \
+        #     np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
+        if np.linalg.norm(self.Error[0:3]) <= 1e6 and \
+            np.linalg.norm(self.Error[3:]) <= 1e2: # TODO: change. Too much
             feasible = 1
         else:
             feasible = 0
@@ -302,7 +303,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 500 # number of training samples. TODO: increase
+    nsamples = 5000 # number of training samples. TODO: increase
     samples_Lambert = np.zeros((nsamples, len(bnds)))
     # for decv in range(len(bnds)): 
     #     sample_inputs[:, decv] = np.random.uniform(low = bnds[decv][0], \
@@ -370,7 +371,7 @@ if __name__ == "__main__":
     # find feasible trajectories
     # Only the initial and the optimized trajectory will be saved
     ####################
-    niter = 10
+    niter = 20
     niterlocal = 100
     niter_success = 10
     mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
