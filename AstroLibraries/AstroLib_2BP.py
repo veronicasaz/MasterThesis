@@ -42,9 +42,8 @@ class Spacecraft:
 
     def MassChangeInverse(self, m, deltav):  
         """
-        MassChangeInverse: change (increase) the mass to obtaine the mass of the
-            spacecraft before
-            an impulse was applied
+        MassChangeInverse: change (increase) the mass to obtain the mass of the
+            spacecraft before an impulse was applied
         IMPUTS: 
             m: current mass of the spacecraft (fuel+drymass)
             deltav: magnitude of the impulse applied

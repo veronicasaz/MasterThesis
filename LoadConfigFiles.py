@@ -1,4 +1,8 @@
 import yaml
+import numpy as np
+
+import AstroLibraries.AstroLib_Basic as AL_BF 
+from AstroLibraries import AstroLib_Ephem as AL_Eph
 
 class SimsFlan_config:
     def __init__(self):
@@ -7,24 +11,34 @@ class SimsFlan_config:
 
         self.Nimp = SimsFlanagan_config['SimsFlan']['Nimp']
         self.date0 = SimsFlanagan_config['SimsFlan']['date0']
-        self.t0 = AL_Eph.DateConv(date0,'calendar') #To JD
+        self.t0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
 
+        
         bounds = SimsFlanagan_config['bounds']
-        bounds[1] *= np.pi
-        bnds = (bounds[0], bounds[1], bounds[1], \
-                bounds[2], bounds[3], bounds[3], \
-                bounds[4], bounds[5])
+        bn_v0_angle = tuple([z * np.pi for z in bounds['v0_angle'] ])
+        bn_vf_angle = tuple([z * np.pi for z in bounds['vf_angle'] ])
+        bn_t0 = tuple([z +  self.t0.JD_0 for z in bounds['t0'] ])
+        bn_t_t = ( AL_BF.days2sec(bounds['t_t'][0]), AL_BF.days2sec(bounds['t_t'][1]) )
+        bn_deltav_ang = tuple([z * np.pi for z in bounds['deltav_ang'] ])
+        
+        self.bnds = (bounds['v0'], bn_v0_angle, bn_v0_angle, \
+                bounds['vf'], bn_vf_angle, bn_vf_angle, \
+                bn_t0, bn_t_t)
+        for i in range(self.Nimp): # 3 times because impulses are 3d vectors
+            self.bnds += (bounds['deltav_mag'], bn_deltav_ang, bn_deltav_ang)
 
+class OPT_config:
+    def __init__(self):
+        with open("./confFiles/OPT_config.yml") as file:
+            OPT_config = yaml.load(file, Loader=yaml.FullLoader)
 
-# bnd_v0 = (0, 5e3) 
-#     bnd_v0_angle = (0., 2*np.pi)
-#     bnd_vf = ( 0.0, 9e3) # Relative to the planet
-#     # bnd_vf = ( v_escape *0.9, v_escape *1.1)
-#     bnd_vf_angle = (0., 2*np.pi)
-#     bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
-#     # bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
-#     bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(900) )
-#     bnd_deltavmag = (0., 1.) # magnitude
-#     bnd_deltavang = (-np.pi, np.pi) # angle
+        self.MBH = OPT_config['MBH']
+        self.EA = OPT_config['EA']
+        self.CS = OPT_config['coordS']
 
-SimsFlan_config()
+class Fitness_config:
+    def __init__(self):
+        with open("./confFiles/Fitness_config.yml") as file:
+            Fit_config = yaml.load(file, Loader=yaml.FullLoader)
+
+        self.FEAS = Fit_config['FEASIB']

@@ -8,6 +8,7 @@ from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_OPT as AL_OPT
 from AstroLibraries import AstroLib_2BP as AL_2BP
 
+import LoadConfigFiles as CONFIG
 
 class Fitness:
     def __init__(self, *args, **kwargs):
@@ -53,24 +54,12 @@ class Fitness:
         self.DeltaV_list = np.zeros(np.shape(DeltaV_list))
         DeltaV_sum = np.zeros(len(self.DeltaV_list)) # Magnitude of the impulses
         for i in range(len(self.DeltaV_list)):
-            # mag = DeltaV_list[i,0]
-            # angle1 = DeltaV_list[i,1]
-            # angle2 = DeltaV_list[i,2]
             self.DeltaV_list[i, :] = AL_BF.convert3dvector(DeltaV_list[i,:], "polar")
-            # self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
-            # self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
-            # self.DeltaV_list[i, 2] = mag * np.sin(angle2)
             DeltaV_sum[i] = np.linalg.norm( self.DeltaV_list[i] )
 
         # Write velocity as x,y,z vector
         v0_cart = AL_BF.convert3dvector(v0, "polar")
         vf_cart = AL_BF.convert3dvector(vf, "polar")
-        # v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
-        #                         np.sin(v0[1])*np.cos(v0[2]),
-        #                         np.sin(v0[2]) ])
-        # vf_cart = vf[0] *np.array([ np.cos(vf[1])*np.cos(vf[2]) , \
-        #                         np.sin(vf[1])*np.cos(vf[2]),
-        #                         np.sin(vf[2]) ])
 
         # Sum of all the Delta V = DeltaV max * sum Delta V_list
         # Assumption: the DeltaV_max is calculated as if mass is constant and 
@@ -254,30 +243,9 @@ if __name__ == "__main__":
     ########################
     # Initial settings
     ########################
-    Nimp = 10
-    Fitness = Fitness(Nimp = Nimp)
-    date0 = np.array([15,6,2019,0])
-    t0 = AL_Eph.DateConv(date0,'calendar') #To JD
-
-    bnd_v0 = (0, 5e3) # Relative to the planet
-    bnd_v0_angle = (0., 2*np.pi)
-    bnd_vf = ( 0.0, 9e3) # Relative to the planet
-    # bnd_vf = ( v_escape *0.9, v_escape *1.1)
-    bnd_vf_angle = (0., 2*np.pi)
-    bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
-    # bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
-    bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(900) )
-    bnd_deltavmag = (0., 1.) # magnitude
-    bnd_deltavang = (-np.pi, np.pi) # angle
-
-    bnds = (bnd_v0, bnd_v0_angle, bnd_v0_angle, \
-            bnd_vf, bnd_vf_angle, bnd_vf_angle, \
-            bnd_t0, bnd_t_t)
-
-    for i in range(Nimp): # 3 times because impulses are 3d vectors
-        bnds += (bnd_deltavmag, bnd_deltavang, bnd_deltavang)
-
-
+    SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
+    
+    Fitness = Fitness(Nimp = SF.Nimp) # Load fitness class
     def f(DecV):
         return Fitness.calculateFeasibility(DecV)
 
@@ -304,19 +272,16 @@ if __name__ == "__main__":
     # CREATION OF RANDOM POPULATION
     ####################
     nsamples = 5000 # number of training samples. TODO: increase
-    samples_Lambert = np.zeros((nsamples, len(bnds)))
-    # for decv in range(len(bnds)): 
-    #     sample_inputs[:, decv] = np.random.uniform(low = bnds[decv][0], \
-    #         high = bnds[decv][1], size = nsamples)
+    samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
-    # CREATION OF RANDOM POPULATION WITH LAMBERT
+    # CHOICE OF RANDOM POPULATION WITH LAMBERT
     ####################
     start_time = time.time()
 
     for decv in range(6,8): 
-        samples_Lambert[:, decv] = np.random.uniform(low = bnds[decv][0], \
-            high = bnds[decv][1], size = nsamples)
+        samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
+            high = SF.bnds[decv][1], size = nsamples)
     
     # Lambert for calculation of the velocity vectors 
     earthephem = pk.planet.jpl_lp('earth')
@@ -342,8 +307,8 @@ if __name__ == "__main__":
             v_i = np.linalg.norm(v1[rev] - np.array(vE)) # Relative velocities for the bounds 
             v_i2 = np.linalg.norm(v2[rev] - np.array(vM))
             # Change to polar for the bounds
-            if v_i >= bnds[0][0] and  v_i <= bnds[0][1] and \
-            v_i2 >= bnds[3][0] and  v_i2 <= bnds[3][1]:
+            if v_i >= SF.bnds[0][0] and  v_i <= SF.bnds[0][1] and \
+            v_i2 >= SF.bnds[3][0] and  v_i2 <= SF.bnds[3][1]:
                 
                 samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
                 samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
@@ -351,7 +316,7 @@ if __name__ == "__main__":
                 break
             elif rev == len(v1)-1:
                 notvalid.append(i)
-                # sample_inputs[i,:] = np.zeros(len(bnds))
+                # sample_inputs[i,:] = np.zeros(len(SF.bnds))
 
         ####################
         # Evaluate similarity between lambert and propagated trajectory
@@ -371,10 +336,9 @@ if __name__ == "__main__":
     # find feasible trajectories
     # Only the initial and the optimized trajectory will be saved
     ####################
-    niter = 20
-    niterlocal = 100
-    niter_success = 10
-    mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
+    opt_config = CONFIG.OPT_config()
+    MBH = opt_config.MBH
+    mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
     
     for i_sample in range(len(sample_inputs)):
         print("-------------------------------")
@@ -387,9 +351,11 @@ if __name__ == "__main__":
         Fitness.printResult()
         
         # optimize starting from sample
-        xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep, niter = niter, \
-                  niter_local = niterlocal, niter_success = niter_success, bnds = bnds, \
-                  jumpMagnitude = 0.005, tolLocal = 1e-2, tolGlobal = 1e-5)
+        xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
+                niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
+                niter_success = MBH['niter_success'], bnds = SF.bnds, \
+                jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
+                tolGlobal = MBH['tolGlobal'])
             
         fvalue = f(xmin)
         Fitness.savetoFile()

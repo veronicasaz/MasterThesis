@@ -45,6 +45,26 @@ def sec2days(x):
     """
     return x/ (3600*24)
 
+def sec2year(x):
+    """
+    sec2year: convert from seconds to years
+    INPUTS:
+        x: time in seconds
+    OUTPUTS:
+        time in years
+    """
+    return x/ (3600*24*365.25)
+
+def year2sec(x):
+    """
+    year2sec: convert from years to seconds
+    INPUTS:
+        x: time in years
+    OUTPUTS:
+        time in seconds
+    """
+    return x* (3600*24*365.25)
+
 def correctAngle(x, units):  
     """
     correctAngle: correct angle for more than 2 pi radians or 360deg. 
@@ -97,6 +117,24 @@ def convertRange(x, units, minRange, maxRange):
             
     return angleCorrected
 
+
+def convert3dvector(vector, typevector):
+    vector2 = np.zeros(3)
+    if typevector == "cartesian":
+        mag = np.linalg.norm(vector)
+        vector2[0] = mag
+        vector2[2] = np.arcsin( vector[2] / mag)
+        vector2[1] = vector[0] / (mag * np.cos(vector2[2]))
+
+    elif typevector == "polar":
+        mag = vector[0]
+        angle1 = vector[1]
+        angle2 = vector[2]
+        vector2[0] = mag * np.cos(angle1) * np.cos(angle2) 
+        vector2[1] = mag * np.sin(angle1) * np.cos(angle2)
+        vector2[2] = mag * np.sin(angle2)
+
+    return vector2 
 
 def writeData(data, mode, title):
     """

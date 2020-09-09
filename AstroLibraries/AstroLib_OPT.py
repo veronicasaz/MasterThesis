@@ -471,6 +471,7 @@ def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
     n_itercounter = 1
     n_noimprove = 0
 
+    Best = x
     bestMin =  f(x)
     previousMin = f(x)
     jumpMagnitude = 1

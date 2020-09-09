@@ -165,6 +165,8 @@ class Fitness:
     def calculateFeasibility(self, DecV, optMode = True):
         """
         """
+        FIT = CONFIG.Fitness_config
+        
         ########################################################################
         # DecV
         ########################################################################
@@ -207,7 +209,8 @@ class Fitness:
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
 
-        return fc1 * 1e2 + fc2
+        return * FIT['factor_pos'] + fc2 * FIT['factor_vel'] # *1000 so that in 
+                                                            # tol they are in same order of mag
 
 
     def calculateMass(self, DecV, optMode = True):

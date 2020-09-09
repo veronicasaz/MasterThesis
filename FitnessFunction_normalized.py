@@ -9,6 +9,7 @@ from AstroLibraries import AstroLib_2BP as AL_2BP
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 
+import LoadConfigFiles as CONFIG
 
 class Fitness:
     def __init__(self, *args, **kwargs):
@@ -31,7 +32,7 @@ class Fitness:
         ## Sims-Flanagan settings
 
         # Choose odd number to compare easily in middle point
-        self.Nimp = kwargs.get('Nimp', 35) 
+        self.Nimp = kwargs.get('Nimp', 10) 
 
     def adaptDecisionVector(self, DecV, optMode):
         """ 
@@ -54,21 +55,24 @@ class Fitness:
         self.DeltaV_list = np.zeros(np.shape(DeltaV_list))
         DeltaV_sum = np.zeros(len(self.DeltaV_list)) # Magnitude of the impulses
         for i in range(len(self.DeltaV_list)):
-            mag = DeltaV_list[i,0]
-            angle1 = DeltaV_list[i,1]
-            angle2 = DeltaV_list[i,2]
-            self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
-            self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
-            self.DeltaV_list[i, 2] = mag * np.sin(angle2)
+            # mag = DeltaV_list[i,0]
+            # angle1 = DeltaV_list[i,1]
+            # angle2 = DeltaV_list[i,2]
+            self.DeltaV_list[i, :] = AL_BF.convert3dvector(DeltaV_list[i,:], "polar")
+            # self.DeltaV_list[i, 0] = mag * np.cos(angle1)*np.cos(angle2) 
+            # self.DeltaV_list[i, 1] = mag * np.sin(angle1)*np.cos(angle2)
+            # self.DeltaV_list[i, 2] = mag * np.sin(angle2)
             DeltaV_sum[i] = np.linalg.norm( self.DeltaV_list[i] )
 
         # Write velocity as x,y,z vector
-        v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
-                                np.sin(v0[1])*np.cos(v0[2]),
-                                np.sin(v0[2]) ])
-        vf_cart = vf[0] *np.array([ np.cos(vf[1])*np.cos(vf[2]) , \
-                                np.sin(vf[1])*np.cos(vf[2]),
-                                np.sin(vf[2]) ])
+        v0_cart = AL_BF.convert3dvector(v0, "polar")
+        vf_cart = AL_BF.convert3dvector(vf, "polar")
+        # v0_cart = v0[0] *np.array([ np.cos(v0[1])*np.cos(v0[2]) , \
+        #                         np.sin(v0[1])*np.cos(v0[2]),
+        #                         np.sin(v0[2]) ])
+        # vf_cart = vf[0] *np.array([ np.cos(vf[1])*np.cos(vf[2]) , \
+        #                         np.sin(vf[1])*np.cos(vf[2]),
+        #                         np.sin(vf[2]) ])
 
         # Sum of all the Delta V = DeltaV max * sum Delta V_list
         # Assumption: the DeltaV_max is calculated as if mass is constant and 
@@ -114,6 +118,7 @@ class Fitness:
         ########################################################################
         # DecV
         ########################################################################
+        self.DecV = DecV
         v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
 
         ########################################################################
@@ -160,9 +165,12 @@ class Fitness:
     def calculateFeasibility(self, DecV, optMode = True):
         """
         """
+        FIT = CONFIG.Fitness_config
+
         ########################################################################
         # DecV
         ########################################################################
+        self.DecV = DecV
         v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
 
         ########################################################################
@@ -180,12 +188,14 @@ class Fitness:
         self.vf = vf_cart + v_p1 
 
         # Create state vector for initial and final point
-        SV_0 = np.append(r_p0, self.v0)
-        SV_1 = np.append(r_p1, -self.vf) # - to propagate backwards
+        self.SV_0 = np.append(r_p0, self.v0)
+        self.SV_f = np.append(r_p1, self.vf) # - to propagate backwards
+        self.SV_f_corrected = np.append(r_p1, -self.vf) # - to propagate backwards
 
         # Sims-Flanagan
-        SV_list_forw = self.__SimsFlanagan(SV_0, saveState=True)
-        SV_list_back = self.__SimsFlanagan(SV_1, backwards = True, saveState=True)
+        SV_list_forw = self.__SimsFlanagan(self.SV_0, saveState=True)
+        SV_list_back = self.__SimsFlanagan(self.SV_f_corrected, \
+            backwards = True, saveState=True)
 
         # convert back propagation so that the signs of velocity match
         SV_list_back_corrected = np.copy(SV_list_back)
@@ -197,12 +207,10 @@ class Fitness:
         # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
 
-
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
         # print(fc1, fc2)
-        return fc1* 1e2 + fc2 # *1000 so that in tol they are in same order of mag
-
+        return fc1* FIT['factor_pos'] + fc2 * FIT['factor_vel'] # *1000 so that in tol they are in same order of mag
 
     def calculateMass(self, DecV, optMode = True):
         ########################################################################
