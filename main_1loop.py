@@ -17,6 +17,7 @@ import time
 ########################
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
 Fitness = Fitness(Nimp = SF.Nimp)
+opt_config = CONFIG.OPT_config()
 
 ########################
 # Decision Vector Outer loop 

@@ -209,7 +209,7 @@ class Fitness:
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
 
-        return * FIT['factor_pos'] + fc2 * FIT['factor_vel'] # *1000 so that in 
+        return fc1 * FIT['factor_pos'] + fc2 * FIT['factor_vel'] # *1000 so that in 
                                                             # tol they are in same order of mag
 
 

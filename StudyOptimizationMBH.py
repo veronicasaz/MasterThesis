@@ -8,44 +8,19 @@ from AstroLibraries import AstroLib_Trajectories as AL_TR
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_OPT as AL_OPT
+import LoadConfigFiles as CONFIG
 
 import time
+
+SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
+opt_config = CONFIG.OPT_config()
+MBH = opt_config.MBH
 
 def runOpt(stepMagn, iterGlobal):
     ########################
     # Initial settings
     ########################
-    Nimp = 25
-    FitnessF = Fitness(Nimp = Nimp)
-
-    ########################
-    # Decision Vector Outer loop 
-    ########################
-    date0 = np.array([15,6,2019,0])
-    t0 = AL_Eph.DateConv(date0,'calendar') #To JD
-    # m0 = 747
-    transfertime = 250
-    iterLocal = 50
-    
-    # Bounds of the outer loop
-    # bnd_v0 = (vp_Hohm * 0.2, vp_Hohm *0.6) 
-    bnd_v0 = (0, 4e3) # Relative to the planet
-    bnd_v0_angle = (0., 2*np.pi)
-    bnd_vf = ( 0.0, 5e3) # Relative to the planet
-    # bnd_vf = ( v_escape *0.9, v_escape *1.1)
-    bnd_vf_angle = (0., 2*np.pi)
-    bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
-    # bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
-    bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(1200) )
-    bnd_deltavmag = (0., 1.) # magnitude
-    bnd_deltavang = (-np.pi, np.pi) # angle
-
-    bnds = (bnd_v0, bnd_v0_angle, bnd_v0_angle, \
-            bnd_vf, bnd_vf_angle, bnd_vf_angle, \
-            bnd_t0, bnd_t_t)
-
-    for i in range(Nimp): # 3 times because impulses are 3d vectors
-        bnds += (bnd_deltavmag, bnd_deltavang, bnd_deltavang)
+    FitnessF = Fitness(Nimp = SF.Nimp)
 
     ########################
     # Calculate fitness
@@ -53,11 +28,11 @@ def runOpt(stepMagn, iterGlobal):
     def f(DecV):
         return FitnessF.calculateFeasibility(DecV)
         
-    mytakestep = AL_OPT.MyTakeStep(Nimp, bnds)
+    mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
-    DecV = np.zeros(len(bnds))
-    for i in range(len(bnds)):
-        DecV[i] = ( bnds[i][0] + bnds[i][1] ) /2
+    DecV = np.zeros(len(SF.bnds))
+    for i in range(len(SF.bnds)):
+        DecV[i] = ( SF.bnds[i][0] + SF.bnds[i][1] ) /2
 
     ########################
     # Parameter sweep
@@ -77,8 +52,6 @@ def runOpt(stepMagn, iterGlobal):
     deleteFile("./Results/StudyMBHSettings/1/Mass.txt")
     deleteFile("./Results/StudyMBHSettings/1/Error.txt")
 
-    niter_success = 15
-
     for i in range(len(iterGlobal)):
         for j in range(len(stepMagn)):
     # for i in range(1):
@@ -88,9 +61,9 @@ def runOpt(stepMagn, iterGlobal):
             print("##################################################")
             start_time = time.time()
             fmin, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, \
-                niter = iterGlobal[i], niter_local = iterLocal, \
-                niter_success = niter_success,bnds = bnds, jumpMagnitude = stepMagn[j], \
-                tolLocal = 1e3, tolGlobal = 1e3)
+                niter = iterGlobal[i], niter_local = MBH['niter_local'], \
+                niter_success = MBH['niter_success'], bnds = SF.bnds, jumpMagnitude = stepMagn[j], \
+                tolLocal = MBH['tolLocal'], tolGlobal = MBH['tolGlobal'])
             t = (time.time() - start_time) 
             fit = FitnessF.calculateFitness(fmin, optMode = True, plot = False)
             
@@ -136,16 +109,7 @@ def loadData():
     minVal_1 = np.loadtxt("./Results/StudyMBHSettings/1/Min.txt")
     mass_1 = np.loadtxt("./Results/StudyMBHSettings/1/Mass.txt")
 
-    # error = np.loadtxt("./Results/StudyOptSettings/1/Error.txt")
-
-    # time_2 = np.loadtxt("./Results/StudyMBHSettings/2/Time.txt")
-    # minVal_2 = np.loadtxt("./Results/StudyMBHSettings/2/Min.txt")
-
-    # time_3 = np.loadtxt("./Results/StudyMBHSettings/3/Time.txt")
-    # minVal_3 = np.loadtxt("./Results/StudyMBHSettings/3/Min.txt")
-
     return [time_1], [minVal_1]
-    # return [time_1, time_2, time_3], [minVal_1, minVal_2, minVal_3]
 
 def plotConvergence(stepMagn, iterGlobal):
     time, minVal = loadData()
@@ -216,9 +180,126 @@ def plotConvergence(stepMagn, iterGlobal):
 
     plt.show()
 
+def studyNiterlocal(nsamples, niter):
+    ########################
+    # Initial settings
+    ########################
+    FitnessF = Fitness(Nimp = SF.Nimp)
+
+    ########################
+    # Calculate fitness
+    ########################
+    def f(DecV):
+        return FitnessF.calculateFeasibility(DecV)
+        
+    mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
+
+    ########################
+    # Parameter sweep
+    ########################
+    Time = np.zeros( (nsamples, len(niter) ))
+    MIN = np.zeros( (nsamples, len(niter) ))
+    ERROR = np.zeros( (nsamples, len(niter), 6 ))
+
+    def deleteFile(name):
+        file = open(name,"r+")
+        file.truncate(0)
+        file.close()
+
+    deleteFile("./Results/StudyMBHSettings/2/Time.txt")
+    deleteFile("./Results/StudyMBHSettings/2/Min.txt")
+    deleteFile("./Results/StudyMBHSettings/2/Error.txt")
+
+    samples = np.zeros((nsamples, len(SF.bnds)))
+    for decv in range(len(SF.bnds)): 
+        samples[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
+            high = SF.bnds[decv][1], size = nsamples)
+
+
+    for i in range(nsamples):
+        DecV = samples[i,:]
+        for j in range(len(niter)):
+            print("##################################################")
+            print("samples",i, "IterLocal", j)
+            print("##################################################")
+            niter_success = niter[j]
+            
+            start_time = time.time()
+
+            fmin, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, \
+                niter = niter[j], niter_local = 100, \
+                niter_success = niter_success,bnds = SF.bnds, jumpMagnitude = MBH['jumpMagnitude'], \
+                tolLocal = MBH['tolLocal'], tolGlobal = MBH['tolGlobal'])
+            t = (time.time() - start_time) 
+            fit = FitnessF.calculateFitness(fmin, optMode = True, plot = False)
+            
+            DecV = FitnessF.DecV # Start next number of iterations from this one
+            Time[i,j] = t
+            MIN[i,j] = Best
+            ERROR[i,j,:] = FitnessF.Error
+        
+            with open('./Results/StudyMBHSettings/2/Time.txt', "a") as myfile:
+                myfile.write(str(Time[i,j]) +' ' )
+            with open('./Results/StudyMBHSettings/2/Min.txt', "a") as myfile:
+                myfile.write(str(MIN[i,j]) +' ' )
+            with open('./Results/StudyMBHSettings/2/Error.txt', "a") as myfile:
+                myfile.write(str(ERROR[i,j]) +' ' )
+
+        with open('./Results/StudyMBHSettings/2/Time.txt', "a") as myfile:
+            myfile.write('\n')
+        with open('./Results/StudyMBHSettings/2/Min.txt', "a") as myfile:
+            myfile.write('\n')
+        with open('./Results/StudyMBHSettings/2/Error.txt', "a") as myfile:
+            myfile.write('\n')
+
+def loadDataLocal():
+    time_1 = np.loadtxt("./Results/StudyMBHSettings/2/Time.txt")
+    minVal_1 = np.loadtxt("./Results/StudyMBHSettings/2/Min.txt")
+
+    return time_1, minVal_1
+
+def plotConvergenceLocal(nsamples, niter):
+    time, minVal = loadDataLocal()
+
+    color = ['red', 'green', 'blue', 'black', 'orange', 'yellow']
+
+    fig = plt.figure()
+
+    niter_add = np.cumsum(niter)
+    ax = fig.add_subplot(1, 2, 1)
+    print(time[0,:])
+    for i in range(nsamples):
+        plt.plot(niter_add, time[i, :] /60, 'x-', c = color[i%len(color)])
+    plt.xlabel('Iterations Global')
+    plt.ylabel('Time of computation 1 (min)')
+    plt.grid()
+    # plt.legend(title = "Individuals")
+ 
+    ax = fig.add_subplot(1, 2, 2)
+    for i in range(nsamples):
+        plt.plot(niter_add, minVal[i,:], 'x-', c = color[i%len(color)])
+    plt.xlabel('Iterations')
+    plt.ylabel('Minimum value 2')
+    plt.grid()
+    ax.set_yscale('log')
+
+    plt.show()
+
+
+
 if __name__ == "__main__":
+
+    # Study for Convergece step global and step mag
     iterGlobal = np.array([10, 20, 50, 100, 200])
     stepMagn = np.array([0.01,0.02,0.05, 0.2])
-    
     # runOpt(stepMagn, iterGlobal)
-    plotConvergence(stepMagn, iterGlobal)
+    # plotConvergence(stepMagn, iterGlobal)
+
+
+
+    # Study for local jump convergence
+    niter = np.array([10, 10, 10, 20]) # Adds to previous niter
+    nsamples = 10
+
+    # studyNiterlocal(nsamples, niter)
+    plotConvergenceLocal(nsamples, niter)
