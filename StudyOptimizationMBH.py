@@ -3,7 +3,7 @@ import pykep as pk
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from FitnessFunction_1loop import Fitness
+from FitnessFunction_normalized import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_Ephem as AL_Eph

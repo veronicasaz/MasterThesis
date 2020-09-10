@@ -3,48 +3,24 @@ import pykep as pk
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from FitnessFunction_1loop import Fitness
+from FitnessFunction_normalized import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_OPT as AL_OPT
+import LoadConfigFiles as CONFIG
 
 import time
+
+SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
+opt_config = CONFIG.OPT_config()
+EA = opt_config.EA
 
 def runOpt(IND, ITER):
     ########################
     # Initial settings
     ########################
-    Nimp = 25
-    FitnessF = Fitness(Nimp = Nimp)
-
-    ########################
-    # Decision Vector Outer loop 
-    ########################
-    date0 = np.array([15,6,2019,0])
-    t0 = AL_Eph.DateConv(date0,'calendar') #To JD
-    # m0 = 747
-    transfertime = 250
-
-    # Bounds of the outer loop
-    # bnd_v0 = (vp_Hohm * 0.2, vp_Hohm *0.6) 
-    bnd_v0 = (0, 4e3) # Relative to the planet
-    bnd_v0_angle = (0., 2*np.pi)
-    bnd_vf = ( 0.0, 5e3) # Relative to the planet
-    # bnd_vf = ( v_escape *0.9, v_escape *1.1)
-    bnd_vf_angle = (0., 2*np.pi)
-    bnd_t0 = (t0.JD_0, t0.JD_0+1000) # Launch date
-    # bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
-    bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(1200) )
-    bnd_deltavmag = (0., 1.) # magnitude
-    bnd_deltavang = (-np.pi, np.pi) # angle
-
-    bnds = (bnd_v0, bnd_v0_angle, bnd_v0_angle, \
-            bnd_vf, bnd_vf_angle, bnd_vf_angle, \
-            bnd_t0, bnd_t_t)
-
-    for i in range(Nimp): # 3 times because impulses are 3d vectors
-        bnds += (bnd_deltavmag, bnd_deltavang, bnd_deltavang)
+    FitnessF = Fitness(Nimp = SF.Nimp)
 
     ########################
     # Calculate fitness
@@ -80,7 +56,8 @@ def runOpt(IND, ITER):
             print("IND",IND[i], "ITER", ITER[j])
             print("##################################################")
             start_time = time.time()
-            f_min, Best = AL_OPT.EvolAlgorithm(f, bnds , x_add = False, ind = IND[i], max_iter = ITER[j], max_iter_success = 1000 )
+            f_min, Best = AL_OPT.EvolAlgorithm(f, SF.bnds , x_add = False, \
+                ind = IND[i], max_iter = ITER[j], max_iter_success = EA['itersuccess'] )
             t = (time.time() - start_time) 
             fit = FitnessF.calculateFitness(f_min, optMode = True, plot = False)
             
