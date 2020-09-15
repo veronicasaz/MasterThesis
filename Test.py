@@ -2,21 +2,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as spy
 
-import pykep as pk
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
 
+import pykep as pk
+from pykep.orbit_plots import plot_planet, plot_lambert
+from pykep import AU, DAY2SEC
+
+from FitnessFunction_normalized import Fitness
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_2BP as AL_2BP
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 from AstroLibraries import AstroLib_Trajectories as AL_TR
 
+import LoadConfigFiles as CONFIG
 
 # # In[]
 # ##############################################
 # ############# VALIDATION #####################
 # ##############################################
 Cts = AL_BF.ConstantsBook()
-
 
 ##############################################
 # Change frame of reference
@@ -48,6 +54,24 @@ def changeReferenceFrame():
     r3 = Frame1.transform(r2, 'perif')
     v3 = Frame1.transform(v2, 'perif')
     print(r3, v3) # Validated: same as initial
+
+
+def test_convertAngleForm():
+    vector0 = np.array([90,0,0])
+    vector1 = AL_BF.convert3dvector(vector0, "cartesian")
+    print(vector1) # validated
+    vector0 = np.array([90,90,90])
+    vector1 = AL_BF.convert3dvector(vector0, "cartesian")
+    print(vector1) # validated
+    vector0 = np.array([155, 0.78, 0.61])
+    vector1 = AL_BF.convert3dvector(vector0, "polar")
+    print(vector1) # validated
+
+    print(np.arcsin(-0.7071067811865475))
+    vector0 = np.array([-90,-90,-90])
+    vector1 = AL_BF.convert3dvector(vector0, "cartesian")
+    print(vector1*AL_BF.rad2deg(1)) 
+
 
 ##############################################
 # Conversion Cartesian-Keplerian and vice-versa
@@ -210,6 +234,8 @@ def propagateLambert():
     r0 = np.array(r_E)
     rf = np.array(r_M)
 
+    print('Mars', r_M, 'Propagation', x, 'Error', abs(rf - x[0:3])) # Almost zero
+
     fig = plt.figure()
     ax = fig.gca(projection = '3d')
 
@@ -271,12 +297,111 @@ def propagateUniversalLambert():
     AL_Plot.set_axes_equal(ax)
     plt.show() 
 
+def findValidLambert():
+    SF = CONFIG.SimsFlan_config()
+
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
+
+    counter = 0
+
+    valid = False
+    while valid == False:
+        decv = np.zeros(len(SF.bnds))
+        for i in range(6,8): 
+            decv[i] = np.random.uniform(low = SF.bnds[i][0], \
+                high = SF.bnds[i][1], size = 1)
+
+        r_E, v_E = earthephem.eph(decv[6])
+        r_M, v_M = marsephem.eph(decv[6] + AL_BF.sec2days(decv[7]) )
+
+        # Create transfer in the first moment
+        nrevs = 0
+        l = pk.lambert_problem(r1 = r_E, r2 = r_M, tof = decv[7], \
+            cw = False, mu =  Cts.mu_S_m, max_revs=nrevs)
+        v1 = np.array(l.get_v1())
+        v2 = np.array(l.get_v2())
+
+        v_i_prev = 1e12 # Excessive random value
+        for rev in range(len(v1)):
+            v_i = np.linalg.norm(v1[rev] - np.array(v_E)) # Relative velocities for the bounds 
+            v_i2 = np.linalg.norm(v2[rev] - np.array(v_M))
+            # Change to polar for the bounds
+            if v_i >= SF.bnds[0][0] and  v_i <= SF.bnds[0][1] and \
+            v_i2 >= SF.bnds[3][0] and  v_i2 <= SF.bnds[3][1]:
+                print('decv')
+                print(v1[rev]-v_E,v2[rev]-v_M)
+                decv[0:3] = AL_BF.convert3dvector(v1[rev]-v_E, "cartesian")
+                decv[3:6] = AL_BF.convert3dvector(v2[rev]-v_M, "cartesian")
+                print(decv[0:6])
+                valid = True
+
+                print('rev', rev, v1[rev], v2[rev])
+
+        counter += 1
+    return decv, l
+
+def propagateSimsFlanagan():
+    "Test the propagation of SimsFlanagan back and forth using the velocities from Lambert"
+    ### Using ephemeris
+    # Lambert trajectory obtain terminal velocity vectors
+    SF = CONFIG.SimsFlan_config()
+
+    # Create bodies
+    sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
+    earth = AL_2BP.Body('earth', 'blue', mu = Cts.mu_E_m)
+    mars = AL_2BP.Body('mars', 'red', mu = Cts.mu_M_m)
+
+    # Calculate trajectory of the bodies based on ephem
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
+    
+    decv, l = findValidLambert()
+
+    print(decv)
+
+    Fit = Fitness(Nimp = SF.Nimp)
+    Fit.calculateFeasibility(decv, plot = True)
+    Fit.printResult()
+
+    # We plot
+    mpl.rcParams['legend.fontsize'] = 10
+
+    # Create the figure and axis
+    fig = plt.figure(figsize = (16,5))
+    ax1 = fig.add_subplot(1, 3, 1, projection='3d')
+    ax1.scatter([0], [0], [0], color=['y'])
+
+    ax2 = fig.add_subplot(1, 3, 2, projection='3d')
+    ax2.scatter([0], [0], [0], color=['y'])
+    ax2.view_init(90, 0)
+
+    ax3 = fig.add_subplot(1, 3, 3, projection='3d')
+    ax3.scatter([0], [0], [0], color=['y'])
+    ax3.view_init(0,0)
+
+    t1 = SF.t0.JD
+    t2 = t1 + AL_BF.sec2days(decv[7])
+
+    for ax in [ax1, ax2, ax3]:
+        # Plot the planet orbits
+        # plot_planet(earth, t0=t1, color=(0.8, 0.8, 1), legend=True, units=AU, axes=ax)
+        # plot_planet(mars, t0=t2, color=(0.8, 0.8, 1), legend=True, units=AU, axes=ax)
+
+        # Plot the Lambert solutions
+        axis = plot_lambert(l, color='b', legend=True, units=AU, axes=ax)
+        # axis = plot_lambert(l, sol=1, color='g', legend=True, units=AU, axes=ax)
+        # axis = plot_lambert(l, sol=2, color='g', legend=True, units=AU, axes=ax)
+
+    plt.show()
 
 if __name__ == "__main__":
     # changeReferenceFrame()
+    # test_convertAngleForm()
     # CartKeplr()
     # propagateHohmann()
     # Lambert()
     # propagateLambert()
     # print("Universal propagation")
     # propagateUniversalLambert()
+    propagateSimsFlanagan()

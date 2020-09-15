@@ -33,6 +33,7 @@ class OPT_config:
             OPT_config = yaml.load(file, Loader=yaml.FullLoader)
 
         self.MBH = OPT_config['MBH']
+        self.MBH_generateDatabase = OPT_config['MBH_generateDatabase']
         self.EA = OPT_config['EA']
         self.CS = OPT_config['coordS']
 

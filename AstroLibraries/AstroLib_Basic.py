@@ -119,12 +119,19 @@ def convertRange(x, units, minRange, maxRange):
 
 
 def convert3dvector(vector, typevector):
+    """
+    INPUTS:
+        typevector: type of the input vector
+    """
     vector2 = np.zeros(3)
     if typevector == "cartesian":
         mag = np.linalg.norm(vector)
         vector2[0] = mag
-        vector2[2] = np.arcsin( vector[2] / mag)
-        vector2[1] = vector[0] / (mag * np.cos(vector2[2]))
+        # vector2[1] = np.arcsin(vector[1] / ( np.linalg.norm(vector[0:2])))
+        # vector2[2] = np.arcsin( vector[2] / mag)
+        vector2[1] = np.arctan2(vector[1], vector[0])
+        vector2[2] = np.arctan2( vector[2], np.linalg.norm(vector[0:2]))
+
 
     elif typevector == "polar":
         mag = vector[0]

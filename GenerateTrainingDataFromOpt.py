@@ -18,9 +18,9 @@ if __name__ == "__main__":
     ########################
     SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
     
-    Fitness = Fitness(Nimp = SF.Nimp) # Load fitness class
+    Fit = Fitness(Nimp = SF.Nimp) # Load fitness class
     def f(DecV):
-        return Fitness.calculateFeasibility(DecV)
+        return Fit.calculateFeasibility(DecV)
 
     ####################
     # FILE CREATION
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 5000 # number of training samples. TODO: increase
+    nsamples = 50 # number of training samples. TODO: increase
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -75,25 +75,29 @@ if __name__ == "__main__":
 
         # Check if any of the solutions for the revolutions has velocities
         # within the bounds
-        nrevs_valid = -1
+
+        v_i_prev = 1e12 # Excessive random value
         for rev in range(len(v1)):
             v_i = np.linalg.norm(v1[rev] - np.array(vE)) # Relative velocities for the bounds 
             v_i2 = np.linalg.norm(v2[rev] - np.array(vM))
             # Change to polar for the bounds
             if v_i >= SF.bnds[0][0] and  v_i <= SF.bnds[0][1] and \
             v_i2 >= SF.bnds[3][0] and  v_i2 <= SF.bnds[3][1]:
-                
-                samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
-                samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
+                if abs(v_i2 - v_i) < v_i_prev or rev == 0:
+                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
+                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
+                    v_i_prev = abs(v_i2 - v_i)
 
-                break
-            elif rev == len(v1)-1:
+                # Choose the revolutions with the lowest velocity at the earth
+                
+            elif rev == len(v1)-1 and v_i_prev == 1e12:
                 notvalid.append(i)
                 # sample_inputs[i,:] = np.zeros(len(SF.bnds))
+        
 
-        ####################
+        ###################
         # Evaluate similarity between lambert and propagated trajectory
-        ####################
+        ################### n nn 
                 
     # Delete not valid rows:
     sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
@@ -102,15 +106,17 @@ if __name__ == "__main__":
     print("Samples", nsamples, "Non valid", len(notvalid))
     print("Time for Lambert", t)
 
+    print(sample_inputs)
+    # sample_inputs = samples_Lambert
 
     ####################
     # EVALUATION OF EACH SAMPLE
     # The idea is to use each sample and optimize it so that it is easier to 
     # find feasible trajectories
-    # Only the initial and the optimized trajectory will be saved
+    # Only the initial and the optimized trajectokry will be saved
     ####################
     opt_config = CONFIG.OPT_config()
-    MBH = opt_config.MBH
+    MBH = opt_config.MBH_generateDatabase
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
     
     for i_sample in range(len(sample_inputs)):
@@ -118,10 +124,10 @@ if __name__ == "__main__":
         print("Sample %i"%i_sample)
         print("-------------------------------")
         sample = sample_inputs[i_sample, :]
-        fvalue = f(sample)
-        Fitness.savetoFile() # saves the current values
+        fvalue = Fit.calculateFeasibility(sample, printValue = True)
+        Fit.savetoFile() # saves the current values
         
-        Fitness.printResult()
+        Fit.printResult()
         
         # optimize starting from sample
         xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
@@ -129,8 +135,8 @@ if __name__ == "__main__":
                 niter_success = MBH['niter_success'], bnds = SF.bnds, \
                 jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
                 tolGlobal = MBH['tolGlobal'])
-            
+        
         fvalue = f(xmin)
-        Fitness.savetoFile()
-        Fitness.printResult()
+        Fit.savetoFile()
+        Fit.printResult()
         

@@ -11,6 +11,8 @@ from AstroLibraries import AstroLib_Plots as AL_Plot
 
 import LoadConfigFiles as CONFIG
 
+CONF = CONFIG.Fitness_config()
+
 class Fitness:
     def __init__(self, *args, **kwargs):
 
@@ -162,10 +164,11 @@ class Fitness:
         ########################################################################
         self.printResult()
 
-    def calculateFeasibility(self, DecV, optMode = True):
+    def calculateFeasibility(self, DecV, optMode = True , plot = False, \
+        printValue = False):
         """
         """
-        FIT = CONFIG.Fitness_config
+        FIT = CONF.FEAS
 
         ########################################################################
         # DecV
@@ -201,6 +204,10 @@ class Fitness:
         SV_list_back_corrected = np.copy(SV_list_back)
         SV_list_back_corrected[:,3:] *= -1 # change sign of velocity
 
+        if plot == True:
+            # print(np.flipud(SV_list_back))
+            self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
+
         ########################################################################
         # Compare State in middle point
         ########################################################################
@@ -210,7 +217,10 @@ class Fitness:
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
         # print(fc1, fc2)
-        return fc1* FIT['factor_pos'] + fc2 * FIT['factor_vel'] # *1000 so that in tol they are in same order of mag
+        value = fc1 * FIT['factor_pos'] + fc2 * FIT['factor_vel']
+        if printValue == True:
+            print("Value: ", value)
+        return value # *1000 so that in 
 
     def calculateMass(self, DecV, optMode = True):
         ########################################################################
@@ -219,9 +229,6 @@ class Fitness:
         v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
 
         return self.m_fuel
-
-    def printResult(self):
-        print("Mass of fuel", self.m_fuel, "Error", self.Error)
 
     def __propagateMass(self):
         """
@@ -271,6 +278,79 @@ class Fitness:
             return SV_list # All states
         else:
             return SV_i # Last state
+
+    def printResult(self):
+        print("Mass of fuel", self.m_fuel, "Error", self.Error)
+
+    def savetoFile(self):
+        """
+        savetoFile: save input parameters for neural network and the fitness and
+        feasibility
+
+        Append to file
+        save in different columns. 
+            1: label: 0 unfeasible, 1 feasible
+            2: t_t: transfer time in s
+            3: m0: initial mass of the spacecraft
+            4: difference in semi-major axis of the origin and goal
+            5: difference in eccentricity of the origin and goal
+            6: cosine of the difference in inclination
+            7: difference in RAANs
+            8: difference in omega
+            9: difference in true anomaly
+
+            max m0 should be added
+        """
+        feasibilityFileName = "trainingData_Feas.txt"
+        massFileName = "trainingData_Opt.txt"
+        # Inputs 
+        inputs = np.zeros(8)
+        inputs[0] = self.t_t
+        inputs[1] = self.m0
+
+        Orbit_0 = AL_2BP.BodyOrbit(self.SV_0, "Cartesian", self.sun)
+        Orbit_f = AL_2BP.BodyOrbit(self.SV_f, "Cartesian", self.sun)
+        K_0 = Orbit_0.KeplerElem
+        K_0[-1] = Orbit_0.theta # change mean anomaly with true anomaly
+        K_f = Orbit_f.KeplerElem
+        K_f[-1] = Orbit_f.theta
+
+        inputs[2:] = K_f - K_0
+        inputs[2] = abs(inputs[2]) # absolute value
+        inputs[3] = abs(inputs[3]) # absolute value
+        inputs[4] = np.cos(inputs[4])# cosine
+
+        # Feasibility
+        # if np.linalg.norm(self.Error[0:3]) <= 100e3 and \
+        #     np.linalg.norm(self.Error[3:]) <= 100: # Feasible trajectory
+        # if np.linalg.norm(self.Error[0:3]) <= 5e7 and \
+        #     np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
+        if np.linalg.norm(self.Error[0:3]) <= 1e6 and \
+            np.linalg.norm(self.Error[3:]) <= 1e2: # TODO: change. Too much
+            feasible = 1
+        else:
+            feasible = 0
+
+        # Write to file
+        vectorFeasibility = np.append(feasible, inputs)
+        with open(feasibilityFileName, "a") as myfile:
+            for value in vectorFeasibility:
+                if value != vectorFeasibility[-1]:
+                    myfile.write(str(value) +" ")
+                else:
+                    myfile.write(str(value))
+            myfile.write("\n")
+        myfile.close()
+
+        vectorMass = np.append(self.m_fuel, inputs)
+        with open(massFileName, "a") as myfile:
+            for value in vectorMass:
+                if value != vectorMass[-1]:
+                    myfile.write(str(value) +" ")
+                else:
+                    myfile.write(str(value))
+            myfile.write("\n")
+        myfile.close()
 
     def plot(self, SV_f, SV_b, bodies, *args, **kwargs):
         fig = plt.figure()

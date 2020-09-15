@@ -45,12 +45,11 @@ bnd_m0 = (0, 200) # Mass should never be 0 as you add dry mass
 bnds_O = (bnd_v0, bnd_v0, bnd_v0, bnd_vf, bnd_vf, bnd_vf, bnd_t0, bnd_m0)
 
 
-
 ########################
 # Decision vector inner loop
 ########################
 # Bounds of the inner loop
-bnd_t_t = (AL_BF.days2sec(300), AL_BF.days2sec(1200) )
+bnd_t_t = (AL_BF.days2sec(200), AL_BF.days2sec(1000) )
 bnd_deltavmag = (0., 1.) # magnitude
 
 bnds_i = (bnd_t_t,)
@@ -80,13 +79,13 @@ def f(DecV_I):
 
 # Optimize outer loop
 start_time = time.time()
-f_min, Best = AL_OPT.EvolAlgorithm(f_O, bnds_O , x_add = False, ind = 20, max_iter = 5, max_iter_success = 4 )
+# f_min, Best = AL_OPT.EvolAlgorithm(f_O, bnds_O , x_add = False, ind = 20, max_iter = 5, max_iter_success = 4 )
 t = (time.time() - start_time) 
 
-print("Min")
-print(f_min)
-Fitness.calculateFitness(f_min, plot = True)
-AL_BF.writeData(f_min, 'w', 'Solution.txt')
+# print("Min")
+# print(f_min)
+# Fitness.calculateFitness(f_min, plot = True)
+# AL_BF.writeData(f_min, 'w', 'Solution.txt')
 
 # Optimize only inner loop and outer loop fixed
 # f_O(DecV_O)
