@@ -16,6 +16,7 @@ if __name__ == "__main__":
     ########################
     # Initial settings
     ########################
+    Cts = AL_BF.ConstantsBook()
     SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
     
     Fit = Fitness(Nimp = SF.Nimp) # Load fitness class
@@ -30,21 +31,21 @@ if __name__ == "__main__":
     Heading = [ "Label", "t_t", "m_0", "|Delta_a|", \
         "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
         "Delta_omega", "Delta_theta"]
-    with open(feasibilityFileName, "w") as myfile:
-        for i in Heading:
-            myfile.write(i +"   ")
-        myfile.write("\n")
-    myfile.close()
-    with open(massFileName, "w") as myfile:
-        for i in Heading:
-            myfile.write(i +"   ")
-        myfile.write("\n")
-    myfile.close()
+    for fileName in [feasibilityFileName, massFileName]:
+        with open(fileName, "w") as myfile:
+            for i in Heading:
+                if i != Heading[-1]:
+                    myfile.write(i +" ")
+                else:
+                    myfile.write(i)
+            myfile.write("\n")
+        myfile.close()
+
 
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 50 # number of training samples. TODO: increase
+    nsamples = 10000 # number of training samples. TODO: increase
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -52,7 +53,8 @@ if __name__ == "__main__":
     ####################
     start_time = time.time()
 
-    for decv in range(6,8): 
+    # for decv in range(6,8):
+    for decv in range(6,len(SF.bnds)): # Add impulses that won't be used for Lambertt
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
@@ -69,7 +71,8 @@ if __name__ == "__main__":
         r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
 
         nrevs = 2
-        l = pk.lambert_problem(r1 = r_0, r2 = r_1, tof = t_t, cw = False, mu = pk.MU_SUN, max_revs=nrevs)
+        l = pk.lambert_problem(r1 = r_0, r2 = r_1, tof = t_t, cw = False, \
+            mu = Cts.mu_S_m, max_revs=nrevs)
         v1 = np.array(l.get_v1())
         v2 = np.array(l.get_v2())
 
@@ -102,11 +105,17 @@ if __name__ == "__main__":
     # Delete not valid rows:
     sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
 
+    for i in range(len(sample_inputs)): # Correct angles to be between 0 and 2pi
+        sample_inputs[i,1] = AL_BF.convertRange(sample_inputs[i,1], 'rad', 0, 2*np.pi)
+        sample_inputs[i,2] = AL_BF.convertRange(sample_inputs[i,2], 'rad', 0, 2*np.pi)
+        sample_inputs[i,4] = AL_BF.convertRange(sample_inputs[i,4], 'rad', 0, 2*np.pi)
+        sample_inputs[i,5] = AL_BF.convertRange(sample_inputs[i,5], 'rad', 0, 2*np.pi)
+
     t = (time.time() - start_time) 
     print("Samples", nsamples, "Non valid", len(notvalid))
     print("Time for Lambert", t)
 
-    print(sample_inputs)
+    # print(sample_inputs)
     # sample_inputs = samples_Lambert
 
     ####################
@@ -137,6 +146,7 @@ if __name__ == "__main__":
                 tolGlobal = MBH['tolGlobal'])
         
         fvalue = f(xmin)
+        print(xmin)
         Fit.savetoFile()
         Fit.printResult()
         

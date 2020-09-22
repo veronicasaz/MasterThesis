@@ -114,6 +114,8 @@ def convertRange(x, units, minRange, maxRange):
         angleCorrected = x-maxRange + minRange
     elif x < minRange:
         angleCorrected = x -minRange +maxRange
+    else:
+        angleCorrected = x
             
     return angleCorrected
 

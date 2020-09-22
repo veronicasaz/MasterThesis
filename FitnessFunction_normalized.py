@@ -301,6 +301,8 @@ class Fitness:
 
             max m0 should be added
         """
+        FIT = CONF.FEAS
+
         feasibilityFileName = "trainingData_Feas.txt"
         massFileName = "trainingData_Opt.txt"
         # Inputs 
@@ -325,8 +327,8 @@ class Fitness:
         #     np.linalg.norm(self.Error[3:]) <= 100: # Feasible trajectory
         # if np.linalg.norm(self.Error[0:3]) <= 5e7 and \
         #     np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
-        if np.linalg.norm(self.Error[0:3]) <= 1e6 and \
-            np.linalg.norm(self.Error[3:]) <= 1e2: # TODO: change. Too much
+        if np.linalg.norm(self.Error[0:3]) <= FIT['feas_ep'] and \
+            np.linalg.norm(self.Error[3:]) <= FIT['feas_ev']: 
             feasible = 1
         else:
             feasible = 0

@@ -72,6 +72,9 @@ def test_convertAngleForm():
     vector1 = AL_BF.convert3dvector(vector0, "cartesian")
     print(vector1*AL_BF.rad2deg(1)) 
 
+def test_convertRange():
+    angle = -3.02
+    print(AL_BF.convertRange(angle, 'deg', 0, 360))
 
 ##############################################
 # Conversion Cartesian-Keplerian and vice-versa
@@ -316,7 +319,7 @@ def findValidLambert():
         r_M, v_M = marsephem.eph(decv[6] + AL_BF.sec2days(decv[7]) )
 
         # Create transfer in the first moment
-        nrevs = 0
+        nrevs = 2
         l = pk.lambert_problem(r1 = r_E, r2 = r_M, tof = decv[7], \
             cw = False, mu =  Cts.mu_S_m, max_revs=nrevs)
         v1 = np.array(l.get_v1())
@@ -398,10 +401,11 @@ def propagateSimsFlanagan():
 if __name__ == "__main__":
     # changeReferenceFrame()
     # test_convertAngleForm()
+     test_convertRange()
     # CartKeplr()
     # propagateHohmann()
     # Lambert()
     # propagateLambert()
     # print("Universal propagation")
     # propagateUniversalLambert()
-    propagateSimsFlanagan()
+    # propagateSimsFlanagan()
