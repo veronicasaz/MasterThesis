@@ -1,0 +1,34 @@
+MBH:
+ niter_total: 20
+ niter_success: 10 #Number of iterations before a big jump
+ niter_local: 100 #Number of iterations for the local opt. TODO: it is ignored
+ jumpMagnitude: 0.005 #Magnitude of the small jump 
+ tolLocal: 0.01
+ tolGlobal: 0.00001
+
+MBH_generateDatabase: #For only small steps
+ niter_total: 20
+ niter_success: 20 #Number of iterations before a big jump
+ niter_local: 100 #Number of iterations for the local opt. TODO: it is ignored
+ jumpMagnitude: 0.01 #Magnitude of the small jump 
+ tolLocal: 0.01
+ tolGlobal: 0.00001
+ 
+EA:
+ ind: 1000 #individuals
+ iterat: 1000 #iterations
+ itersuccess: 200 #max iter without improvement
+ elitism: 0.01
+ mutat: 0.001 #probability of mutation
+
+coordS:
+ maxiter: 10
+ stepsize:
+  - 1000
+  - 0.01
+  - 0.01
+  - 1000
+  - 0.01
+  - 0.01
+  - 15
+  - 864000

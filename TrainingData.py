@@ -6,12 +6,19 @@ import seaborn as sns
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler 
 
+from LoadConfigFiles import ANN 
+
 ###################################################################
 # https://www.tensorflow.org/tutorials/load_data/pandas_dataframe
 # https://www.tensorflow.org/tutorials/keras/classification
+# https://medium.com/@curiousily/tensorflow-for-hackers-part-ii-building-simple-neural-network-2d6779d2f91b
 ###################################################################
 
-train_file_path = "./databaseANN/trainingData_Feas_shortTest.txt"
+# train_file_path = "./databaseANN/trainingData_Feas_shortTest.txt"
+train_file_path = "./databaseANN/trainingData_Feas.txt"
+
+ANN_train = ANN.ANN_train
+ANN_archic = ANN.ANN_archic
 
 class Dataset:
     def __init__(self, file_path, labels_feas, dataset = False):
@@ -109,10 +116,57 @@ def loadPandas(plotDistribution = False, pairplot = False, corrplot = False):
         sns.heatmap(corr_mat, vmax = 1.0, square= True, ax=ax)
         plt.show()
 
-    return feasible_stnd
+    return feasible_stnd, [standardized, input_data]
 
-def encodeData(feasible_stnd):
+# def encodeData(feasible_stnsd):
+#     def enconde(series)
 
+def splitData(feasible_stnd, data_feature ):
+    train_x, train_y = data_feature 
+
+    train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
+    x_train = train_x.iloc[0:train_cnt].values
+    y_train = train_y.iloc[0:train_cnt].values
+    x_test = train_x.iloc[train_cnt:].values
+    y_test = train_y.iloc[train_cnt:].values
+
+    return [x_train, y_train], [x_test, y_test]
+
+def multilayer_perceptron(x, weights, biases, keep_prob):
+    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+    layer_1 = tf.nn.relu(layer_1)
+    layer_1 = tf.nn.dropout(layer_1, keep_prob)
+    out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
+    
+    return out_layer
+
+# def get_compiled_model():
+#     # Dense(number of neurons per layer)
+#     model = tf.keras.Sequential([
+#     tf.keras.layers.Dense(10, activation='relu'),
+#     tf.keras.layers.Dense(10, activation='relu'),
+#     tf.keras.layers.Dense(1)
+#   ])
+
+def ANN_setup(traindata): 
+    ANN_config['train_size']
+
+    n_input = traindata[0].shape[1] #inputs
+    n_classes = traindata[1].shape[1] # Labels
+
+    weights = {
+        'h1': tf.Variable(tf.random_normal([n_input, ANN_archic['neuron_hidden']])),
+        'out': tf.Variable(tf.random_normal([ANN_archic['neuron_hidden'], n_classes]))
+    }
+
+    biases = {
+        'b1': tf.Variable(tf.random_normal([ANN_archic['neuron_hidden']])),
+        'out': tf.Variable(tf.random_normal([n_classes]))
+    }
+
+    keep_prob = tf.placeholder("float")
+
+    
 # # Convert objects into discrete numerical values
 # for label in labels_feas:
 #   feasible_txt[label] = pd.Categorical(feasible_txt[label])
@@ -148,6 +202,9 @@ def encodeData(feasible_stnd):
 
 
 if __name__ == "__main__":
+
     # LoadNumpy()
-    loadPandas(plotDistribution = False)
-    encodeData(feasible_stnd)
+    feasible_stnd, data_feature = loadPandas(plotDistribution = True, pairplot= True, corrplot= True)
+    # encodeData(feasible_stnd) #needed?
+    traindata, testdata = splitData(feasible_stnd, data_feature)
+    ANN_setup(traindata, testdata)

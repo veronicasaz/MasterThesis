@@ -1,0 +1,5 @@
+FEASIB:
+ factor_pos: 500 #multiplication of position vector for scaling
+ factor_vel: 1 #multiplication of velocity vector for scaling
+ feas_ep: 10000000 #allowed error in position to be feasible
+ feas_ev: 1000 #allowed error in velocity to be feasible

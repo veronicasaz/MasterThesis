@@ -43,3 +43,11 @@ class Fitness_config:
             Fit_config = yaml.load(file, Loader=yaml.FullLoader)
 
         self.FEAS = Fit_config['FEASIB']
+
+class ANN:
+    def __init__(self):
+        with open("./confFiles/ANN.yml") as file:
+            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+        
+        self.ANN_archic = ANN_config['Architecture']
+        self.ANN_train = ANN_config['Training']
