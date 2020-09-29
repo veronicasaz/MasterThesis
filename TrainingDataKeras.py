@@ -1,11 +1,13 @@
 # import tensorflow as tf
 import tensorflow.compat.v1 as tf
+# import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from math import floor, ceil
 
+from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler 
 
 import LoadConfigFiles as CONF
@@ -84,14 +86,14 @@ def LoadNumpy():
 # def plotDistributionStandardized(database):
 
 def convertLabels(Labels):
-    # Labels2 = np.zeros((len(Labels), 2))
-    # for i in range(len(Labels)):
-    #     if Labels[i] == 0: # Non feasible
-    #         Labels2[i,:] = np.array([1,0])
-    #     else:
-    #         Labels2[i,:] = np.array([0,1])
+    Labels2 = np.zeros((len(Labels), 2))
+    for i in range(len(Labels)):
+        if Labels[i] == 0: # Non feasible
+            Labels2[i,:] = np.array([1,0])
+        else:
+            Labels2[i,:] = np.array([0,1])
 
-    Labels2 = Labels
+    # Labels2 = Labels
     return Labels2
 
 def loadPandas(plotDistribution = False, pairplot = False, corrplot = False):
@@ -143,11 +145,15 @@ def splitData(feasible_stnd, data_feature ):
     train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
     # x_train = train_x.iloc[0:train_cnt].values
     x_train = train_x[0:train_cnt] # it comes from numpy
-    y_train = train_y.iloc[0:train_cnt].values
+    # y_train = train_y.iloc[0:train_cnt].values
+    y_train = train_y[0:train_cnt]
     # x_test = train_x.iloc[train_cnt:].values
     x_test = train_x[train_cnt:] # it comes from numpy 
-    y_test = train_y.iloc[train_cnt:].values
+    # y_test = train_y.iloc[train_cnt:].values
+    y_test = train_y[train_cnt:]
+
     return [x_train, y_train], [x_test, y_test]
+
 
 # def multilayer_perceptron(x, weights, biases, keep_prob): #with dropout
 def multilayer_perceptron(x, weights, biases):
@@ -160,6 +166,7 @@ def multilayer_perceptron(x, weights, biases):
     # layer_2 = tf.nn.dropout(layer_2, keep_prob)
 
     out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+    out_layer = tf.sigmoid(out_layer)
     
     return out_layer
 
@@ -173,12 +180,18 @@ def multilayer_perceptron(x, weights, biases):
 
 def ANN_setup(traindata, testdata): 
 
+    s = tf.InteractiveSession()
+
     n_input = traindata[0].shape[1] #inputs
     n_classes = 2 # Labels
     n_examples = traindata[0].shape[0]
 
-    x = tf.cast(traindata[0], dtype = tf.float32)
-    y = np.reshape( traindata[1], (traindata[1].size, 1) )
+    # x = tf.cast(traindata[0], dtype = tf.float32)
+    # y = np.reshape( traindata[1], (traindata[1].size, 1) )
+
+    x = tf.placeholder('float32', shape = (None, n_input), name= "x")
+    y = tf.placeholder("float32", shape = (None, n_classes), name = "y")
+    keep_prob = tf.placeholder(tf.float32)
 
     weights = {
         'h1': tf.Variable(tf.random.normal([n_input, ANN_archic['neuron_hidden']])),
@@ -198,98 +211,58 @@ def ANN_setup(traindata, testdata):
 
     # Cost function and optimizer
 
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-        logits = out_layer, labels = y)) # TODO: change from sigmoid. Relu?
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+        logits = out_layer, labels = y)) 
+            # + regularizer_rate*(tf.reduce_sum(tf.square(bias_0)) + tf.reduce_sum(tf.square(bias_1)))
 
     # optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost) 
-    optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost) 
-    # optimizer = tf.train.GradientDescentOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost, \
+        var_list = list(weights.values()) + list(biases.values())  ) 
+
+    # Metrics definition
+    correct_prediction = tf.equal(tf.argmax(traindata[1], 1), \
+                                  tf.argmax(out_layer, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction , tf.float32))
 
 
-    ###############################################
-    # Plot settings 
-    ###############################################
-    avg_set = [] 
-    epoch_set = [] 
+    training_accuracy = []
+    training_loss = []
+    testing_accuracy = []
 
-    # Initializing the variables 
-    init = tf.global_variables_initializer() 
+    s.run(tf.global_variables_initializer())
+    for epoch in range(ANN_train['training_epochs']):    
+        arr = np.arange(traindata[0].shape[0])
+        np.random.shuffle(arr)
+        for index in range(0, traindata[0].shape[0], ANN_train['batch_size']):
+            s.run(optimizer, {x: traindata[0][arr[index:index + ANN_train['batch_size']]],
+                             y: traindata[1][arr[index:index + ANN_train['batch_size']]],
+                             keep_prob: ANN_train['dropout_prob']})
 
-    # Launch the graph 
-    with tf.Session() as sess: 
-        sess.run(init) 
+        training_accuracy.append(s.run(accuracy, feed_dict= {x: traindata[0], 
+                                                            y: traindata[1], 
+                                                            keep_prob: 1}))
+        training_loss.append(s.run(cost, {x: traindata[0], 
+                                        y: traindata[1], 
+                                        keep_prob: 1}))
         
-        # Training cycle
-        for epoch in range(ANN_train['training_epochs']): 
-            avg_cost = 0. 
-            total_batch = int(n_examples / ANN_train['batch_size']) # number of batches
-            
-            # Loop over all batches 
-            for i in range(total_batch): 
-                batch_xs, batch_ys = mnist.train.next_batch(ANN_train['batch_size']) 
-                # Fit training using batch data sess.run(optimizer, feed_dict = {
-                    # x: batch_xs, y: batch_ys}) 
-                # Compute average loss 
-                avg_cost += sess.run(cost, feed_dict = {x: batch_xs, y: batch_ys}) / total_batch
-            # Display logs per epoch step 
-            if epoch % display_step == 0: 
-                print( "Epoch:", '%04d' % (epoch + 1), \
-                    "cost=", "{:.9f}".format(avg_cost) )
-            avg_set.append(avg_cost) 
-            epoch_set.append(epoch + 1)
-        print ("Training phase finished") 
-        
-        plt.plot(epoch_set, avg_set, 'o', label = 'MLP Training phase') 
-        plt.ylabel('cost') 
-        plt.xlabel('epoch') 
-        plt.legend() 
-        plt.show() 
-        
-        # Test model 
-        correct_prediction = tf.equal(tf.argmax(output_layer, 1), tf.argmax(y, 1)) 
-        
-        # Calculate accuracy 
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float")) 
-        print ("Model Accuracy:", accuracy.eval({x: testdata[0], y: testdata[1]}))
-        
+        ## Evaluation of model
+        testing_accuracy.append(accuracy_score(testdata[1].argmax(1), 
+                                s.run(out_layer, {x: testdata[0],keep_prob:1}).argmax(1)))
+        print("Epoch:{0}, Train loss: {1:.2f} Train acc: {2:.3f}, Test acc:{3:.3f}".format(epoch,
+                                                                        training_loss[epoch],
+                                                                        training_accuracy[epoch],
+                                                                    testing_accuracy[epoch]))
 
 
-
-
-
-# # Convert objects into discrete numerical values
-# for label in labels_feas:
-#   feasible_txt[label] = pd.Categorical(feasible_txt[label])
-#   feasible_txt[label] = getattr(feasible_txt, label).cat.codes
-
-# # Create data.Dataset
-# output = feasible_txt.pop('Label')
-# dataset = tf.data.Dataset.from_tensor_slices((feasible_txt.values, output.values))
-
-# # for feat, targ in dataset.take(5):
-# #     print ('Features: {}, Target: {}'.format(feat, targ))
-
-# # Shuffle and batch the dataset
-# train_dataset = dataset.shuffle(len(feasible_txt)).batch(1)
-
-# # Create and train a model
-# def get_compiled_model():
-#     # Dense(number of neurons per layer)
-#     model = tf.keras.Sequential([
-#     tf.keras.layers.Dense(10, activation='relu'),
-#     tf.keras.layers.Dense(10, activation='relu'),
-#     tf.keras.layers.Dense(1)
-#   ])
-
-#     model.compile(optimizer='adam',
-#                     loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-#                     metrics=['accuracy']) # TODO: choose measure for accuracy for classification
-
-#     return model
-
-# model = get_compiled_model()
-# model.fit(train_dataset, epochs=10)
-
+    ## Plotting chart of training and testing accuracy as a function of iterations
+    iterations = list(range(ANN_train['training_epochs']))
+    plt.plot(iterations, training_accuracy, label='Train')
+    plt.plot(iterations, testing_accuracy, label='Test')
+    plt.ylabel('Accuracy')
+    plt.xlabel('iterations')
+    plt.show()
+    print("Train Accuracy: {0:.2f}".format(training_accuracy[-1]))
+    print("Test Accuracy:{0:.2f}".format(testing_accuracy[-1])) 
 
 if __name__ == "__main__":
 
