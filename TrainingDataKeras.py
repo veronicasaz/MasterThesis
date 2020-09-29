@@ -96,9 +96,12 @@ def convertLabels(Labels):
     # Labels2 = Labels
     return Labels2
 
-def loadPandas(plotDistribution = False, pairplot = False, corrplot = False):
+def loadPandas():
     # Load with pandas
     feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
+    return feasible_txt
+
+def adaptData(feasible_txt, plotDistribution = False, pairplot = False, corrplot = False):
     labels_feas = feasible_txt.columns.values
     input_data = feasible_txt.drop('Label', axis = 1)
     input_labels = convertLabels( feasible_txt['Label'] )
@@ -157,26 +160,25 @@ def splitData(feasible_stnd, data_feature ):
 
 # def multilayer_perceptron(x, weights, biases, keep_prob): #with dropout
 def multilayer_perceptron(x, weights, biases):
-    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
-    layer_1 = tf.nn.relu(layer_1)
+    """
+
+    """
+    # layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+    layer_prev = tf.add(tf.matmul(x, weights[0]), biases[0])
+    layer_prev = tf.nn.relu(layer_prev)
     # layer_1 = tf.nn.dropout(layer_1, keep_prob)
 
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-    layer_2 = tf.nn.relu(layer_2)
+    for layer in range(ANN_archic['hidden_layers']-1):
+        # layer_current = tf.add(tf.matmul(layers[layer], weights['h2']), biases['b2'])
+        layer_current = tf.add(tf.matmul(layer_prev, weights[layer+1]), biases[layer+1])
+        layer_current = tf.nn.relu(layer_current)
+        layer_prev = layer_current
     # layer_2 = tf.nn.dropout(layer_2, keep_prob)
 
-    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+    out_layer = tf.matmul(layer_current, weights[-1]) + biases[-1]
     out_layer = tf.sigmoid(out_layer)
     
     return out_layer
-
-# def get_compiled_model():
-#     # Dense(number of neurons per layer)
-#     model = tf.keras.Sequential([
-#     tf.keras.layers.Dense(10, activation='relu'),
-#     tf.keras.layers.Dense(10, activation='relu'),
-#     tf.keras.layers.Dense(1)
-#   ])
 
 def ANN_setup(traindata, testdata): 
 
@@ -193,19 +195,26 @@ def ANN_setup(traindata, testdata):
     y = tf.placeholder("float32", shape = (None, n_classes), name = "y")
     keep_prob = tf.placeholder(tf.float32)
 
-    weights = {
-        'h1': tf.Variable(tf.random.normal([n_input, ANN_archic['neuron_hidden']])),
-        'h2': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], ANN_archic['neuron_hidden']])),
-        'out': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], n_classes]))
-    }
+    # weights = {
+    #     'h1': tf.Variable(tf.random.normal([n_input, ANN_archic['neuron_hidden']])),
+    #     'h2': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], ANN_archic['neuron_hidden']])),
+    #     'out': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], n_classes]))
+    # }
 
-    biases = {
-        'b1': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']])),
-        'b2': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']])),
-        'out': tf.Variable(tf.random.normal([n_classes]))
-    }
+    # biases = {
+    #     'b1': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']])),
+    #     'b2': tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']])),
+    #     'out': tf.Variable(tf.random.normal([n_classes]))
+    # }
 
-    # keep_prob = tf.placeholder("float")
+    weights = [ tf.Variable(tf.random.normal([n_input, ANN_archic['neuron_hidden']]))] +\
+            [ tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], ANN_archic['neuron_hidden']])) ] * (ANN_archic['hidden_layers'] -1) +\
+            [  tf.Variable(tf.random.normal([ANN_archic['neuron_hidden'], n_classes])) ]
+
+    biases = [tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']]))] +\
+             [tf.Variable(tf.random.normal([ANN_archic['neuron_hidden']]))] * (ANN_archic['hidden_layers'] -1) +\
+             [tf.Variable(tf.random.normal([n_classes]))]
+
     # out_layer = multilayer_perceptron(x, weights, biases, keep_prob)
     out_layer = multilayer_perceptron(x, weights, biases) # without dropout
 
@@ -216,8 +225,11 @@ def ANN_setup(traindata, testdata):
             # + regularizer_rate*(tf.reduce_sum(tf.square(bias_0)) + tf.reduce_sum(tf.square(bias_1)))
 
     # optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost) 
+    # optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost, \
+    #     var_list = list(weights.values()) + list(biases.values())  ) # When weights and biases are dictionaries
+
     optimizer = tf.train.AdamOptimizer(learning_rate = ANN_train['learning_rate']).minimize(cost, \
-        var_list = list(weights.values()) + list(biases.values())  ) 
+        var_list = weights + biases  ) 
 
     # Metrics definition
     correct_prediction = tf.equal(tf.argmax(traindata[1], 1), \
@@ -260,6 +272,7 @@ def ANN_setup(traindata, testdata):
     plt.plot(iterations, testing_accuracy, label='Test')
     plt.ylabel('Accuracy')
     plt.xlabel('iterations')
+    plt.legend()
     plt.show()
     print("Train Accuracy: {0:.2f}".format(training_accuracy[-1]))
     print("Test Accuracy:{0:.2f}".format(testing_accuracy[-1])) 
@@ -267,8 +280,9 @@ def ANN_setup(traindata, testdata):
 if __name__ == "__main__":
 
     # LoadNumpy()
-    # feasible_stnd, data_feature = loadPandas(plotDistribution = True, pairplot= True, corrplot= True)
-    feasible_stnd, data_feature = loadPandas()
+    feasible_txt = loadPandas()
+    # feasible_stnd, data_feature = adaptData(feasible_txt, plotDistribution = True, pairplot= True, corrplot= True)
+    feasible_stnd, data_feature = adaptData(feasible_txt)
     
     # encodeData(feasible_stnd) #needed?
     traindata, testdata = splitData(feasible_stnd, data_feature)
