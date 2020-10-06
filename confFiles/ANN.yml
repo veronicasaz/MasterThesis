@@ -1,7 +1,8 @@
 Training:
- train_size: 0.9 # 90% of the data for training and 10% for testing
- training_epochs: 80 # training steps
+ train_size: 0.8 # 90% of the data for training and 10% for testing
+ training_epochs: 20 # training steps
  batch_size: 30 # number of data to use in each epoch
+ validation_size: 0.2 # validation size
  display_step: 5
  learning_rate: 0.001
  regularizer_rate: 0.1
@@ -9,7 +10,7 @@ Training:
 
 Architecture:
  hidden_layers: 2 # number of hidden layers
- neuron_hidden: 80 # number of neurons in each hidden layer
+ neuron_hidden: 4 # number of neurons in each hidden layer
 
 
 

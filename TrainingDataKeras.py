@@ -128,27 +128,43 @@ class ANN:
         self.n_classes = 2 # Labels
         self.n_examples = traindata[0].shape[0] # samples
 
+        self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
 
-    def training(self):
-
+    def create_model(self):
+        # Create architecture
         initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
         
-        self.model = keras.Sequential([ # TODO: add input_dim? in first layer
-            keras.layers.Dense(ANN_archic['neuron_hidden'], activation='relu', 
-                               use_bias=True, bias_initializer='zeros',
-                               kernel_initializer = initializer),
-            keras.layers.Dense(ANN_archic['neuron_hidden'], activation='relu', 
-                               use_bias=True, bias_initializer='zeros',
-                               kernel_initializer = initializer),                               
-            keras.layers.Dense(self.n_classes)
-        ])
-
-        self.model.compile(optimizer='adam',
+        model = keras.Sequential()
+        for layer in range(ANN_archic['hidden_layers']):
+            model.add(keras.layers.Dense(
+                        ANN_archic['neuron_hidden'], 
+                        activation='relu', 
+                        use_bias=True, bias_initializer='zeros',
+                        kernel_initializer = initializer) )
+        model.add(keras.layers.Dense(self.n_classes) ) # output layer
+       
+        # Compile
+        model.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
-        self.history = self.model.fit(self.traindata[0], self.traindata[1], validation_split=0.20,
-                    epochs = ANN_train['training_epochs'], batch_size = ANN_train['batch_size'] )
+        return model
+            
+    def training(self):
+        # Create a callback that saves the model's weights
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+                                                        save_weights_only=True,
+                                                        verbose=1)
+
+        # Create model architecture
+        self.model = self.create_model()
+        
+        # Train
+        self.history = self.model.fit(self.traindata[0], self.traindata[1], 
+                    validation_split= ANN_train['validation_size'],
+                    epochs = ANN_train['training_epochs'], 
+                    batch_size = ANN_train['batch_size'],
+                    callbacks=[cp_callback] )
 
     def plotTraining(self):
         plt.plot(self.history.history['accuracy'])
@@ -168,12 +184,21 @@ class ANN:
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
 
-    def evaluate(self):
+    def evaluateTest(self):
         test_loss, test_acc = self.model.evaluate(self.testdata[0], self.testdata[1], verbose=2)
 
         print('\nTest accuracy:', test_acc)
 
-    def predict(self):
+    def predict(self, fromFile = False):
+        """
+        INPUTS:
+            fromFile: model is not trained in this run but loaded
+        """
+        if fromFile == True:
+            model_fromFile = self.create_model()
+            model_fromFile.load_weights(self.checkpoint_path)
+            self.model = model_fromFile
+
         self.probability_model = tf.keras.Sequential([self.model, 
                                          tf.keras.layers.Softmax()])
         
@@ -211,12 +236,18 @@ class ANN:
         prediction = self.probability_model.predict(input_batch)
         print("Prediction", prediction, "predicted label", np.argmax(prediction))
 
-    def saveTrained(self):
-        weights_h = np.zeros((ANN_archic['hidden_layers'], ANN_archic['neuron_hidden'] ))
+    def printWeights(self):
+        weights_h = list()
+        bias_h = list()
+
         for layer in range(ANN_archic['hidden_layers']):
-            weights_h[layer] = self.model.layers[layer].get_weights()[1]
-            
-        weights_output = self.model.layers[-1].get_weights()[1]
+            weights_h.append( self.model.layers[layer].get_weights()[0] )
+            bias_h.append( self.model.layers[layer].get_weights()[1] )
+
+        weights_output = self.model.layers[-1].get_weights()[0]
+        bias_output = self.model.layers[-1].get_weights()[1]
+        print("WEIGHTS", weights_h)
+        print("WEIGHTS", weights_output)
 
 if __name__ == "__main__":
 
@@ -226,16 +257,16 @@ if __name__ == "__main__":
     traindata, testdata = splitData(dataset_np)
     
     perceptron = ANN(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
     
     print("EVALUATE")
-    perceptron.evaluate()
-    predictions = perceptron.predict()
+    # perceptron.evaluateTest()
+    predictions = perceptron.predict(fromFile=True)
     perceptron.plotPredictions(predictions)
 
-    # Save trained to file
-    perceptron.saveTrained()
+    # Print weights of trained
+    perceptron.printWeights()
 
     # Simple prediction
     print("SINGLE PREDICTION")
