@@ -184,6 +184,9 @@ class ANN:
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
 
+    def plotTrainingMeasure(self):
+        # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+
     def evaluateTest(self):
         test_loss, test_acc = self.model.evaluate(self.testdata[0], self.testdata[1], verbose=2)
 
@@ -210,21 +213,27 @@ class ANN:
         true_labels = self.testdata[1]
         choice_prediction = [np.argmax(pred) for pred in predictions]
         
-        correctResult = np.zeros(len(choice_prediction))
-        for i in range(len(choice_prediction)):
-            if choice_prediction[i] == true_labels[i]:
-                correctResult[i] = 1 
-            else:
-                correctResult[i] = -1
 
-        sumTrue = np.count_nonzero(correctResult == 1)
-        sumFalse = np.count_nonzero(correctResult == -1)
+        True_Positive = 0
+        True_Negative = 0
+        False_Positive = 0
+        False_Negative = 0
+
+        for i in range(len(choice_prediction)):
+            if choice_prediction[i] == 1 and true_labels[i] == 1:
+                True_Positive += 1
+            elif choice_prediction[i] == 0 and true_labels[i] == 0:
+                True_Negative += 1
+            elif choice_prediction[i] == 1 and true_labels[i] == 0:
+                False_Positive += 1
+            elif choice_prediction[i] == 0 and true_labels[i] == 1:
+                False_Negative += 1
 
         fig, ax = plt.subplots() 
-        plt.xticks(range(self.n_classes))
+        plt.xticks(range(4), labels = ['True Positive', 'True Negative', 'False Positive', 'False Negative'])
         plt.yticks([])
-        plot = plt.bar(range(self.n_classes), [sumTrue, sumFalse] )
-        for i, v in enumerate([sumTrue, sumFalse]):
+        plot = plt.bar(range(4), [True_Positive, True_Negative, False_Positive, False_Negative] )
+        for i, v in enumerate([True_Positive, True_Negative, False_Positive, False_Negative]):
             ax.text(i, v+5, str(v), color='black', fontweight='bold')
         plt.grid(False)
         plt.tight_layout()
@@ -257,11 +266,11 @@ if __name__ == "__main__":
     traindata, testdata = splitData(dataset_np)
     
     perceptron = ANN(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron.training()
+    perceptron.plotTraining()
     
     print("EVALUATE")
-    # perceptron.evaluateTest()
+    perceptron.evaluateTest()
     predictions = perceptron.predict(fromFile=True)
     perceptron.plotPredictions(predictions)
 

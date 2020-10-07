@@ -45,7 +45,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 10000 # number of training samples. TODO: increase
+    nsamples = 10000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         r_0, vE = earthephem.eph(t_0)
         r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
 
-        nrevs = 2
+        nrevs = 4
         l = pk.lambert_problem(r1 = r_0, r2 = r_1, tof = t_t, cw = False, \
             mu = Cts.mu_S_m, max_revs=nrevs)
         v1 = np.array(l.get_v1())
@@ -79,13 +79,23 @@ if __name__ == "__main__":
         # Check if any of the solutions for the revolutions has velocities
         # within the bounds
 
+        # Correction for the continuous thrust:
+        Spacecraft = AL_2BP.Spacecraft( )
+        # Apply correction of half DeltaV_max for approximation
+        correction = 2
+        DeltaV_max = Spacecraft.T / Spacecraft.m_dry * t_t / correction
+        
+        v1 -= v1/np.linalg.norm(v1) * DeltaV_max # applied in the same direction
+        v2 += v2/np.linalg.norm(v2) * DeltaV_max
+
         v_i_prev = 1e12 # Excessive random value
         for rev in range(len(v1)):
-            v_i = np.linalg.norm(v1[rev] - np.array(vE)) # Relative velocities for the bounds 
+            v_i = np.linalg.norm(v1[rev] - np.array(vE))  # Relative velocities for the bounds 
             v_i2 = np.linalg.norm(v2[rev] - np.array(vM))
+            
             # Change to polar for the bounds
-            if v_i >= SF.bnds[0][0] and  v_i <= SF.bnds[0][1] and \
-            v_i2 >= SF.bnds[3][0] and  v_i2 <= SF.bnds[3][1]:
+            if v_i >= (SF.bnds[0][0] ) and  v_i <= (SF.bnds[0][1] ) and \
+            v_i2 >= (SF.bnds[3][0] ) and  v_i2 <= (SF.bnds[3][1] ):
                 if abs(v_i2 - v_i) < v_i_prev or rev == 0:
                     samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
                     samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")

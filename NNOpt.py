@@ -59,7 +59,7 @@ class ANN:
                     epochs = dv[2], 
                     batch_size = dv[3] )
 
-    def retrieveAccuracy(self):
+    def retrieveAccuracy(self, retrieve = 'Accuracy'):
         train_loss = self.history.history['loss']
         train_accuracy = self.history.history['accuracy']
 
@@ -68,9 +68,14 @@ class ANN:
 
         test_loss, test_accuracy = self.model.evaluate(self.testdata[0], self.testdata[1], verbose=2)
 
-        return train_accuracy, val_accuracy, test_accuracy
+        if retrieve == 'Accuracy':
+            return train_accuracy, val_accuracy, test_accuracy
+        elif retrieve == 'Loss':
+            return train_loss, val_loss, test_loss
 
-def optArch(traindata, testdata, dv_HL, dv_NH):
+
+
+def optArch(traindata, testdata, dv_HL, dv_NH, retrieveValue = 'Accuracy'):
 
     perceptron = ANN(traindata, testdata)
 
@@ -88,7 +93,7 @@ def optArch(traindata, testdata, dv_HL, dv_NH):
             print("OPT arch", dv0, dv1)
             dv = [dv0, dv1, dv2, dv3]
             perceptron.training(dv)
-            train_accuracy, val_accuracy, test_accuracy = perceptron.retrieveAccuracy()
+            train_accuracy, val_accuracy, test_accuracy = perceptron.retrieveAccuracy(retrieve = retrieveValue)
             train_accuracy_Matrix_arch[i, j] = train_accuracy[-1]
             val_accuracy_Matrix_arch[i, j] = val_accuracy[-1]
             test_accuracy_Matrix_arch[i, j] = test_accuracy
@@ -114,7 +119,7 @@ def optArch(traindata, testdata, dv_HL, dv_NH):
             np.savetxt(f, line, fmt='%.2f')  
     f.close()
 
-def optTra(traindata, testdata, dv_TE, dv_BS):
+def optTra(traindata, testdata, dv_TE, dv_BS, retrieveValue = 'Accuracy'):
     perceptron = ANN(traindata, testdata)
 
     train_accuracy_Matrix_train = np.zeros((len(dv_TE), len(dv_BS)))
@@ -128,7 +133,7 @@ def optTra(traindata, testdata, dv_TE, dv_BS):
             print("OPT train", dv2, dv3)
             dv = [dv0, dv1, dv2, dv3]
             perceptron.training(dv)
-            train_accuracy, val_accuracy, test_accuracy = perceptron.retrieveAccuracy()
+            train_accuracy, val_accuracy, test_accuracy = perceptron.retrieveAccuracy(retrieve = retrieveValue)
             train_accuracy_Matrix_train[i, j] = train_accuracy[-1]
             test_accuracy_Matrix_train[i, j] = test_accuracy
             val_accuracy_Matrix_train[i, j] = val_accuracy[-1]
@@ -165,17 +170,17 @@ def loadData():
 
     return train_acc_arch, test_acc_arch, val_acc_arch, train_acc_train, test_acc_train, val_acc_train
 
-def plot(dv_HL, dv_NH, dv_TE, dv_BS):
+def plot(dv_HL, dv_NH, dv_TE, dv_BS, measureValue = 'Accuracy'):
     ta1, te1, va1, ta2, te2, va2 = loadData()
     color = ['red', 'green', 'blue', 'black', 'orange', 'yellow']
-
+    
     fig= plt.figure()
 
     ax = fig.add_subplot(2,3, 1)
     for i in range(len(dv_HL)):
         plt.plot(dv_NH, ta1[i, :], 'x-', c = color[i], label = dv_HL[i])
     plt.xlabel('Neurons per layer')
-    plt.ylabel('Training accuracy')
+    plt.ylabel('Training'+measureValue)
     plt.grid()
     plt.legend(title = "Hidden layers")
 
@@ -183,7 +188,7 @@ def plot(dv_HL, dv_NH, dv_TE, dv_BS):
     for i in range(len(dv_HL)):
         plt.plot(dv_NH, te1[i, :], 'x-', c = color[i], label = dv_HL[i])
     plt.xlabel('Neurons per layer')
-    plt.ylabel('Testing accuracy')
+    plt.ylabel('Testing'+measureValue)
     plt.grid()
     plt.legend(title = "Hidden layers")
     # plt.show()
@@ -192,7 +197,7 @@ def plot(dv_HL, dv_NH, dv_TE, dv_BS):
     for i in range(len(dv_HL)):
         plt.plot(dv_NH, va1[i, :], 'x-', c = color[i], label = dv_HL[i])
     plt.xlabel('Neurons per layer')
-    plt.ylabel('Validation accuracy')
+    plt.ylabel('Validation'+measureValue)
     plt.grid()
     plt.legend(title = "Hidden layers")
     # plt.show()
@@ -202,7 +207,7 @@ def plot(dv_HL, dv_NH, dv_TE, dv_BS):
     for i in range(len(dv_BS)):
         plt.plot(dv_TE, ta2[:, i], 'x-', c = color[i], label = dv_BS[i])
     plt.xlabel('Training epochs')
-    plt.ylabel('Training accuracy')
+    plt.ylabel('Training'+measureValue)
     plt.grid()
     plt.legend(title = "Batch size")
 
@@ -210,7 +215,7 @@ def plot(dv_HL, dv_NH, dv_TE, dv_BS):
     for i in range(len(dv_BS)):
         plt.plot(dv_TE, te2[:, i], 'x-', c = color[i], label = dv_BS[i])
     plt.xlabel('Training epochs')
-    plt.ylabel('Testing accuracy')
+    plt.ylabel('Testing'+measureValue)
     plt.grid()
     plt.legend(title = "Batch size")
 
@@ -218,30 +223,35 @@ def plot(dv_HL, dv_NH, dv_TE, dv_BS):
     for i in range(len(dv_BS)):
         plt.plot(dv_TE, va2[:, i], 'x-', c = color[i], label = dv_BS[i])
     plt.xlabel('Training epochs')
-    plt.ylabel('Validation accuracy')
+    plt.ylabel('Validation'+measureValue)
     plt.grid()
     plt.legend(title = "Batch size")
-
-    # plt.layout('tight')
     
     plt.show()
-
 
 if __name__ == "__main__":
 
     dataset_np = DTS.LoadNumpy()
     traindata, testdata = DTS.splitData(dataset_np)
 
+    # hidden_layers, neuron_hidden, training_epochs, batch_size
     dv_HL = [2, 5, 8]
     dv_NH = [3, 5, 10, 20, 50, 80, 100]
     dv_TE = [1, 5, 20, 50, 80, 150]
     dv_BS = [10, 30, 60, 100]
 
+
+    # ACCURACY
     # optArch(traindata, testdata, dv_HL, dv_NH)
     # optTra(traindata, testdata, dv_TE, dv_BS)
-    # hidden_layers, neuron_hidden, training_epochs, batch_size
+    
+    # plot(dv_HL, dv_NH, dv_TE, dv_BS, measureValue = 'Accuracy')
 
-    plot(dv_HL, dv_NH, dv_TE, dv_BS)
+    # LOSS
+    # optArch(traindata, testdata, dv_HL, dv_NH, retrieveValue = 'Loss')
+    # optTra(traindata, testdata, dv_TE, dv_BS, retrieveValue = 'Loss')
+    
+    plot(dv_HL, dv_NH, dv_TE, dv_BS, measureValue = 'Loss')
 
 
     
