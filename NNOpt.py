@@ -80,8 +80,8 @@ def optArch(traindata, testdata, dv_HL, dv_NH, retrieveValue = 'Accuracy'):
     perceptron = ANN(traindata, testdata)
 
     # Fix training values to study architecture
-    dv2 = 50
-    dv3 = 30
+    dv2 = 60
+    dv3 = 80
 
     train_accuracy_Matrix_arch = np.zeros((len(dv_HL), len(dv_NH)))
     val_accuracy_Matrix_arch = np.zeros((len(dv_HL), len(dv_NH)))
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     # plot(dv_HL, dv_NH, dv_TE, dv_BS, measureValue = 'Accuracy')
 
     # LOSS
-    # optArch(traindata, testdata, dv_HL, dv_NH, retrieveValue = 'Loss')
+    optArch(traindata, testdata, dv_HL, dv_NH, retrieveValue = 'Loss')
     # optTra(traindata, testdata, dv_TE, dv_BS, retrieveValue = 'Loss')
     
     plot(dv_HL, dv_NH, dv_TE, dv_BS, measureValue = 'Loss')

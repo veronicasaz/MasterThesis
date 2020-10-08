@@ -45,7 +45,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 10000 # number of training samples. 
+    nsamples = 50 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -58,62 +58,67 @@ if __name__ == "__main__":
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
-    # Lambert for calculation of the velocity vectors 
-    earthephem = pk.planet.jpl_lp('earth')
-    marsephem = pk.planet.jpl_lp('mars')
+    Lambert = False
+    if Lambert == True:
+        # Lambert for calculation of the velocity vectors 
+        earthephem = pk.planet.jpl_lp('earth')
+        marsephem = pk.planet.jpl_lp('mars')
 
-    notvalid = list()
-    for i in range(nsamples):
-        t_0 = samples_Lambert[i, 6]
-        t_t = samples_Lambert[i, 7]
+        notvalid = list()
+        for i in range(nsamples):
+            t_0 = samples_Lambert[i, 6]
+            t_t = samples_Lambert[i, 7]
 
-        r_0, vE = earthephem.eph(t_0)
-        r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
+            r_0, vE = earthephem.eph(t_0)
+            r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
 
-        nrevs = 4
-        l = pk.lambert_problem(r1 = r_0, r2 = r_1, tof = t_t, cw = False, \
-            mu = Cts.mu_S_m, max_revs=nrevs)
-        v1 = np.array(l.get_v1())
-        v2 = np.array(l.get_v2())
+            nrevs = 4
+            l = pk.lambert_problem(r1 = r_0, r2 = r_1, tof = t_t, cw = False, \
+                mu = Cts.mu_S_m, max_revs=nrevs)
+            v1 = np.array(l.get_v1())
+            v2 = np.array(l.get_v2())
 
-        # Check if any of the solutions for the revolutions has velocities
-        # within the bounds
+            # Check if any of the solutions for the revolutions has velocities
+            # within the bounds
 
-        # Correction for the continuous thrust:
-        Spacecraft = AL_2BP.Spacecraft( )
-        # Apply correction of half DeltaV_max for approximation
-        correction = 2
-        DeltaV_max = Spacecraft.T / Spacecraft.m_dry * t_t / correction
-        
-        v1 -= v1/np.linalg.norm(v1) * DeltaV_max # applied in the same direction
-        v2 += v2/np.linalg.norm(v2) * DeltaV_max
-
-        v_i_prev = 1e12 # Excessive random value
-        for rev in range(len(v1)):
-            v_i = np.linalg.norm(v1[rev] - np.array(vE))  # Relative velocities for the bounds 
-            v_i2 = np.linalg.norm(v2[rev] - np.array(vM))
+            # Correction for the continuous thrust:
+            Spacecraft = AL_2BP.Spacecraft( )
+            # Apply correction of half DeltaV_max for approximation
+            correction = 2
+            DeltaV_max = Spacecraft.T / Spacecraft.m_dry * t_t / correction
             
-            # Change to polar for the bounds
-            if v_i >= (SF.bnds[0][0] ) and  v_i <= (SF.bnds[0][1] ) and \
-            v_i2 >= (SF.bnds[3][0] ) and  v_i2 <= (SF.bnds[3][1] ):
-                if abs(v_i2 - v_i) < v_i_prev or rev == 0:
-                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
-                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
-                    v_i_prev = abs(v_i2 - v_i)
+            v1 -= v1/np.linalg.norm(v1) * DeltaV_max # applied in the same direction
+            v2 += v2/np.linalg.norm(v2) * DeltaV_max
 
-                # Choose the revolutions with the lowest velocity at the earth
+            v_i_prev = 1e12 # Excessive random value
+            for rev in range(len(v1)):
+                v_i = np.linalg.norm(v1[rev] - np.array(vE))  # Relative velocities for the bounds 
+                v_i2 = np.linalg.norm(v2[rev] - np.array(vM))
                 
-            elif rev == len(v1)-1 and v_i_prev == 1e12:
-                notvalid.append(i)
-                # sample_inputs[i,:] = np.zeros(len(SF.bnds))
-        
+                # Change to polar for the bounds
+                if v_i >= (SF.bnds[0][0] ) and  v_i <= (SF.bnds[0][1] ) and \
+                v_i2 >= (SF.bnds[3][0] ) and  v_i2 <= (SF.bnds[3][1] ):
+                    if abs(v_i2 - v_i) < v_i_prev or rev == 0:
+                        samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
+                        samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
+                        v_i_prev = abs(v_i2 - v_i)
 
-        ###################
-        # Evaluate similarity between lambert and propagated trajectory
-        ################### n nn 
+                    # Choose the revolutions with the lowest velocity at the earth
+                    
+                elif rev == len(v1)-1 and v_i_prev == 1e12:
+                    notvalid.append(i)
+                    # sample_inputs[i,:] = np.zeros(len(SF.bnds))
+
                 
-    # Delete not valid rows:
-    sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
+        # Delete not valid rows:
+        sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
+
+        t = (time.time() - start_time) 
+        print("Samples", nsamples, "Non valid", len(notvalid))
+        print("Time for Lambert", t)
+
+    else: 
+        sample_inputs = samples_Lambert 
 
     for i in range(len(sample_inputs)): # Correct angles to be between 0 and 2pi
         sample_inputs[i,1] = AL_BF.convertRange(sample_inputs[i,1], 'rad', 0, 2*np.pi)
@@ -121,9 +126,7 @@ if __name__ == "__main__":
         sample_inputs[i,4] = AL_BF.convertRange(sample_inputs[i,4], 'rad', 0, 2*np.pi)
         sample_inputs[i,5] = AL_BF.convertRange(sample_inputs[i,5], 'rad', 0, 2*np.pi)
 
-    t = (time.time() - start_time) 
-    print("Samples", nsamples, "Non valid", len(notvalid))
-    print("Time for Lambert", t)
+
 
     # print(sample_inputs)
     # sample_inputs = samples_Lambert

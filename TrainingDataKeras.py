@@ -17,7 +17,7 @@ import LoadConfigFiles as CONF
 ###################################################################
 
 # train_file_path = "./databaseANN/trainingData_Feas_shortTest.txt"
-train_file_path = "./databaseANN/trainingData_Feas.txt"
+train_file_path = "./databaseANN/trainingData_Feas_V2.txt"
 
 ANN = CONF.ANN()
 ANN_train = ANN.ANN_train
@@ -77,7 +77,7 @@ class Dataset:
                 self.output_2d[i,:] = np.array([0,1])
 
 
-def plotInitialDataPandas(pairplot = False, corrplot = False):
+def plotInitialDataPandas(pairplot = False, corrplot = False, inputsplotbar = False, inputsplotbarFeas = False):
     feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
     labels_feas = feasible_txt.columns.values
 
@@ -90,6 +90,34 @@ def plotInitialDataPandas(pairplot = False, corrplot = False):
         fig, ax = plt.subplots(figsize =(20,12))
         sns.heatmap(corr_mat, vmax = 1.0, square= True, ax=ax)
         plt.show()   
+
+    if inputsplotbar == True: # plot distribution of inputs
+        fig= plt.figure()
+
+        rows = floor( np.sqrt(len(labels_feas)-1) )
+        cols = ceil(int((len(labels_feas)-1 ) /rows))
+
+        for i in range(len(labels_feas)-1): # number of inputs
+            ax = fig.add_subplot(rows, cols, i+1)
+            ax = sns.histplot(feasible_txt[labels_feas[i+1]], kde = True)
+            # ax.set_title(labels_feas[i+1])
+            # ax.set(ylim=(0, None))
+
+        plt.show()
+
+    if inputsplotbarFeas == True: # plot distribution of inputs
+        fig= plt.figure()
+
+        rows = floor( np.sqrt(len(labels_feas)-1) )
+        cols = ceil(int((len(labels_feas)-1 ) /rows))
+
+        for i in range(len(labels_feas)-1): # number of inputs
+            ax = fig.add_subplot(rows, cols, i+1)
+            ax = sns.histplot(data = feasible_txt, x= labels_feas[i+1], hue = 'Label' )
+            # ax.set_title(labels_feas[i+1])
+            # ax.set(ylim=(0, None))
+
+        plt.show()
 
 def LoadNumpy(plotDistribution = False):
     # Load with numpy to see plot
@@ -130,17 +158,28 @@ class ANN:
 
         self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
 
-    def create_model(self):
+    def create_model(self, regularization = True):
         # Create architecture
         initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
         
         model = keras.Sequential()
-        for layer in range(ANN_archic['hidden_layers']):
-            model.add(keras.layers.Dense(
-                        ANN_archic['neuron_hidden'], 
-                        activation='relu', 
-                        use_bias=True, bias_initializer='zeros',
-                        kernel_initializer = initializer) )
+
+        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+            for layer in range(ANN_archic['hidden_layers']):
+                model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializer,
+                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+        else:
+            for layer in range(ANN_archic['hidden_layers']):
+                model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializer) )
+
         model.add(keras.layers.Dense(self.n_classes) ) # output layer
        
         # Compile
@@ -183,9 +222,6 @@ class ANN:
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
-
-    def plotTrainingMeasure(self):
-        # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
 
     def evaluateTest(self):
         test_loss, test_acc = self.model.evaluate(self.testdata[0], self.testdata[1], verbose=2)
@@ -260,24 +296,24 @@ class ANN:
 
 if __name__ == "__main__":
 
-    # plotInitialDataPandas(pairplot= True, corrplot= True)
+    plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = LoadNumpy(plotDistribution = True)
-    dataset_np = LoadNumpy()
-    traindata, testdata = splitData(dataset_np)
+    # dataset_np = LoadNumpy()
+    # traindata, testdata = splitData(dataset_np)
     
-    perceptron = ANN(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron = ANN(traindata, testdata)
+    # perceptron.training()
+    # perceptron.plotTraining()
     
-    print("EVALUATE")
-    perceptron.evaluateTest()
-    predictions = perceptron.predict(fromFile=True)
-    perceptron.plotPredictions(predictions)
+    # print("EVALUATE")
+    # perceptron.evaluateTest()
+    # predictions = perceptron.predict(fromFile=True)
+    # perceptron.plotPredictions(predictions)
 
-    # Print weights of trained
-    perceptron.printWeights()
+    # # Print weights of trained
+    # # perceptron.printWeights()
 
-    # Simple prediction
-    print("SINGLE PREDICTION")
-    predictions = perceptron.singlePrediction(testdata[0][60, :])
-    print("Correct label", testdata[1][60])
+    # # Simple prediction
+    # print("SINGLE PREDICTION")
+    # predictions = perceptron.singlePrediction(testdata[0][60, :])
+    # print("Correct label", testdata[1][60])
