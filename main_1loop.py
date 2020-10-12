@@ -20,11 +20,6 @@ Fitness = Fitness(Nimp = SF.Nimp)
 opt_config = CONFIG.OPT_config()
 
 ########################
-# Decision Vector Outer loop 
-########################
-transfertime = 250
-
-########################
 # Calculate fitness
 ########################
 def f(DecV):

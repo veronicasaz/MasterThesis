@@ -15,11 +15,14 @@ MBH_generateDatabase: #For only small steps
  tolGlobal: 0.00001
  
 EA:
- ind: 1000 #individuals
- iterat: 1000 #iterations
- itersuccess: 200 #max iter without improvement
+ ind: 10000 #individuals
+ iterat: 10 #iterations
+ itersuccess: 2 #max iter without improvement
  elitism: 0.01
  mutat: 0.001 #probability of mutation
+ immig: 0.01 # New individuals
+ penalty: 10000 # penalty if it doesnt accomplish constraints
+
 
 coordS:
  maxiter: 10

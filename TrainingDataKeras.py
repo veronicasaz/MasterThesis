@@ -1,4 +1,8 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+
 import tensorflow as tf
+
 from tensorflow import keras
 
 import numpy as np
@@ -112,8 +116,12 @@ def plotInitialDataPandas(pairplot = False, corrplot = False, inputsplotbar = Fa
         cols = ceil(int((len(labels_feas)-1 ) /rows))
 
         for i in range(len(labels_feas)-1): # number of inputs
+            if i == 4 or i == 5:
+                log_scale = True
+            else:
+                log_scale = False
             ax = fig.add_subplot(rows, cols, i+1)
-            ax = sns.histplot(data = feasible_txt, x= labels_feas[i+1], hue = 'Label' )
+            ax = sns.histplot(data = feasible_txt, x= labels_feas[i+1], hue = 'Label')
             # ax.set_title(labels_feas[i+1])
             # ax.set(ylim=(0, None))
 
@@ -294,26 +302,79 @@ class ANN:
         print("WEIGHTS", weights_h)
         print("WEIGHTS", weights_output)
 
+class ANN_fromFile:
+    def __init__(self):
+        self.n_classes = 2 # Labels
+        self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
+
+    def create_model(self, regularization = True):
+        # Create architecture
+        initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
+        
+        model = keras.Sequential()
+
+        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+            for layer in range(ANN_archic['hidden_layers']):
+                model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializer,
+                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+        else:
+            for layer in range(ANN_archic['hidden_layers']):
+                model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializer) )
+
+        model.add(keras.layers.Dense(self.n_classes) ) # output layer
+       
+        # Compile
+        model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+        return model
+    
+    def load_model_fromFile(self):
+        model_fromFile = self.create_model()
+        model_fromFile.load_weights(self.checkpoint_path)
+        self.model = model_fromFile
+
+        self.probability_model = tf.keras.Sequential([self.model, 
+                                         tf.keras.layers.Softmax()])
+
+    def predict(self, input_case):
+        prediction = self.probability_model.predict(input_case)
+        return [np.argmax(pred) for pred in prediction]
+
+    def predict_single(self, input_case):
+        input_batch = np.array([input_case])
+        prediction = self.probability_model.predict(input_batch)
+        return np.argmax(prediction)
+
 if __name__ == "__main__":
 
     plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    # dataset_np = LoadNumpy(plotDistribution = True)
+    dataset_np = LoadNumpy(plotDistribution = True)
     # dataset_np = LoadNumpy()
-    # traindata, testdata = splitData(dataset_np)
+    traindata, testdata = splitData(dataset_np)
     
-    # perceptron = ANN(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron = ANN(traindata, testdata)
+    perceptron.training()
+    perceptron.plotTraining()
     
     # print("EVALUATE")
-    # perceptron.evaluateTest()
-    # predictions = perceptron.predict(fromFile=True)
-    # perceptron.plotPredictions(predictions)
+    perceptron.evaluateTest()
+    predictions = perceptron.predict(fromFile=True)
+    perceptron.plotPredictions(predictions)
 
-    # # Print weights of trained
-    # # perceptron.printWeights()
+    # Print weights of trained
+    # perceptron.printWeights()
 
-    # # Simple prediction
-    # print("SINGLE PREDICTION")
-    # predictions = perceptron.singlePrediction(testdata[0][60, :])
-    # print("Correct label", testdata[1][60])
+    # Simple prediction
+    print("SINGLE PREDICTION")
+    predictions = perceptron.singlePrediction(testdata[0][10, :])
+    print("Correct label", testdata[1][10])

@@ -13,7 +13,7 @@ class SimsFlan_config:
         self.date0 = SimsFlanagan_config['SimsFlan']['date0']
         self.t0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
 
-        
+
         bounds = SimsFlanagan_config['bounds']
         bn_v0_angle = tuple([z * np.pi for z in bounds['v0_angle'] ])
         bn_vf_angle = tuple([z * np.pi for z in bounds['vf_angle'] ])
@@ -26,6 +26,7 @@ class SimsFlan_config:
                 bn_t0, bn_t_t)
         for i in range(self.Nimp): # 3 times because impulses are 3d vectors
             self.bnds += (bounds['deltav_mag'], bn_deltav_ang, bn_deltav_ang)
+
 
 class OPT_config:
     def __init__(self):

@@ -10,7 +10,6 @@ from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 
 import LoadConfigFiles as CONFIG
-
 CONF = CONFIG.Fitness_config()
 
 class Fitness:
@@ -36,7 +35,7 @@ class Fitness:
         # Choose odd number to compare easily in middle point
         self.Nimp = kwargs.get('Nimp', 10) 
 
-    def adaptDecisionVector(self, DecV, optMode):
+    def adaptDecisionVector(self, DecV, optMode = True):
         """ 
         adaptDecisionVector: modify decision vector to input in the problem
         """
@@ -116,12 +115,12 @@ class Fitness:
                 DeltaV_list: list of size = Number of impulses 
                             with the 3D impulse between 0 and 1 
                             (will be multiplied by the max DeltaV)
-        """
-        ########################################################################
+        """        
+                ########################################################################
         # DecV
         ########################################################################
         self.DecV = DecV
-        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode=optMode)
 
         ########################################################################
         # Propagation
@@ -162,19 +161,19 @@ class Fitness:
         ########################################################################
         # Return fitness 
         ########################################################################
-        self.printResult()
+        self.f = self.objFunction(self.m_fuel, self.Error)
+        return self.f
 
-    def calculateFeasibility(self, DecV, optMode = True , plot = False, \
-        printValue = False):
+    def calculateFeasibility(self, DecV, optMode = True, printValue = False):
         """
         """
         FIT = CONF.FEAS
-
+        
         ########################################################################
         # DecV
         ########################################################################
         self.DecV = DecV
-        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode=optMode)
 
         ########################################################################
         # Propagation
@@ -183,30 +182,25 @@ class Fitness:
         # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
         t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
 
-        r_p0, v_p0 = self.earthephem.eph(self.t0)
-        r_p1, v_p1 = self.marsephem.eph(t_1.JD_0)
+        self.r_p0, self.v_p0 = self.earthephem.eph(self.t0)
+        self.r_p1, self.v_p1 = self.marsephem.eph(t_1.JD_0)
         
         # Change from relative to heliocentric velocity
-        self.v0 = v0_cart + v_p0 
-        self.vf = vf_cart + v_p1 
+        self.v0 = v0_cart + self.v_p0 
+        self.vf = vf_cart + self.v_p1 
 
         # Create state vector for initial and final point
-        self.SV_0 = np.append(r_p0, self.v0)
-        self.SV_f = np.append(r_p1, self.vf) # - to propagate backwards
-        self.SV_f_corrected = np.append(r_p1, -self.vf) # - to propagate backwards
+        self.SV_0 = np.append(self.r_p0, self.v0)
+        self.SV_f = np.append(self.r_p1, self.vf) # - to propagate backwards
+        self.SV_f_corrected = np.append(self.r_p1, -self.vf) # - to propagate backwards
 
         # Sims-Flanagan
         SV_list_forw = self.__SimsFlanagan(self.SV_0, saveState=True)
-        SV_list_back = self.__SimsFlanagan(self.SV_f_corrected, \
-            backwards = True, saveState=True)
+        SV_list_back = self.__SimsFlanagan(self.SV_f_corrected, backwards = True, saveState=True)
 
         # convert back propagation so that the signs of velocity match
         SV_list_back_corrected = np.copy(SV_list_back)
         SV_list_back_corrected[:,3:] *= -1 # change sign of velocity
-
-        if plot == True:
-            # print(np.flipud(SV_list_back))
-            self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
         ########################################################################
         # Compare State in middle point
@@ -216,17 +210,19 @@ class Fitness:
 
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
-        # print(fc1, fc2)
+
         value = fc1 * FIT['factor_pos'] + fc2 * FIT['factor_vel']
         if printValue == True:
             print("Value: ", value)
         return value # *1000 so that in 
+                                                            # tol they are in same order of mag
+
 
     def calculateMass(self, DecV, optMode = True):
         ########################################################################
         # DecV
         ########################################################################
-        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode)
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode=optMode)
 
         return self.m_fuel
 
@@ -278,9 +274,62 @@ class Fitness:
             return SV_list # All states
         else:
             return SV_i # Last state
-
+    
     def printResult(self):
         print("Mass of fuel", self.m_fuel, "Error", self.Error)
+
+    def adaptDecisionVector_simplified(self, DecV):
+        self.t0, self.t_t = DecV[6:8]
+        DeltaV_list = np.array(DecV[8:]).reshape(-1,3) # make a Nimp x 3 matrix
+
+
+        self.DeltaV_max = self.Spacecraft.T / self.Spacecraft.m_dry * \
+            self.t_t / (self.Nimp + 1) 
+
+        # Total DeltaV 
+        DeltaV_total = sum(DeltaV_list[:,0]) * self.DeltaV_max
+
+        #Calculate total mass of fuel for the given impulses
+        self.m0 = \
+            self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
+
+
+    def DecV2inputV(self, newDecV = 0):
+
+        if type(newDecV) != int:
+            self.adaptDecisionVector_simplified(newDecV)
+
+        inputs = np.zeros(8)
+        inputs[0] = self.t_t
+        inputs[1] = self.m0
+
+        t_1 = self.t0 + AL_BF.sec2days(self.t_t)
+
+        elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
+        elem_f = self.marsephem.osculating_elements(pk.epoch(t_1, 'mjd2000'))
+
+        K_0 = np.array(elem_0)
+        K_f = np.array(elem_f)
+
+        # Mean anomaly to true anomaly
+        K_0[-1] = AL_2BP.Kepler(K_0[-1], K_0[1], 'Mean')[0]
+        K_f[-1] = AL_2BP.Kepler(K_f[-1], K_f[1], 'Mean')[0]
+
+        inputs[2:] = K_f - K_0
+        inputs[2] = abs(inputs[2]) # absolute value
+        inputs[3] = abs(inputs[3]) # absolute value
+        inputs[4] = np.cos(inputs[4])# cosine
+
+        return inputs
+    
+    def studyFeasibility(self):
+        
+        if np.linalg.norm(self.Error[0:3]) <= CONF.FEAS['feas_ep'] and \
+            np.linalg.norm(self.Error[3:]) <= CONF.FEAS['feas_ev']: 
+            feasible = 1
+        else:
+            feasible = 0
+        return feasible
 
     def savetoFile(self):
         """
@@ -301,37 +350,14 @@ class Fitness:
 
             max m0 should be added
         """
-        FIT = CONF.FEAS
-
         feasibilityFileName = "trainingData_Feas.txt"
         massFileName = "trainingData_Opt.txt"
+        
         # Inputs 
-        inputs = np.zeros(8)
-        inputs[0] = self.t_t
-        inputs[1] = self.m0
-
-        Orbit_0 = AL_2BP.BodyOrbit(self.SV_0, "Cartesian", self.sun)
-        Orbit_f = AL_2BP.BodyOrbit(self.SV_f, "Cartesian", self.sun)
-        K_0 = Orbit_0.KeplerElem
-        K_0[-1] = Orbit_0.theta # change mean anomaly with true anomaly
-        K_f = Orbit_f.KeplerElem
-        K_f[-1] = Orbit_f.theta
-
-        inputs[2:] = K_f - K_0
-        inputs[2] = abs(inputs[2]) # absolute value
-        inputs[3] = abs(inputs[3]) # absolute value
-        inputs[4] = np.cos(inputs[4])# cosine
+        inputs = self.DecV2inputV()
 
         # Feasibility
-        # if np.linalg.norm(self.Error[0:3]) <= 100e3 and \
-        #     np.linalg.norm(self.Error[3:]) <= 100: # Feasible trajectory
-        # if np.linalg.norm(self.Error[0:3]) <= 5e7 and \
-        #     np.linalg.norm(self.Error[3:]) <= 5e3: # TODO: change. Too much
-        if np.linalg.norm(self.Error[0:3]) <= FIT['feas_ep'] and \
-            np.linalg.norm(self.Error[3:]) <= FIT['feas_ev']: 
-            feasible = 1
-        else:
-            feasible = 0
+        feasible = self.studyFeasibility()
 
         # Write to file
         vectorFeasibility = np.append(feasible, inputs)
@@ -353,6 +379,7 @@ class Fitness:
                     myfile.write(str(value))
             myfile.write("\n")
         myfile.close()
+
 
     def plot(self, SV_f, SV_b, bodies, *args, **kwargs):
         fig = plt.figure()
