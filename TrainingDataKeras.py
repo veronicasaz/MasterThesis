@@ -20,8 +20,8 @@ import LoadConfigFiles as CONF
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
 
-# train_file_path = "./databaseANN/trainingData_Feas_shortTest.txt"
-train_file_path = "./databaseANN/trainingData_Feas_V2.txt"
+# train_file_path = "./databaseANN/trainingData_Feas_V2.txt"
+train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
 ANN = CONF.ANN()
 ANN_train = ANN.ANN_train
@@ -357,17 +357,17 @@ class ANN_fromFile:
 
 if __name__ == "__main__":
 
-    plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    dataset_np = LoadNumpy(plotDistribution = True)
-    # dataset_np = LoadNumpy()
+    # plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
+    # dataset_np = LoadNumpy(plotDistribution = True)
+    dataset_np = LoadNumpy()
     traindata, testdata = splitData(dataset_np)
     
     perceptron = ANN(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
     
     # print("EVALUATE")
-    perceptron.evaluateTest()
+    # perceptron.evaluateTest()
     predictions = perceptron.predict(fromFile=True)
     perceptron.plotPredictions(predictions)
 

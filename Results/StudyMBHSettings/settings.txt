@@ -1,0 +1,2 @@
+1: stepMagnitude of 0.01 tolLocal = 1e2  tolGlobal = 1e3
+2: stepMagnitude of 0.05 tolLocal = 1e2  tolGlobal = 1e3

@@ -9,12 +9,14 @@ import pykep as pk
 from pykep.orbit_plots import plot_planet, plot_lambert
 from pykep import AU, DAY2SEC
 
-from FitnessFunction_normalized import Fitness
+
+from FitnessFunction_normalized import Fitness, Propagate
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_2BP as AL_2BP
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 from AstroLibraries import AstroLib_Trajectories as AL_TR
+
 
 import LoadConfigFiles as CONFIG
 
@@ -23,6 +25,21 @@ import LoadConfigFiles as CONFIG
 # ############# VALIDATION #####################
 # ##############################################
 Cts = AL_BF.ConstantsBook()
+
+def pykepephem():
+    # earth = pk.planet.jpl_lp('earth')
+    # marsephem = pk.planet.jpl_lp('mars')
+
+    earth = pk.planet.jpl_lp('earth')
+
+    K_0 = earth.eph(0)
+    # print(K_0)
+    earth.mu_central_body
+    print(earth.mu_self)
+    elem = earth.osculating_elements(pk.epoch(2345.3, 'mjd2000'))
+    print(elem)
+    print(np.array(elem))
+
 
 ##############################################
 # Change frame of reference
@@ -250,7 +267,6 @@ def propagateLambert():
     AL_Plot.set_axes_equal(ax)
     plt.show() # Validated
 
-
 # ##############################################
 # # Propagation Universal
 # ##############################################
@@ -342,6 +358,7 @@ def findValidLambert():
                 print('rev', rev, v1[rev], v2[rev])
 
         counter += 1
+        print(counter)
     return decv, l
 
 def propagateSimsFlanagan():
@@ -364,7 +381,7 @@ def propagateSimsFlanagan():
     print(decv)
 
     Fit = Fitness(Nimp = SF.Nimp)
-    Fit.calculateFeasibility(decv, plot = True)
+    Fit.calculateFeasibility(decv)
     Fit.printResult()
 
     # We plot
@@ -398,10 +415,38 @@ def propagateSimsFlanagan():
 
     plt.show()
 
+def propagateSimsFlanaganForward():
+    "Test the propagation of SimsFlanagan forward using the velocities from Lambert"
+    ### Using ephemeris
+    # Lambert trajectory obtain terminal velocity vectors
+    SF = CONFIG.SimsFlan_config()
+
+    # Create bodies
+    sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
+    earth = AL_2BP.Body('earth', 'blue', mu = Cts.mu_E_m)
+    mars = AL_2BP.Body('mars', 'red', mu = Cts.mu_M_m)
+
+    # Calculate trajectory of the bodies based on ephem
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
+    
+    decv, l = findValidLambert()
+    print(decv)
+
+    r_M, v_M = marsephem.eph(decv[6] + AL_BF.sec2days(decv[7]) )
+
+    Fit = Propagate(Nimp = SF.Nimp)
+    Fit.prop(decv, plot = True)
+    print("Final", Fit.rv_final)
+    print("Theoretical final", r_M,  AL_BF.convert3dvector(decv[3:6], "polar")+v_M)
+
+    # Verified
+    
 if __name__ == "__main__":
+    # pykepephem()
     # changeReferenceFrame()
     # test_convertAngleForm()
-     test_convertRange()
+    #  test_convertRange()
     # CartKeplr()
     # propagateHohmann()
     # Lambert()
@@ -409,3 +454,4 @@ if __name__ == "__main__":
     # print("Universal propagation")
     # propagateUniversalLambert()
     # propagateSimsFlanagan()
+    propagateSimsFlanaganForward()
