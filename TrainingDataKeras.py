@@ -20,8 +20,8 @@ import LoadConfigFiles as CONF
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
 
-# train_file_path = "./databaseANN/trainingData_Feas_V2.txt"
-train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
+train_file_path = "./databaseANN/trainingData_Feas_V2.txt"
+# train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
 ANN = CONF.ANN()
 ANN_train = ANN.ANN_train
@@ -30,7 +30,7 @@ ANN_archic = ANN.ANN_archic
 class Dataset:
     def __init__(self, file_path, dataset = False, shuffle = True):
         # Load with numpy
-        if np.any(dataset) == False:
+        if type(dataset) == bool:
             dataset = np.loadtxt(file_path, skiprows = 1)
             # Load labels
             fh = open(file_path,'r')
@@ -42,6 +42,7 @@ class Dataset:
             fh.close()
 
         else:
+            dataset, labels = dataset
             self.dataset = dataset
 
         if shuffle == True:
@@ -110,22 +111,26 @@ def plotInitialDataPandas(pairplot = False, corrplot = False, inputsplotbar = Fa
         plt.show()
 
     if inputsplotbarFeas == True: # plot distribution of inputs
+        print("Here")
         fig= plt.figure()
 
         rows = floor( np.sqrt(len(labels_feas)-1) )
         cols = ceil(int((len(labels_feas)-1 ) /rows))
 
         for i in range(len(labels_feas)-1): # number of inputs
+            print(i)
             if i == 4 or i == 5:
                 log_scale = True
             else:
                 log_scale = False
             ax = fig.add_subplot(rows, cols, i+1)
-            ax = sns.histplot(data = feasible_txt, x= labels_feas[i+1], hue = 'Label')
+            ax = sns.histplot(data = feasible_txt, x= labels_feas[i+1], hue = 'Label',\
+                legend=False,  kde=False)
             # ax.set_title(labels_feas[i+1])
             # ax.set(ylim=(0, None))
 
         plt.show()
+        print("Here2")
 
 def LoadNumpy(plotDistribution = False):
     # Load with numpy to see plot
@@ -236,7 +241,7 @@ class ANN:
 
         print('\nTest accuracy:', test_acc)
 
-    def predict(self, fromFile = False):
+    def predict(self, fromFile = False, testfile = False):
         """
         INPUTS:
             fromFile: model is not trained in this run but loaded
@@ -249,12 +254,18 @@ class ANN:
         self.probability_model = tf.keras.Sequential([self.model, 
                                          tf.keras.layers.Softmax()])
         
-        predictions = self.probability_model.predict(self.testdata[0])
+        if type(testfile) == bool:
+            predictions = self.probability_model.predict(self.testdata[0])
+        else:
+            predictions = self.probability_model.predict(testfile)
 
         return predictions
 
-    def plotPredictions(self, predictions):
-        true_labels = self.testdata[1]
+    def plotPredictions(self, predictions, labels = False):
+        if type(labels) == bool:
+            true_labels = self.testdata[1]
+        else:
+            true_labels = labels
         choice_prediction = [np.argmax(pred) for pred in predictions]
         
 
@@ -280,7 +291,7 @@ class ANN:
         for i, v in enumerate([True_Positive, True_Negative, False_Positive, False_Negative]):
             ax.text(i, v+5, str(v), color='black', fontweight='bold')
         plt.grid(False)
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.show()
 
     def singlePrediction(self, input_case):
@@ -358,23 +369,45 @@ class ANN_fromFile:
 if __name__ == "__main__":
 
     # plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    # dataset_np = LoadNumpy(plotDistribution = True)
-    dataset_np = LoadNumpy()
+    dataset_np = LoadNumpy(plotDistribution = True)
+    # dataset_np = LoadNumpy()
     traindata, testdata = splitData(dataset_np)
     
     perceptron = ANN(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
-    
-    # print("EVALUATE")
-    # perceptron.evaluateTest()
-    predictions = perceptron.predict(fromFile=True)
-    perceptron.plotPredictions(predictions)
+    perceptron.training()
+    perceptron.plotTraining()
+    perceptron.evaluateTest()
+    #     
+    print("EVALUATE")
+
+    # predictions = perceptron.predict(fromFile=True)
+    # perceptron.plotPredictions(predictions)
 
     # Print weights of trained
     # perceptron.printWeights()
 
     # Simple prediction
-    print("SINGLE PREDICTION")
-    predictions = perceptron.singlePrediction(testdata[0][10, :])
-    print("Correct label", testdata[1][10])
+    # print("SINGLE PREDICTION")
+    # predictions = perceptron.singlePrediction(testdata[0][10, :])
+    # print("Correct label", testdata[1][10])
+
+
+    # Use test file 
+    testfile =  "./databaseANN/trainingData_Feas_V2.txt"
+    dataset_Test = np.loadtxt(testfile, skiprows = 1)
+    # Load labels
+    fh = open(testfile,'r')
+    for i, line in enumerate(fh):
+        if i == 1: 
+            break
+        line = line[:-1] # remove the /n
+        labels = line.split(" ")
+    fh.close()
+    dataset_np = Dataset(" ", dataset = [dataset_Test, labels], shuffle = True)
+    dataset_np.standardizationInputs()
+
+    perceptron = ANN(traindata, testdata)
+    
+    predictions = perceptron.predict(fromFile=True, testfile = dataset_np.input_data_std)
+    perceptron.plotPredictions(predictions, labels = dataset_np.output)
+
