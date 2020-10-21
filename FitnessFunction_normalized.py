@@ -350,8 +350,8 @@ class Fitness:
 
             max m0 should be added
         """
-        feasibilityFileName = "trainingData_Feas.txt"
-        massFileName = "trainingData_Opt.txt"
+        feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Feas.txt"
+        massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
         
         # Inputs 
         inputs = self.DecV2inputV()
@@ -360,7 +360,8 @@ class Fitness:
         feasible = self.studyFeasibility()
 
         # Write to file
-        vectorFeasibility = np.append(feasible, inputs)
+        vectorFeasibility = np.append(feasible, self.Error)
+        vectorFeasibility = np.append(vectorFeasibility, inputs)
         with open(feasibilityFileName, "a") as myfile:
             for value in vectorFeasibility:
                 if value != vectorFeasibility[-1]:
@@ -370,15 +371,15 @@ class Fitness:
             myfile.write("\n")
         myfile.close()
 
-        vectorMass = np.append(self.m_fuel, inputs)
-        with open(massFileName, "a") as myfile:
-            for value in vectorMass:
-                if value != vectorMass[-1]:
-                    myfile.write(str(value) +" ")
-                else:
-                    myfile.write(str(value))
-            myfile.write("\n")
-        myfile.close()
+        # vectorMass = np.append(self.m_fuel, inputs)
+        # with open(massFileName, "a") as myfile:
+        #     for value in vectorMass:
+        #         if value != vectorMass[-1]:
+        #             myfile.write(str(value) +" ")
+        #         else:
+        #             myfile.write(str(value))
+        #     myfile.write("\n")
+        # myfile.close()
 
 
     def plot(self, SV_f, SV_b, bodies, *args, **kwargs):

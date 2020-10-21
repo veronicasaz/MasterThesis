@@ -26,9 +26,9 @@ if __name__ == "__main__":
     ####################
     # FILE CREATION
     ####################
-    feasibilityFileName = "trainingData_Feas.txt"
-    massFileName = "trainingData_Opt.txt"
-    Heading = [ "Label", "t_t", "m_0", "|Delta_a|", \
+    feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Feas.txt"
+    massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
+    Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
         "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
         "Delta_omega", "Delta_theta"]
     for fileName in [feasibilityFileName, massFileName]:
