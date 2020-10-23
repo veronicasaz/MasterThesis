@@ -172,8 +172,19 @@ def LoadNumpy(train_file_path, plotDistribution = False):
     return dataset_np
 
 
-def splitData( dataset_np):
+def splitData_class( dataset_np):
     train_x, train_y = dataset_np.input_data_std, dataset_np.output
+
+    train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
+    x_train = train_x[0:train_cnt]
+    y_train = train_y[0:train_cnt]
+    x_test = train_x[train_cnt:]  
+    y_test = train_y[train_cnt:]
+
+    return [x_train, y_train], [x_test, y_test]
+
+def splitData_reg(dataset_np):
+    train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
 
     train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
     x_train = train_x[0:train_cnt]
