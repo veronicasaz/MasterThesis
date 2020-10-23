@@ -52,3 +52,11 @@ class ANN:
         
         self.ANN_archic = ANN_config['Architecture']
         self.ANN_train = ANN_config['Training']
+
+class ANN_reg:
+    def __init__(self):
+        with open("./confFiles/ANN_reg.yml") as file:
+            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+        
+        self.ANN_archic = ANN_config['Architecture']
+        self.ANN_train = ANN_config['Training']

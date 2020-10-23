@@ -12,7 +12,7 @@ MBH_generateDatabase: #For only small steps
  niter_local: 100 #Number of iterations for the local opt. TODO: it is ignored
  jumpMagnitude: 0.01 #Magnitude of the small jump 
  tolLocal: 0.01
- tolGlobal: 0.00001
+ tolGlobal: 0.001
  
 EA:
  ind: 10000 #individuals

@@ -22,7 +22,7 @@ import TrainingDataKeras as TD
 # https://machinelearningmastery.com/deep-learning-models-for-multi-output-regression/
 ###################################################################
 
-ANN = CONF.ANN()
+ANN = CONF.ANN_reg()
 ANN_train = ANN.ANN_train
 ANN_archic = ANN.ANN_archic
 
@@ -69,12 +69,21 @@ class ANN_reg:
             
     def training(self):
 
-        X, y = make_regression(n_samples=self.n_examples, n_features=self.n_input, n_targets=self.n_classes)
+
+        # Create a callback that saves the model's weights
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+                                                        save_weights_only=True,
+                                                        verbose=0)
+
+
+        X, y = self.traindata
         
         results = list()
 
         # define evaluation procedure
-        cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+        cv = RepeatedKFold(n_splits=ANN_train['n_splits'], 
+                        n_repeats=ANN_train['n_repeats'], 
+                        random_state=ANN_train['random_state'])
 
         # enumerate folds
         for train_ix, test_ix in cv.split(X):
@@ -84,8 +93,9 @@ class ANN_reg:
             # define model
             self.model = self.create_model()
             # fit model
-            self.history = self.model.fit(X_train, y_train, verbose=0, epochs=100)
-            # evaluate model on test set
+            self.history = self.model.fit(X_train, y_train, verbose=2, epochs=100,
+                    callbacks=[cp_callback])
+            # evaluate model on test set: mean absolute error
             mae = self.model.evaluate(X_test, y_test, verbose=0)
             # store result
             print(mae)
@@ -95,51 +105,18 @@ class ANN_reg:
         print('MAE: %.3f (%.3f)' % (np.mean(results), np.std(results)))
 
 
-        # # Create a callback that saves the model's weights
-        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-        #                                                 save_weights_only=True,
-        #                                                 verbose=1)
-
-
-        # # Create model architecture
-        # self.model = self.create_model()
-        
-        # # Train
-        # self.history = self.model.fit(self.traindata[0], self.traindata[1], 
-        #             validation_split= ANN_train['validation_size'],
-        #             epochs = ANN_train['training_epochs'], 
-        #             batch_size = ANN_train['batch_size'],
-        #             callbacks=[cp_callback] )
-
-        # pred_train = self.model.predict(self.traindata[0] )
-        # print("Train MSE", np.sqrt(mean_squared_error(self.traindata[1], pred_train)))
-
-
     def plotTraining(self):
-        plt.plot(self.history.history['mean_squared_error'])
-        plt.plot(self.history.history['val_mean_squared_error'])
-        plt.title('model mean_squared_error')
-        plt.ylabel('accuracy')
+        # summarize history for loss
+        plt.plot(self.history.history['loss'])
+        # plt.plot(self.history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
         plt.xlabel('epoch')
-        plt.legend(['train', 'validation'], loc='upper left')
+        # plt.legend(['train', 'validation'], loc='upper left')
         plt.show()
 
-        # # summarize history for loss
-        # plt.plot(self.history.history['loss'])
-        # plt.plot(self.history.history['val_loss'])
-        # plt.title('model loss')
-        # plt.ylabel('loss')
-        # plt.xlabel('epoch')
-        # plt.legend(['train', 'test'], loc='upper left')
-        # plt.show()
 
-    def evaluateTest(self):
-        
-        pred_test = self.model.predict(self.testdata[0])
-        print("Test MSE", np.sqrt(mean_squared_error(testdata[1], pred_test)))
-
-
-    def predict(self, fromFile = False, testfile = False):
+    def predict(self, fromFile = False, testfile = False, plot = True, dataset = False):
         """
         INPUTS:
             fromFile: model is not trained in this run but loaded
@@ -149,45 +126,42 @@ class ANN_reg:
             model_fromFile.load_weights(self.checkpoint_path)
             self.model = model_fromFile
 
-        
         if type(testfile) == bool:
             pred_test = self.model.predict(self.testdata[0])
+
+            if type(dataset) == bool: # No inverse standarization possible
+
+                self.Error_pred = np.zeros((len(pred_test),2))
+                for i in range(len(pred_test)):
+                    print('i', i)
+                    print("%e, %e"%(pred_test[i,0], pred_test[i,1]) )
+                    print("%e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1] ))
+                    print("------------------------")
+                    self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
+                    self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
+            
+            else:
+                predictions_unscaled = dataset_np.inverseStandardizationError(pred_test) #Obtain predictions in actual 
+                true_value = dataset_np.inverseStandardizationError(self.testdata[1]) #Obtain predictions in actual 
+                for i in range(len(predictions_unscaled)):
+                    print('i', i)
+                    print("%e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
+                    print("%e, %e"%(true_value[i,0], true_value[i,1] ))
+                    print("------------------------")
         else:
             pred_test = self.model.predict(testfile)
         
+        if plot == True:
+            self.plotPredictions()
 
-        return predictions
+        return pred_test
 
-    def plotPredictions(self, predictions, labels = False):
-        if type(labels) == bool:
-            true_labels = self.testdata[1]
-        else:
-            true_labels = labels
-        choice_prediction = self.model.predict(self.testdata[0])
-        # print("Test MSE", np.sqrt(mean_squared_error(testdata[1], pred_test)))
+    def plotPredictions(self):
         
-
-        True_Positive = 0
-        True_Negative = 0
-        False_Positive = 0
-        False_Negative = 0
-
-        for i in range(len(choice_prediction)):
-            if choice_prediction[i] == 1 and true_labels[i] == 1:
-                True_Positive += 1
-            elif choice_prediction[i] == 0 and true_labels[i] == 0:
-                True_Negative += 1
-            elif choice_prediction[i] == 1 and true_labels[i] == 0:
-                False_Positive += 1
-            elif choice_prediction[i] == 0 and true_labels[i] == 1:
-                False_Negative += 1
-
         fig, ax = plt.subplots() 
-        plt.xticks(range(4), labels = ['True Positive', 'True Negative', 'False Positive', 'False Negative'])
-        plt.yticks([])
-        plot = plt.bar(range(4), [True_Positive, True_Negative, False_Positive, False_Negative] )
-        for i, v in enumerate([True_Positive, True_Negative, False_Positive, False_Negative]):
-            ax.text(i, v+5, str(v), color='black', fontweight='bold')
+
+        plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0], color = 'red')
+        plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0])
         plt.grid(False)
         # plt.tight_layout()
         plt.show()
@@ -211,65 +185,12 @@ class ANN_reg:
         print("WEIGHTS", weights_h)
         print("WEIGHTS", weights_output)
 
-class ANN_fromFile:
-    def __init__(self):
-        self.n_classes = 2 # Labels
-        self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
-
-    def create_model(self, regularization = True):
-        # Create architecture
-        initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
-        
-        model = keras.Sequential()
-
-        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
-            for layer in range(ANN_archic['hidden_layers']):
-                model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
-                    activation='relu', 
-                    use_bias=True, bias_initializer='zeros',
-                    kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
-        else:
-            for layer in range(ANN_archic['hidden_layers']):
-                model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
-                    activation='relu', 
-                    use_bias=True, bias_initializer='zeros',
-                    kernel_initializer = initializer) )
-
-        model.add(keras.layers.Dense(self.n_classes) ) # output layer
-       
-        # Compile
-        model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-        return model
-    
-    def load_model_fromFile(self):
-        model_fromFile = self.create_model()
-        model_fromFile.load_weights(self.checkpoint_path)
-        self.model = model_fromFile
-
-        self.probability_model = tf.keras.Sequential([self.model, 
-                                         tf.keras.layers.Softmax()])
-
-    def predict(self, input_case):
-        prediction = self.probability_model.predict(input_case)
-        return [np.argmax(pred) for pred in prediction]
-
-    def predict_single(self, input_case):
-        input_batch = np.array([input_case])
-        prediction = self.probability_model.predict(input_batch)
-        return np.argmax(prediction)
-
 if __name__ == "__main__":
 
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big_temp.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
@@ -283,12 +204,22 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN_reg(traindata, testdata)
     perceptron.training()
-    # perceptron.plotTraining()
-    # perceptron.evaluateTest()
+    perceptron.plotTraining()
     
     # print("EVALUATE")
+    predictions = perceptron.predict(fromFile=True)
+    print("Rescaled:")
+    predictions = perceptron.predict(fromFile=True, dataset = dataset_np)
 
-    # predictions = perceptron.predict(fromFile=True)
+    # predictions_unscaled = dataset_np.inverseStandardizationError(predictions) #Obtain predictions in actual 
+    # true_value = dataset_np.inverseStandardizationError(testdata[1]) #Obtain predictions in actual 
+    # for i in range(len(predictions_unscaled)):
+    #     print('i', i)
+    #     print("%e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
+    #     print("%e, %e"%(true_value[i,0], true_value[i,1] ))
+    #     print("------------------------")
+    
+    
     # perceptron.plotPredictions(predictions)
 
     # # Print weights of trained

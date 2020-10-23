@@ -92,9 +92,14 @@ class Dataset:
     
     def standardizationError(self):
         # Standarization of the error
-        scaler = StandardScaler()
-        scaler.fit(self.error)
-        self.error_std = scaler.transform(self.error)
+        self.scaler = StandardScaler()
+        self.scaler.fit(self.error)
+        self.error_std = self.scaler.transform(self.error)
+
+    def inverseStandardizationError(self, x):
+        x2 = self.scaler.inverse_transform(x)
+        return x2
+        
 
     def convertLabels(self): # Labels are [Unfeasible feasible]
         self.output_2d = np.zeros((len(self.output), 2))
