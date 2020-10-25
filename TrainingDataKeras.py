@@ -2,8 +2,9 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
 import tensorflow as tf
-
 from tensorflow import keras
+from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 import numpy as np
 import pandas as pd
@@ -11,9 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from math import floor, ceil
 
-from sklearn.metrics import roc_auc_score, accuracy_score
-from sklearn.preprocessing import MinMaxScaler, StandardScaler 
-
+import AstroLibraries.AstroLib_Basic as AL_BF 
 import LoadConfigFiles as CONF
 
 ANN = CONF.ANN()
@@ -58,6 +57,9 @@ class Dataset:
         error_v = [np.linalg.norm(dataset[i, 4:7]) for i in range(self.nsamples)]
         self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
+        self.n_input = self.input_data.shape[1]
+        self.n_classes = self.error.shape[1]
+
     def statisticsFeasible(self):
         self.count_feasible = np.count_nonzero(self.output)
         print("Samples", self.nsamples, "Feasible", self.count_feasible)
@@ -91,13 +93,21 @@ class Dataset:
         self.input_data_std = scaler.transform(self.input_data)
     
     def standardizationError(self):
+        # Normalization of errors TODO: eliminate and inlcude in database already
+        self.error[:,0] /= AL_BF.AU # Normalize with AU
+        self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+
+        print(self.error[0:5,:])
         # Standarization of the error
         self.scaler = StandardScaler()
         self.scaler.fit(self.error)
         self.error_std = self.scaler.transform(self.error)
+        return 
 
     def inverseStandardizationError(self, x):
         x2 = self.scaler.inverse_transform(x)
+        x2[:,0] *= AL_BF.AU # Normalize with AU
+        x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
         return x2
         
 
@@ -110,7 +120,7 @@ class Dataset:
                 self.output_2d[i,:] = np.array([0,1])
 
 
-def plotInitialDataPandas(pairplot = False, corrplot = False, inputsplotbar = False, inputsplotbarFeas = False):
+def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, inputsplotbar = False, inputsplotbarFeas = False):
     feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
     labels_feas = feasible_txt.columns.values
 
@@ -139,7 +149,6 @@ def plotInitialDataPandas(pairplot = False, corrplot = False, inputsplotbar = Fa
         plt.show()
 
     if inputsplotbarFeas == True: # plot distribution of inputs
-        print("Here")
         fig= plt.figure()
 
         rows = floor( np.sqrt(len(labels_feas)-1) )

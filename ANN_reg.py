@@ -28,14 +28,12 @@ ANN_archic = ANN.ANN_archic
 
 
 class ANN_reg:
-    def __init__(self, traindata, testdata, dataset):
+    def __init__(self, dataset):
         self.dataset_np = dataset
-        self.traindata = traindata
-        self.testdata = testdata
 
-        self.n_input = traindata[0].shape[1] #inputs
-        self.n_classes = np.shape(traindata[1])[1] # Labels
-        self.n_examples = traindata[0].shape[0] # samples
+        self.n_classes = self.dataset_np.n_classes # Labels
+        self.n_examples = self.dataset_np.nsamples # samples
+        self.n_input = self.dataset_np.n_input #inputs
 
         self.checkpoint_path = "./trainedCNet_Reg/training_1/cp.ckpt"
 
@@ -68,6 +66,10 @@ class ANN_reg:
 
         return model
             
+    def get_traintestdata(self, traindata, testdata):
+        self.traindata = traindata
+        self.testdata = testdata
+
     def training(self):
         # Create a callback that saves the model's weights
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
@@ -118,7 +120,7 @@ class ANN_reg:
 
     def load_model_fromFile(self):
         model_fromFile = self.create_model()
-        model_fromFile.load_weights(self.checkpoint_path)
+        model_fromFile.load_weights(self.checkpoint_path).expect_partial()
         self.model = model_fromFile
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
@@ -161,7 +163,7 @@ class ANN_reg:
         else:
             pred_test0 = self.model.predict(testfile)
             if rescale == True: # inverse standarization 
-                predictions_test = self.dataset_np.inverseStandardizationError(pred_test0) #Obtain predictions in actual
+                pred_test = self.dataset_np.inverseStandardizationError(pred_test0) #Obtain predictions in actual
             else:
                 pred_test = pred_test0
         return pred_test
@@ -207,10 +209,10 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
-    # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
+    # TD.plotInitialDataPandas(train_file_path, pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
     dataset_np = TD.LoadNumpy(train_file_path)
     traindata, testdata = TD.splitData_reg(dataset_np)
@@ -219,14 +221,15 @@ if __name__ == "__main__":
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
-    perceptron = ANN_reg(traindata, testdata, dataset_np)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron = ANN_reg(dataset_np)
+    perceptron.get_traintestdata(traindata, testdata)
+    perceptron.training()
+    perceptron.plotTraining()
     
-    # print("EVALUATE")
-    predictions = perceptron.predict(fromFile=True)
+    print("EVALUATE")
+    # predictions = perceptron.predict(fromFile=True, rescale = False)
     print("Rescaled:")
-    predictions = perceptron.predict(fromFile=True, dataset = dataset_np)
+    predictions = perceptron.predict(fromFile=True, rescale = True)
 
     # predictions_unscaled = dataset_np.inverseStandardizationError(predictions) #Obtain predictions in actual 
     # true_value = dataset_np.inverseStandardizationError(testdata[1]) #Obtain predictions in actual 

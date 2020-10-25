@@ -30,6 +30,8 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
         max_iter: maximum number of iterations (generations)
         max_iter_success
         elitism: percentage of population elitism
+        bulk_fitness: if True, the data has to be passed to the function all 
+                    at once as a matrix with each row being an individual
     """
     x_add = kwargs.get('x_add', False)
     ind = kwargs.get('ind', 100)
@@ -40,25 +42,36 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
     elitism = kwargs.get('elitism',0.1)
     mut = kwargs.get('mutation',0.01)
     cons = kwargs.get('cons', None)
+    bulk = kwargs.get('bulk_fitness', False)
 
     
+    def f_evaluate(pop_0):
+        if bulk == True:
+            if x_add == False:
+                pop_0[:,0] = f(pop_0[:,1:])
+            else:
+                pop_0[:,0] = f(pop_0[:,1:], x_add)
+        else:
+            if x_add == False: # No additional arguments needed
+                for i in range(ind):
+                    pop_0[i,0] = f(pop_0[i,1:])
+            else:
+                for i in range(ind):
+                    pop_0[i,0] = f(pop_0[i,1:], x_add)
+
+        return pop_0
+
     ###############################################
     ###### GENERATION OF INITIAL POPULATION #######
     ###############################################
     pop_0 = np.zeros([ind, len(bounds)+1])
     for i in range(len(bounds)):
         pop_0[:,i+1] = np.random.rand(ind) * (bounds[i][1]-bounds[i][0]) + bounds[i][0]
-    
 
     ###############################################
     ###### FITNESS EVALUATION               #######
     ###############################################
-    if x_add == False: # No additional arguments needed
-        for i in range(ind):
-            pop_0[i,0] = f(pop_0[i,1:])
-    else:
-        for i in range(ind):
-            pop_0[i,0] = f(pop_0[i,1:], x_add)
+    pop_0 = f_evaluate(pop_0)
     
     Sol = pop_0[pop_0[:,0].argsort()]
     minVal = min(Sol[:,0])
@@ -97,10 +110,10 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
 
             pop[ind_elit +2*j,1:] = np.concatenate((children[2*j,1:cut+1],children[2*j +1,cut+1:]),axis = 0)
             pop[ind_elit+ 2*j + 1,1:] = np.concatenate((children[2*j+1,1:cut+1],children[2*j ,cut+1:]),axis = 0)
+        
         if (len(children)-ind_elit) %2 != 0:
             pop[-1,:] = children[-ind_elit,:]
 
-        
         #Mutation
         for i in range(ind):
             for j in range(len(bounds)):
@@ -109,12 +122,7 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
         
         ###############################################
         # Fitness
-        if x_add == False: # No additional arguments needed
-            for i in range(ind):
-                pop[i,0] = f(pop[i,1:])
-        else:
-            for i in range(ind):
-                pop[i,0] = f(pop[i,1:], x_add)
+        pop = f_evaluate(pop)
 
         Sol = pop[pop[:,0].argsort()]
         minVal = min(Sol[:,0])

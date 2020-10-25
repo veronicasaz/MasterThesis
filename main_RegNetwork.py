@@ -16,15 +16,16 @@ import time
 ########################
 # Sims Flanagan
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
+FIT = CONFIG.Fitness_config()
 Fitness = Fitness(Nimp = SF.Nimp)
-
-# ANN
-ANN = ANN_reg()
-ANN.load_model_fromFile()
 
 # Database for inverse standardization
 train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
 dataset_np = TD.LoadNumpy(train_file_path)
+
+# ANN
+ANN = ANN_reg(dataset_np)
+ANN.load_model_fromFile()
 
 # optimization
 opt_config = CONFIG.OPT_config()
@@ -33,36 +34,52 @@ opt_config = CONFIG.OPT_config()
 # Calculate fitness
 ########################
 def f(DecV):
-    return Fitness.calculateMass(DecV)
+    # Mass
+    mass = np.zeros((opt_config.EA['ind']))
+    for i in range(opt_config.EA['ind']):
+        mass[i] = Fitness.calculateMass(DecV[i,:])
 
-def f_reg(DecV):
+    # Error
     t0_reg = time.time()
     # Transform inputs
     ind = len(DecV[:,0])
     input_Vector = np.zeros((ind,8))
     for i in range(ind):
         input_Vector[i,:] = Fitness.DecV2inputV(newDecV = DecV[i,:])
+    
     # Feasibility 
     feas = ANN.predict(fromFile = True, 
                         testfile = input_Vector,
-                        dataset = dataset_np)
+                        rescale = True)
     tf_reg = (time.time() - t0_reg) 
     print('Time network eval', tf_reg)
 
-    return abs(np.array(feas)-1) # If equal to 0, equality constraint achieved
-   
+    # Fitness Function
+    fc1 = feas[:,0] / AL_BF.AU # Normalize with AU
+    fc2 = feas[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+
+    print(feas[0:5,:])
+    print(fc1[0:5], fc2[0:5], mass[0:5])
+
+    value = fc1 * FIT.FEAS['factor_pos'] + \
+            fc2 * FIT.FEAS['factor_vel'] + \
+            mass * FIT.FEAS['factor_mass']
+    return value 
+
 def EA(): # Evolutionary Algorithm
     # Optimize outer loop
     EA = opt_config.EA
     start_time = time.time()
-    f_min, Best = AL_OPT.EvolAlgorithm_cons(f, SF.bnds , x_add = False, \
+    f_min, Best = AL_OPT.EvolAlgorithm(f, SF.bnds , x_add = False, \
         ind = EA['ind'], max_iter = EA['iterat'], max_iter_success = EA['itersuccess'],
-        elitism = EA['elitism'], mutation = EA['mutat'], immig = EA['immig'],\
-            cons = [f_class, EA['penalty'] ] )
+        elitism = EA['elitism'], mutation = EA['mutat'], immig = EA['immig'],
+        bulk_fitness = True )
     t = (time.time() - start_time) 
 
     print("Min", f_min,'time',t)    
     # AL_BF.writeData(f_min, 'w', 'SolutionEA.txt')
+
+    # SHOW RESULT
     Fitness.calculateFitness(f_min, plot = True)
     Fitness.printResult()
 
