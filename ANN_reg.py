@@ -28,7 +28,8 @@ ANN_archic = ANN.ANN_archic
 
 
 class ANN_reg:
-    def __init__(self, traindata, testdata):
+    def __init__(self, traindata, testdata, dataset):
+        self.dataset_np = dataset
         self.traindata = traindata
         self.testdata = testdata
 
@@ -38,7 +39,7 @@ class ANN_reg:
 
         self.checkpoint_path = "./trainedCNet_Reg/training_1/cp.ckpt"
 
-    def create_model(self, regularization = True):
+    def create_model(self, regularization = False):
         # Create architecture
         initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
         
@@ -68,13 +69,10 @@ class ANN_reg:
         return model
             
     def training(self):
-
-
         # Create a callback that saves the model's weights
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
                                                         save_weights_only=True,
                                                         verbose=0)
-
 
         X, y = self.traindata
         
@@ -86,6 +84,7 @@ class ANN_reg:
                         random_state=ANN_train['random_state'])
 
         # enumerate folds
+        self.history = []
         for train_ix, test_ix in cv.split(X):
             # prepare data
             X_train, X_test = X[train_ix], X[test_ix]
@@ -93,8 +92,8 @@ class ANN_reg:
             # define model
             self.model = self.create_model()
             # fit model
-            self.history = self.model.fit(X_train, y_train, verbose=2, epochs=100,
-                    callbacks=[cp_callback])
+            self.history.append( self.model.fit(X_train, y_train, verbose=2, epochs=100,
+                    callbacks=[cp_callback])    )
             # evaluate model on test set: mean absolute error
             mae = self.model.evaluate(X_test, y_test, verbose=0)
             # store result
@@ -107,7 +106,9 @@ class ANN_reg:
 
     def plotTraining(self):
         # summarize history for loss
-        plt.plot(self.history.history['loss'])
+        colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
+        for i in range(len(self.history)):
+            plt.plot(self.history[i].history['loss'], colors[i])
         # plt.plot(self.history.history['val_loss'])
         plt.title('model loss')
         plt.ylabel('loss')
@@ -115,21 +116,27 @@ class ANN_reg:
         # plt.legend(['train', 'validation'], loc='upper left')
         plt.show()
 
-
-    def predict(self, fromFile = False, testfile = False, plot = True, dataset = False):
+    def load_model_fromFile(self):
+        model_fromFile = self.create_model()
+        model_fromFile.load_weights(self.checkpoint_path)
+        self.model = model_fromFile
+        
+    def predict(self, fromFile = False, testfile = False, rescale = False):
         """
         INPUTS:
-            fromFile: model is not trained in this run but loaded
+            fromFile: model is not trained in this run but loaded. True or False
+            testfile: the predict function uses the test from the database or
+                    an external dataset. To use the testdataset: False, otherwise 
+                    testfile = dataset to be evaluated.
+            rescale: rescale the output (True) or not (False)
         """
         if fromFile == True:
-            model_fromFile = self.create_model()
-            model_fromFile.load_weights(self.checkpoint_path)
-            self.model = model_fromFile
+            self.load_model_fromFile()
 
         if type(testfile) == bool:
             pred_test = self.model.predict(self.testdata[0])
 
-            if type(dataset) == bool: # No inverse standarization possible
+            if rescale == False: # No inverse standarization possible
 
                 self.Error_pred = np.zeros((len(pred_test),2))
                 for i in range(len(pred_test)):
@@ -139,30 +146,40 @@ class ANN_reg:
                     print("------------------------")
                     self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
                     self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
-            
             else:
-                predictions_unscaled = dataset_np.inverseStandardizationError(pred_test) #Obtain predictions in actual 
-                true_value = dataset_np.inverseStandardizationError(self.testdata[1]) #Obtain predictions in actual 
+                predictions_unscaled = self.dataset_np.inverseStandardizationError(pred_test) #Obtain predictions in actual 
+                true_value = self.dataset_np.inverseStandardizationError(self.testdata[1]) #Obtain predictions in actual
+
+                self.Error_pred_unscale = np.zeros((len(pred_test),2)) 
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
                     print("%e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
                     print("%e, %e"%(true_value[i,0], true_value[i,1] ))
                     print("------------------------")
+                    self.Error_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
+                    self.Error_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
         else:
-            pred_test = self.model.predict(testfile)
-        
-        if plot == True:
-            self.plotPredictions()
-
+            pred_test0 = self.model.predict(testfile)
+            if rescale == True: # inverse standarization 
+                predictions_test = self.dataset_np.inverseStandardizationError(pred_test0) #Obtain predictions in actual
+            else:
+                pred_test = pred_test0
         return pred_test
 
-    def plotPredictions(self):
-        
-        fig, ax = plt.subplots() 
+    def plotPredictions(self, dataset):
 
-        plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0], color = 'red')
-        plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0])
-        plt.grid(False)
+        if type(dataset) == bool: # No inverse standarization possible
+            fig, ax = plt.subplots() 
+            plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0], 'r-x', label = 'Error in position')
+            plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,1], 'g-x', label = 'Error in velocity')
+
+        else:
+            f, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.plot(np.arange(0, len(self.Error_pred_unscale)), self.Error_pred_unscale[:,0], 'r-x', label = 'Error in position')
+            ax2.plot(np.arange(0, len(self.Error_pred_unscale)), self.Error_pred_unscale[:,1], 'g-x', label = 'Error in velocity')
+
+        # plt.grid(False)
+        plt.legend()
         # plt.tight_layout()
         plt.show()
 
@@ -190,7 +207,7 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big_temp.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
@@ -202,9 +219,9 @@ if __name__ == "__main__":
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
-    perceptron = ANN_reg(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    perceptron = ANN_reg(traindata, testdata, dataset_np)
+    # perceptron.training()
+    # perceptron.plotTraining()
     
     # print("EVALUATE")
     predictions = perceptron.predict(fromFile=True)
