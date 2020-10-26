@@ -58,5 +58,6 @@ class ANN_reg:
         with open("./confFiles/ANN_reg.yml") as file:
             ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
+        self.ANN_datab = ANN_config['Database']
         self.ANN_archic = ANN_config['Architecture']
         self.ANN_train = ANN_config['Training']

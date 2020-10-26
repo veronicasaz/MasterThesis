@@ -224,10 +224,10 @@ if __name__ == "__main__":
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
-    # perceptron = ANN_reg(dataset_np)
-    # perceptron.get_traintestdata(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron = ANN_reg(dataset_np)
+    perceptron.get_traintestdata(traindata, testdata)
+    perceptron.training()
+    perceptron.plotTraining()
     
     # print("EVALUATE")
     # # predictions = perceptron.predict(fromFile=True, rescale = False)

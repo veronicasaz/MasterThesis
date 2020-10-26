@@ -45,7 +45,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 1000 # number of training samples. 
+    nsamples = 5000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
-    Lambert = True
+    Lambert = False # Use lambert or not
     if Lambert == True:
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         print("-------------------------------")
         sample = sample_inputs[i_sample, :]
         fvalue = Fit.calculateFeasibility(sample, printValue = True)
-        # Fit.savetoFile() # saves the current values
+        Fit.savetoFile() # saves the current values
         
         Fit.printResult()
         

@@ -4,7 +4,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.metrics import roc_auc_score, accuracy_score
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
 
 import numpy as np
 import pandas as pd
@@ -15,8 +15,9 @@ from math import floor, ceil
 import AstroLibraries.AstroLib_Basic as AL_BF 
 import LoadConfigFiles as CONF
 
-ANN = CONF.ANN()
+ANN = CONF.ANN_reg()
 ANN_train = ANN.ANN_train
+ANN_datab = ANN.ANN_datab
 
 FIT = CONF.Fitness_config()
 FIT_FEAS = FIT.FEAS
@@ -96,6 +97,7 @@ class Dataset:
             ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in position")
+            plt.yscale("log")
 
         plt.tight_layout()
         plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorPosition_std.png", dpi = 100)
@@ -108,6 +110,7 @@ class Dataset:
             ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in velocity")
+            plt.yscale("log")
 
         plt.tight_layout()
         plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorVelocity_std.png", dpi = 100)
@@ -127,9 +130,20 @@ class Dataset:
 
         # print(self.error[0:5,:])
         # Standarization of the error
-        self.scaler = StandardScaler()
-        self.scaler.fit(self.error)
-        self.error_std = self.scaler.transform(self.error) 
+        if ANN_datab['scaling'] == 0:
+            self.scaler = MinMaxScaler()
+            self.scaler.fit(self.error)
+            self.error_std = self.scaler.transform(self.error) 
+
+        elif ANN_datab['scaling'] == 1:
+            self.scaler = StandardScaler()
+            self.scaler.fit(self.error)
+            self.error_std = self.scaler.transform(self.error) 
+        
+        elif ANN_datab['scaling'] == 2:
+            self.scaler = Normalizer()
+            transformer = Normalizer(0).fit
+        
 
     def inverseStandardizationError(self, x):
         x2 = self.scaler.inverse_transform(x)

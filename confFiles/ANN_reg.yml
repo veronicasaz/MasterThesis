@@ -1,15 +1,21 @@
+Database:
+ scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+
 Training:
  train_size: 0.9 # % of the data for training, the rest is testing
  n_splits: 5 # 
- n_repeats: 2 # 
+ n_repeats: 5 # 
+ epochs: 150
  random_state: 1 #
  learning_rate: 0.001
+ regularization: True
  regularizer_rate: 0.1
  dropout_prob: 0.6
+ 
 
 Architecture:
- hidden_layers: 5 # number of hidden layers
- neuron_hidden: 40 # number of neurons in each hidden layer
+ hidden_layers: 2 # number of hidden layers
+ neuron_hidden: 100 # number of neurons in each hidden layer
  regularizer_value: 0.001
 
 
