@@ -37,13 +37,13 @@ class ANN_reg:
 
         self.checkpoint_path = "./trainedCNet_Reg/training_1/cp.ckpt"
 
-    def create_model(self, regularization = False):
+    def create_model(self):
         # Create architecture
         initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
         
         model = keras.Sequential()
 
-        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+        if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(ANN_archic['hidden_layers']):
                 model.add(keras.layers.Dense(
                     ANN_archic['neuron_hidden'], 
@@ -94,7 +94,8 @@ class ANN_reg:
             # define model
             self.model = self.create_model()
             # fit model
-            self.history.append( self.model.fit(X_train, y_train, verbose=2, epochs=100,
+            self.history.append( self.model.fit(X_train, y_train, verbose=2, 
+                    epochs=ANN_train['epochs'],
                     callbacks=[cp_callback])    )
             # evaluate model on test set: mean absolute error
             mae = self.model.evaluate(X_test, y_test, verbose=0)
@@ -110,7 +111,7 @@ class ANN_reg:
         # summarize history for loss
         colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
         for i in range(len(self.history)):
-            plt.plot(self.history[i].history['loss'], colors[i])
+            plt.plot(self.history[i].history['loss'], colors[i//len(colors)])
         # plt.plot(self.history.history['val_loss'])
         plt.title('model loss')
         plt.ylabel('loss')
@@ -213,7 +214,9 @@ if __name__ == "__main__":
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(train_file_path, pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
+    dataset_np = TD.LoadNumpy(train_file_path, 
+                            plotDistribution = False, 
+                            plotErrors =True)
     dataset_np = TD.LoadNumpy(train_file_path)
     traindata, testdata = TD.splitData_reg(dataset_np)
 
@@ -221,15 +224,15 @@ if __name__ == "__main__":
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
-    perceptron = ANN_reg(dataset_np)
-    perceptron.get_traintestdata(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron = ANN_reg(dataset_np)
+    # perceptron.get_traintestdata(traindata, testdata)
+    # perceptron.training()
+    # perceptron.plotTraining()
     
-    print("EVALUATE")
-    # predictions = perceptron.predict(fromFile=True, rescale = False)
-    print("Rescaled:")
-    predictions = perceptron.predict(fromFile=True, rescale = True)
+    # print("EVALUATE")
+    # # predictions = perceptron.predict(fromFile=True, rescale = False)
+    # print("Rescaled:")
+    # predictions = perceptron.predict(fromFile=True, rescale = True)
 
     # predictions_unscaled = dataset_np.inverseStandardizationError(predictions) #Obtain predictions in actual 
     # true_value = dataset_np.inverseStandardizationError(testdata[1]) #Obtain predictions in actual 

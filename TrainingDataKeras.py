@@ -86,6 +86,34 @@ class Dataset:
             ax.text(i, v+5, str(v), color='black', fontweight='bold')
         plt.show()
 
+    def plotDistributionOfErrors(self):
+        # fig = plt.figure(figsize = (30,30))
+        
+        # Error in position
+        fig = plt.figure(figsize = (15,15))
+        for i in range(self.n_input):
+            ax = fig.add_subplot(self.n_input//2, 2, i+1)
+            ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
+            ax.set_xlabel(self.labels[i+7], labelpad = -2)
+            ax.set_ylabel("Error in position")
+
+        plt.tight_layout()
+        plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorPosition_std.png", dpi = 100)
+        plt.show()
+
+        # Error in velocity
+        fig = plt.figure(figsize = (15,15))
+        for i in range(self.n_input):
+            ax = fig.add_subplot(self.n_input//2, 2, i+1)
+            ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
+            ax.set_xlabel(self.labels[i+7], labelpad = -2)
+            ax.set_ylabel("Error in velocity")
+
+        plt.tight_layout()
+        plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorVelocity_std.png", dpi = 100)
+        plt.show()
+
+
     def standardizationInputs(self):
         # Standarization of the inputs
         scaler = StandardScaler()
@@ -97,12 +125,11 @@ class Dataset:
         self.error[:,0] /= AL_BF.AU # Normalize with AU
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
-        print(self.error[0:5,:])
+        # print(self.error[0:5,:])
         # Standarization of the error
         self.scaler = StandardScaler()
         self.scaler.fit(self.error)
-        self.error_std = self.scaler.transform(self.error)
-        return 
+        self.error_std = self.scaler.transform(self.error) 
 
     def inverseStandardizationError(self, x):
         x2 = self.scaler.inverse_transform(x)
@@ -120,7 +147,8 @@ class Dataset:
                 self.output_2d[i,:] = np.array([0,1])
 
 
-def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, inputsplotbar = False, inputsplotbarFeas = False):
+def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
+                            inputsplotbar = False, inputsplotbarFeas = False):
     feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
     labels_feas = feasible_txt.columns.values
 
@@ -169,19 +197,23 @@ def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, i
         plt.show()
         print("Here2")
 
-def LoadNumpy(train_file_path, plotDistribution = False):
+def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True)
 
     # Plot distribution of feasible/unfeasible
     if plotDistribution == True:
         dataset_np.plotDistributionOfFeasible()
+
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
     dataset_np.standardizationInputs()
     dataset_np.standardizationError()
     # dataset_np.convertLabels()
+
+    if plotErrors == True:
+        dataset_np.plotDistributionOfErrors()
 
     return dataset_np
 
