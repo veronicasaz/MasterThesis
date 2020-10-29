@@ -2,7 +2,6 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
 import tensorflow as tf
-
 from tensorflow import keras
 
 import numpy as np
@@ -11,13 +10,12 @@ from math import floor, ceil
 
 from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler 
-from keras.utils.vis_utils import plot_model
 
 import LoadConfigFiles as CONF
 import TrainingDataKeras as TD
 
 ###################################################################
-# https://deeplizard.com/learn/video/8krd5qKVw-Q
+# https://machinelearningmastery.com/semi-supervised-generative-adversarial-network/
 ###################################################################
 
 ANN = CONF.ANN()
@@ -26,22 +24,23 @@ ANN_archic = ANN.ANN_archic
 
 
 class ANN:
-    def __init__(self, dataset):
-        self.dataset_np = dataset
+    def __init__(self, traindata, testdata):
+        self.traindata = traindata
+        self.testdata = testdata
 
-        self.n_classes = self.dataset_np.n_classes # Labels
-        self.n_examples = self.dataset_np.nsamples # samples
-        self.n_input = self.dataset_np.n_input #inputs
+        self.n_input = traindata[0].shape[1] #inputs
+        self.n_classes = 2 # Labels
+        self.n_examples = traindata[0].shape[0] # samples
 
         self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
 
-    def create_model(self):
+    def create_model(self, regularization = True):
         # Create architecture
         initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
         
         model = keras.Sequential()
 
-        if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(ANN_archic['hidden_layers']):
                 model.add(keras.layers.Dense(
                     ANN_archic['neuron_hidden'], 
@@ -57,7 +56,7 @@ class ANN:
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
 
-        model.add(keras.layers.Dense(self.n_classes) # output layer
+        model.add(keras.layers.Dense(self.n_classes) ) # output layer
        
         # Compile
         model.compile(optimizer='adam',
@@ -65,10 +64,6 @@ class ANN:
               metrics=['accuracy'])
 
         return model
-
-    def get_traintestdata(self, traindata, testdata):
-        self.traindata = traindata
-        self.testdata = testdata
             
     def training(self):
         # Create a callback that saves the model's weights
@@ -103,7 +98,6 @@ class ANN:
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
-
 
     def evaluateTest(self):
         test_loss, test_acc = self.model.evaluate(self.testdata[0], self.testdata[1], verbose=2)
@@ -240,20 +234,19 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
-    dataset_np = TD.LoadNumpy(train_file_path)
-    traindata, testdata = TD.splitData_class(dataset_np)
+    dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
+    # dataset_np = TD.LoadNumpy()
+    traindata, testdata = TD.splitData(dataset_np)
 
     
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
-    perceptron = ANN(dataset_np)
-    perceptron.get_traintestdata(traindata, testdata)
+    perceptron = ANN(traindata, testdata)
     perceptron.training()
     perceptron.plotTraining()
     perceptron.evaluateTest()

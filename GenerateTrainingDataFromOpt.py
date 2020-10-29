@@ -58,7 +58,7 @@ if __name__ == "__main__":
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
-    Lambert = False # Use lambert or not
+    Lambert = True # Use lambert or not
     if Lambert == True:
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')
