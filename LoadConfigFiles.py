@@ -61,3 +61,12 @@ class ANN_reg:
         self.ANN_datab = ANN_config['Database']
         self.ANN_archic = ANN_config['Architecture']
         self.ANN_train = ANN_config['Training']
+
+class ANN_GAN:
+    def __init__(self):
+        with open("./confFiles/ANN_GAN.yml") as file:
+            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+        
+        self.ANN_datab = ANN_config['Database']
+        self.Discriminator = ANN_config['Discriminator']
+        self.Generator = ANN_config['Generator']
