@@ -21,7 +21,8 @@ import TrainingDataKeras as TD
 ###################################################################
 # https://machinelearningmastery.com/semi-supervised-generative-adversarial-network/
 # https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
-###################################################################
+# https://machinelearningmastery.com/how-to-develop-a-conditional-generative-adversarial-network-from-scratch/
+# ##################################################################
 
 ANN = CONF.ANN_GAN()
 
@@ -141,10 +142,10 @@ class GAN_training:
         return model
 
     def generate_real_samples(self, n):
-        inputs = np.copy(self.traindata[0])
+        inputs = np.column_stack((self.traindata[1],self.traindata[0] ))
         np.random.shuffle(inputs) # So that not only takes the first ones
-        x = inputs[0:n,:]
-        y = np.ones((n,1)) # Label 1 indicates they are real
+        x = inputs[0:n,1:]
+        y = inputs[0:n,0] # Label 1 indicates they are real
         return x, y
 
     def generate_latent_points(self, latent_dim, n_samples):
@@ -173,11 +174,12 @@ class GAN_training:
         # evaluate discriminator on real examples
         _, acc_real = Discriminator_uns.evaluate(x_real, y_real, verbose=0)
         # prepare fake examples
-        x_fake, y_fake = self.generate_fake_samples(Generator, latent_dim, n_samples)
-        # evaluate discriminator on fake examples
-        _, acc_fake = Discriminator_uns.evaluate(x_fake, y_fake, verbose=0)
+        # x_fake, y_fake = self.generate_fake_samples(Generator, latent_dim, n_samples)
+        # # evaluate discriminator on fake examples
+        # _, acc_fake = Discriminator_uns.evaluate(x_fake, y_fake, verbose=0)
         # summarize discriminator performance
-        print("Discriminator performance", epoch, acc_real, acc_fake)
+        # print("Discriminator performance", epoch, acc_real, acc_fake)
+        print("Discriminator performance", epoch, acc_real)
 
 
     def train(self, Generator, Discriminator_uns, GAN, latent_dim):
@@ -200,12 +202,12 @@ class GAN_training:
             # real data
             x_real, y_real = self.generate_real_samples(half_batch)
             
-            # fake data
-            x_fake, y_fake = self.generate_fake_samples(Generator, latent_dim, half_batch)
+            # # fake data
+            # x_fake, y_fake = self.generate_fake_samples(Generator, latent_dim, half_batch)
             
             # update unsupervised discriminator (d)
             Discriminator_uns.train_on_batch(x_real, y_real)
-            Discriminator_uns.train_on_batch(x_fake, y_fake)
+            # Discriminator_uns.train_on_batch(x_fake, y_fake)
             
             # update generator (g)
             x_gan = self.generate_latent_points(latent_dim, ANN.Training['n_batch'])
@@ -218,7 +220,8 @@ class GAN_training:
                 self.summarize_performance(i, Generator, Discriminator_uns, latent_dim)
 
         # serialize weights to HDF5
-        Generator.save_weights("./trainedCNet_GAN_real/Generator.h5")
+        Generator.save_weights("./trainedCNet_GAN_feas/Generator.h5")
+        Discriminator_uns.save_weights("./trainedCNet_GAN_feas/Discriminator.h5")
         print("Saved model to disk")
 
     def start(self):
@@ -241,7 +244,7 @@ class GAN_training:
         # Load trained generator
         loaded_model = self.Generator_model(latent_dim)
         # load weights into new model
-        loaded_model.load_weights("./trainedCNet_GAN_real/Generator.h5")
+        loaded_model.load_weights("./trainedCNet_GAN_feas/Generator.h5")
         print("Loaded model from disk")
 
         # Create samples
@@ -279,6 +282,50 @@ class GAN_training:
         sns.pairplot(feasible_txt[labels_feas], hue = 'Label')
         plt.show()
 
+    # def evaluate_discriminator(self):
+    #     loaded_model = self.Discriminator_model()
+    #     # load weights into new model
+    #     loaded_model.load_weights("./trainedCNet_GAN_feas/Discriminator.h5")
+
+    #     test_loss, test_acc = loaded_model.evaluate(self.testdata[0], self.testdata[1], verbose=0)
+    #     print('\nTest accuracy:', test_acc, 'loss', test_loss)
+
+    def evaluate_discriminator(self):
+        loaded_model = self.Discriminator_model()
+        # load weights into new model
+        loaded_model.load_weights("./trainedCNet_GAN_feas/Discriminator.h5")
+
+        # Predict outcome with discriminator
+        predictions = loaded_model.predict(self.testdata[0])
+        choice_prediction = [np.argmax(pred) for pred in predictions]
+        true_labels = self.testdata[1]
+
+        True_Positive = 0
+        True_Negative = 0
+        False_Positive = 0
+        False_Negative = 0
+
+        for i in range(len(choice_prediction)):
+            if choice_prediction[i] == 1 and true_labels[i] == 1:
+                True_Positive += 1
+            elif choice_prediction[i] == 0 and true_labels[i] == 0:
+                True_Negative += 1
+            elif choice_prediction[i] == 1 and true_labels[i] == 0:
+                False_Positive += 1
+            elif choice_prediction[i] == 0 and true_labels[i] == 1:
+                False_Negative += 1
+
+        fig, ax = plt.subplots() 
+        plt.xticks(range(4), labels = ['True Positive', 'True Negative', 'False Positive', 'False Negative'])
+        plt.yticks([])
+        plot = plt.bar(range(4), [True_Positive, True_Negative, False_Positive, False_Negative] )
+        for i, v in enumerate([True_Positive, True_Negative, False_Positive, False_Negative]):
+            ax.text(i, v+5, str(v), color='black', fontweight='bold')
+        plt.grid(False)
+        # plt.tight_layout()
+        plt.show()
+
+    
 if __name__ == "__main__":
 
     ###############################################
@@ -300,7 +347,9 @@ if __name__ == "__main__":
     perceptron.get_traintestdata( traindata, testdata)
     perceptron.start() # Train GAN
 
-    nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    perceptron.generate_samples(30, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
-     #                           # Label indicates if it is real (1) or fake (0)
-    perceptron.see_samples(nameFile)
+    nameFile = "./databaseANN/GAN/FeasvsUnfData/fakesamples.txt"
+    # perceptron.generate_samples(100, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+    #  #                           # Label indicates if it is real (1) or fake (0)
+    # perceptron.see_samples(nameFile)
+
+    perceptron.evaluate_discriminator()
