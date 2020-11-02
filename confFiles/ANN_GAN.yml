@@ -1,0 +1,23 @@
+Database:
+ scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ 
+Discriminator:
+ architecture:
+  hidden_layers: 2 # number of hidden layers
+  neuron_hidden: 100 # number of neurons in each hidden layer
+  regularizer_value: 0.001
+  regularization: True
+Generator:
+ architecture:
+  hidden_layers: 2 # number of hidden layers
+  neuron_hidden: 100 # number of neurons in each hidden layer
+  regularizer_value: 0.001
+  regularization: True
+ 
+Training:
+ latent_dim: 20 # latent dimension of the GAN
+ n_batch: 100
+ n_epochs: 20
+ n_eval: 50
+
+

@@ -111,7 +111,7 @@ class ANN_reg:
         # summarize history for loss
         colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
         for i in range(len(self.history)):
-            plt.plot(self.history[i].history['loss'], colors[i//len(colors)])
+            plt.plot(self.history[i].history['loss'], colors[i%len(colors)])
         # plt.plot(self.history.history['val_loss'])
         plt.title('model loss')
         plt.ylabel('loss')
@@ -214,9 +214,9 @@ if __name__ == "__main__":
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(train_file_path, pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    dataset_np = TD.LoadNumpy(train_file_path, 
-                            plotDistribution = False, 
-                            plotErrors =True)
+    # dataset_np = TD.LoadNumpy(train_file_path, 
+                            # plotDistribution = False, 
+                            # plotErrors =True)
     dataset_np = TD.LoadNumpy(train_file_path)
     traindata, testdata = TD.splitData_reg(dataset_np)
 
@@ -229,10 +229,10 @@ if __name__ == "__main__":
     perceptron.training()
     perceptron.plotTraining()
     
-    # print("EVALUATE")
-    # # predictions = perceptron.predict(fromFile=True, rescale = False)
-    # print("Rescaled:")
-    # predictions = perceptron.predict(fromFile=True, rescale = True)
+    print("EVALUATE")
+    predictions = perceptron.predict(fromFile=True, rescale = False)
+    print("Rescaled:")
+    predictions = perceptron.predict(fromFile=True, rescale = True)
 
     # predictions_unscaled = dataset_np.inverseStandardizationError(predictions) #Obtain predictions in actual 
     # true_value = dataset_np.inverseStandardizationError(testdata[1]) #Obtain predictions in actual 

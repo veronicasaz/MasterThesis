@@ -70,3 +70,4 @@ class ANN_GAN:
         self.ANN_datab = ANN_config['Database']
         self.Discriminator = ANN_config['Discriminator']
         self.Generator = ANN_config['Generator']
+        self.Training = ANN_config['Training']
