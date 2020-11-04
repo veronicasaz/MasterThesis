@@ -16,9 +16,9 @@ Generator:
   regularization: True
  
 Training:
- latent_dim: 5 # latent dimension of the GAN
- n_batch: 100 # size of the batch, must be lower than twice the size of the real dataset
- n_epochs: 50 # number of iterations
+ latent_dim: 80 # latent dimension of the GAN
+ n_batch: 10 # size of the batch, must be lower than twice the size of the real dataset
+ n_epochs: 10 # number of iterations
  n_eval: 10 # show accuracy every n_eval iterations
 
 

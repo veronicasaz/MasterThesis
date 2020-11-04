@@ -71,9 +71,10 @@ class Dataset:
         # Plot limit lines for feasibility
         x = [min(self.error[:,0]) , max(self.error[:,0]) ]
         y = [min(self.error[:,1]) , max(self.error[:,1]) ]
-        plt.plot(FIT_FEAS['feas_ep']*np.ones(len(y)), y)
-        plt.plot(x, FIT_FEAS['feas_ev']*np.ones(len(x)))
-
+        plt.plot(FIT_FEAS['feas_ep'] / AL_BF.AU*np.ones(len(y)), y)
+        plt.plot(x, FIT_FEAS['feas_ev'] / AL_BF.AU * AL_BF.year2sec(1) *np.ones(len(x)))
+        plt.xscale("log")
+        plt.yscale("log")
         plt.show()
 
     def plotDistributionOfFeasible(self):
@@ -123,12 +124,12 @@ class Dataset:
         scaler.fit(self.input_data)
         self.input_data_std = scaler.transform(self.input_data)
     
+
     def standardizationError(self):
         # Normalization of errors TODO: eliminate and inlcude in database already
         self.error[:,0] /= AL_BF.AU # Normalize with AU
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
-        # print(self.error[0:5,:])
         # Standarization of the error
         if ANN_datab['scaling'] == 0:
             self.scaler = MinMaxScaler()
@@ -160,6 +161,30 @@ class Dataset:
             else:
                 self.output_2d[i,:] = np.array([0,1])
 
+    def equalizeclasses(self, en):
+        indexes = np.where(self.output == 1)[0]
+        indexes_un = np.arange(0, self.nsamples,1)
+        indexes_un = np.delete(indexes_un, indexes)
+        np.random.shuffle(indexes_un)
+
+        self.input_data_std_e = np.zeros((2*len(indexes) + en, len(self.input_data[0,:])))
+        self.output_e = np.zeros(2*len(indexes) + en)
+        self.error_std_e = np.zeros((2*len(indexes) + en, len(self.error[0,:])))
+        for i in range(len(indexes)):
+            self.input_data_std_e[2*i,:] = self.input_data_std[indexes[i],:]
+            self.output_e[2*i] = self.output[indexes[i]]
+            self.error_std_e[2*i,:] = self.error_std[indexes[i],:]
+            
+            self.input_data_std_e[2*i+1,:] = self.input_data_std[indexes_un[i],:]
+            self.output_e[2*i+1] = self.output[indexes_un[i]]
+            self.error_std_e[2*i+1,:] = self.error_std[indexes_un[i],:]
+
+        # fill with unfeasible data
+        self.input_data_std_e[2*len(indexes)+2:,:] = self.input_data_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
+        self.output_e[2*len(indexes)+2:] = self.output[indexes_un[len(indexes)+2:len(indexes)+en]]
+        self.error_std_e[2*len(indexes)+2:,:] = self.error_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
+
+        self.n_examples = 2*len(indexes)
 
 def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
                             inputsplotbar = False, inputsplotbarFeas = False):
@@ -211,7 +236,8 @@ def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
         plt.show()
         print("Here2")
 
-def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False):
+def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
+    equalize = False):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True)
 
@@ -222,18 +248,26 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False):
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
+    if plotErrors == True:
+        dataset_np.plotDistributionOfErrors()
+
     dataset_np.standardizationInputs()
     dataset_np.standardizationError()
     # dataset_np.convertLabels()
 
-    if plotErrors == True:
-        dataset_np.plotDistributionOfErrors()
+    if equalize == True:
+        dataset_np.equalizeclasses(50)
+
+
 
     return dataset_np
 
 
-def splitData_class( dataset_np):
-    train_x, train_y = dataset_np.input_data_std, dataset_np.output
+def splitData_class( dataset_np, equalize = False):
+    if equalize == True:
+        train_x, train_y = dataset_np.input_data_std_e, dataset_np.output_e
+    else:
+        train_x, train_y = dataset_np.input_data_std, dataset_np.output
 
     train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
     x_train = train_x[0:train_cnt]
@@ -243,8 +277,11 @@ def splitData_class( dataset_np):
 
     return [x_train, y_train], [x_test, y_test]
 
-def splitData_reg(dataset_np):
-    train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
+def splitData_reg(dataset_np, equalize = False):
+    if equalize == True:
+        train_x, train_y = dataset_np.input_data_std_e, dataset_np.error_std_e
+    else:
+        train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
 
     train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
     x_train = train_x[0:train_cnt]
@@ -262,7 +299,8 @@ if __name__ == "__main__":
 
     # plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = LoadNumpy(train_file_path, plotDistribution = True)
-    dataset_np = LoadNumpy(train_file_path)
+    equalize = True
+    dataset_np = LoadNumpy(train_file_path, equalize = equalize)
     dataset_np.statisticsError()
-    traindata, testdata = splitData(dataset_np)
+    traindata, testdata = splitData_class(dataset_np, equalize = equalize)
     
