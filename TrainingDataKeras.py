@@ -25,13 +25,42 @@ FIT_FEAS = FIT.FEAS
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
+def join_files(file_path, filename):
+    dataset_i = np.loadtxt(file_path[0], skiprows = 1)
+    # TODO: eliminate. Eliminate columns for error
+    dataset = np.delete(dataset_i, [1,2,3,4,5,6],1)
+    for file_i in file_path[1:]:
+        dataset_i = np.loadtxt(file_i, skiprows = 1) 
+
+        dataset = np.vstack((dataset, dataset_i))
+
+    # Load labels
+    fh = open(file_path[1],'r')
+    for i, line in enumerate(fh):
+        if i == 1: 
+            break
+        line = line[:-1] # remove the /n
+        labels = line.split(" ")
+    fh.close()
+
+    with open(filename, "w") as myfile:
+        for i in labels:
+            if i != labels[-1]:
+                myfile.write(i +" ")
+            else:
+                myfile.write(i)
+        myfile.write("\n")
+    myfile.close()
+    np.savetxt(filename, dataset)
 
 class Dataset:
-    def __init__(self, file_path, dataset_preloaded = False, shuffle = True):
+    def __init__(self, file_path, dataset_preloaded = False, shuffle = True, error = True):
         # Load with numpy
         if type(dataset_preloaded) == bool:
+
             dataset = np.loadtxt(file_path, skiprows = 1)
             # self.dataset = dataset
+            
             # Load labels
             fh = open(file_path,'r')
             for i, line in enumerate(fh):
@@ -42,7 +71,7 @@ class Dataset:
             fh.close()
 
         else:
-            dataset, labels = dataset_preloaded
+            dataset, self.labels = dataset_preloaded
 
         if shuffle == True:
             np.random.shuffle(dataset ) # shuffle rows
@@ -52,14 +81,18 @@ class Dataset:
 
         self.nsamples = len(self.dataset[:,0])
 
-        self.input_data = dataset[:,7:]
+        
         self.output = dataset[:,0]
-        error_p = [np.linalg.norm(dataset[i, 1:4]) for i in range(self.nsamples)]
-        error_v = [np.linalg.norm(dataset[i, 4:7]) for i in range(self.nsamples)]
-        self.error = np.column_stack((error_p, error_v)) # error in position and velocity
+        if error == True:
+            self.input_data = dataset[:,7:]
+            error_p = [np.linalg.norm(dataset[i, 1:4]) for i in range(self.nsamples)]
+            error_v = [np.linalg.norm(dataset[i, 4:7]) for i in range(self.nsamples)]
+            self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
+        else:
+            self.input_data = dataset[:,1:]
         self.n_input = self.input_data.shape[1]
-        self.n_classes = self.error.shape[1]
+        self.n_classes = 2
 
     def statisticsFeasible(self):
         self.count_feasible = np.count_nonzero(self.output)
@@ -237,9 +270,9 @@ def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
         print("Here2")
 
 def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
-    equalize = False):
+    equalize = False, error = False):
     # Load with numpy to see plot
-    dataset_np = Dataset(train_file_path, shuffle = True)
+    dataset_np = Dataset(train_file_path, shuffle = True, error = error)
 
     # Plot distribution of feasible/unfeasible
     if plotDistribution == True:
@@ -248,16 +281,18 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
-    if plotErrors == True:
-        dataset_np.plotDistributionOfErrors()
+    if error == True:
+        if plotErrors == True:
+            dataset_np.plotDistributionOfErrors()
+
+        dataset_np.standardizationError()
 
     dataset_np.standardizationInputs()
-    dataset_np.standardizationError()
+    
     # dataset_np.convertLabels()
 
     if equalize == True:
         dataset_np.equalizeclasses(50)
-
 
 
     return dataset_np

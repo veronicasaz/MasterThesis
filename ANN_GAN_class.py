@@ -141,9 +141,8 @@ class GAN_training:
         return model
 
     def generate_real_samples(self, n):
-        inputs = np.copy(self.traindata[0])
-        np.random.shuffle(inputs) # So that not only takes the first ones
-        x = inputs[0:n,:]
+        ix = np.random.randint(0, len(self.traindata[1]), n)
+        x = self.traindata[0][ix,:]
         y = np.ones((n,1)) # Label 1 indicates they are real
         return x, y
 
@@ -298,9 +297,9 @@ if __name__ == "__main__":
     ###############################################
     perceptron = GAN_training(dataset_np)
     perceptron.get_traintestdata( traindata, testdata)
-    perceptron.start() # Train GAN
+    # perceptron.start() # Train GAN
 
     nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    perceptron.generate_samples(30, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+    perceptron.generate_samples(60, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
      #                           # Label indicates if it is real (1) or fake (0)
     perceptron.see_samples(nameFile)

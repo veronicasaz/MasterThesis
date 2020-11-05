@@ -3,8 +3,8 @@ Database:
  
 Discriminator:
  architecture:
-  hidden_layers: 3 # number of hidden layers
-  neuron_hidden: 50 # number of neurons in each hidden layer
+  hidden_layers: 1 # number of hidden layers
+  neuron_hidden: 5 # number of neurons in each hidden layer
   regularizer_value: 0.001
   regularization: True
 
