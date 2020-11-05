@@ -33,7 +33,7 @@ class ANN:
         self.n_examples = self.dataset_np.nsamples # samples
         self.n_input = self.dataset_np.n_input #inputs
 
-        self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
+        self.checkpoint_path = "./trainedCNet_Class/training_1/classificator.h5"
 
     def create_model(self):
         # Create architecture
@@ -41,8 +41,17 @@ class ANN:
         
         model = keras.Sequential()
 
+
         if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
-            for layer in range(ANN_archic['hidden_layers']):
+            model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    input_dim = self.n_input,
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializer,
+                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+            
+            for layer in range(ANN_archic['hidden_layers']-1):
                 model.add(keras.layers.Dense(
                     ANN_archic['neuron_hidden'], 
                     activation='relu', 
@@ -50,18 +59,25 @@ class ANN:
                     kernel_initializer = initializer,
                     kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
         else:
-            for layer in range(ANN_archic['hidden_layers']):
+            model.add(keras.layers.Dense(
+                    ANN_archic['neuron_hidden'], 
+                    input_dim = self.n_input,
+                    activation='relu', 
+                    use_bias=True, bias_initializer='zeros',
+                    kernel_initializer = initializera))
+            
+            for layer in range(ANN_archic['hidden_layers']-1):
                 model.add(keras.layers.Dense(
                     ANN_archic['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
 
-        model.add(keras.layers.Dense(self.n_classes) # output layer
+        model.add(keras.layers.Dense(self.n_classes) ) # output layer
        
         # Compile
-        model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        model.compile(optimizer='adam',\
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),\
               metrics=['accuracy'])
 
         return model
@@ -72,9 +88,9 @@ class ANN:
             
     def training(self):
         # Create a callback that saves the model's weights
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-                                                        save_weights_only=True,
-                                                        verbose=1)
+        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+        #                                                 save_weights_only=True,
+        #                                                 verbose=1)
 
         # Create model architecture
         self.model = self.create_model()
@@ -83,8 +99,9 @@ class ANN:
         self.history = self.model.fit(self.traindata[0], self.traindata[1], 
                     validation_split= ANN_train['validation_size'],
                     epochs = ANN_train['training_epochs'], 
-                    batch_size = ANN_train['batch_size'],
-                    callbacks=[cp_callback] )
+                    batch_size = ANN_train['batch_size'] )
+        
+        self.model.save_weights(self.checkpoint_path)
 
     def plotTraining(self):
         plt.plot(self.history.history['accuracy'])
@@ -126,6 +143,7 @@ class ANN:
         if type(testfile) == bool:
             predictions = self.probability_model.predict(self.testdata[0])
         else:
+            print(np.shape(testfile))
             predictions = self.probability_model.predict(testfile)
 
         return predictions
@@ -182,70 +200,25 @@ class ANN:
         print("WEIGHTS", weights_h)
         print("WEIGHTS", weights_output)
 
-class ANN_fromFile:
-    def __init__(self):
-        self.n_classes = 2 # Labels
-        self.checkpoint_path = "./trainedCNet_Class/training_1/cp.ckpt"
-
-    def create_model(self, regularization = True):
-        # Create architecture
-        initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
-        
-        model = keras.Sequential()
-
-        if regularization == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
-            for layer in range(ANN_archic['hidden_layers']):
-                model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
-                    activation='relu', 
-                    use_bias=True, bias_initializer='zeros',
-                    kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
-        else:
-            for layer in range(ANN_archic['hidden_layers']):
-                model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
-                    activation='relu', 
-                    use_bias=True, bias_initializer='zeros',
-                    kernel_initializer = initializer) )
-
-        model.add(keras.layers.Dense(self.n_classes) ) # output layer
-       
-        # Compile
-        model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-        return model
-    
-    def load_model_fromFile(self):
-        model_fromFile = self.create_model()
-        model_fromFile.load_weights(self.checkpoint_path)
-        self.model = model_fromFile
-
-        self.probability_model = tf.keras.Sequential([self.model, 
-                                         tf.keras.layers.Softmax()])
-
-    def predict(self, input_case):
-        prediction = self.probability_model.predict(input_case)
-        return [np.argmax(pred) for pred in prediction]
-
-    def predict_single(self, input_case):
-        input_batch = np.array([input_case])
-        prediction = self.probability_model.predict(input_batch)
-        return np.argmax(prediction)
 
 if __name__ == "__main__":
 
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
-    # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
-
+    # train_file_path = "./databaseANN/RealplusGAN/trainingData_Feas_big.txt"
+    train_file_path_fake = "./databaseANN/RealplusGAN/fakesamples.txt"
+    
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
-    dataset_np = TD.LoadNumpy(train_file_path)
+    
+    dataset_np = TD.LoadNumpy(train_file_path_fake,  error = False, plotDistribution = False)
+    # TD.plotInitialDataPandas(train_file_path_fake, pairplot= True, 
+    #                         corrplot= False, 
+    #                         inputsplotbar = False, 
+    #                         inputsplotbarFeas = False)
+    # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
+    # dataset_np = TD.LoadNumpy(train_file_path)
     traindata, testdata = TD.splitData_class(dataset_np)
 
     
@@ -254,9 +227,9 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
-    perceptron.evaluateTest()
+    # perceptron.training()
+    # perceptron.plotTraining()
+    # perceptron.evaluateTest()
     
     print("EVALUATE")
 
@@ -267,15 +240,16 @@ if __name__ == "__main__":
     # perceptron.printWeights()
 
     # Simple prediction
-    print("SINGLE PREDICTION")
-    predictions = perceptron.singlePrediction(testdata[0][10, :])
-    print("Correct label", testdata[1][10])
+    # print("SINGLE PREDICTION")
+    # predictions = perceptron.singlePrediction(testdata[0][10, :])
+    # print("Correct label", testdata[1][10])
 
 
     # # Use test file 
-    # testfile =  "./databaseANN/ErrorIncluded/trainingData_Feas_V2.txt"
-    # dataset_Test = np.loadtxt(testfile, skiprows = 1)
-    # # Load labels
+    print("TEST ONLY REAL DATA")
+    testfile =  "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
+    # dataset_Tes = np.loadtxt(testfile, skiprows = 1)
+    # Load labels
     # fh = open(testfile,'r')
     # for i, line in enumerate(fh):
     #     if i == 1: 
@@ -283,11 +257,11 @@ if __name__ == "__main__":
     #     line = line[:-1] # remove the /n
     #     labels = line.split(" ")
     # fh.close()
-    # dataset_np = Dataset(" ", dataset = [dataset_Test, labels], shuffle = True)
-    # dataset_np.standardizationInputs()
-
-    # perceptron = ANN(traindata, testdata)
-    
-    # predictions = perceptron.predict(fromFile=True, testfile = dataset_np.input_data_std)
-    # perceptron.plotPredictions(predictions, labels = dataset_np.output)
+    # dataset_Test = TD.Dataset(" ", dataset_preloaded= [dataset_Tes, labels], \
+    #                 shuffle = True, 
+    #                 error = False)
+    # dataset_Test.standardizationInputs()
+    dataset_Test = TD.LoadNumpy(testfile,  plotDistribution = False, error = True)
+    predictions = perceptron.predict(fromFile=True, testfile = dataset_Test.input_data_std)
+    perceptron.plotPredictions(predictions, labels = dataset_Test.output)
 

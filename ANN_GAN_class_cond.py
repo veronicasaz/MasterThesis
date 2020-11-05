@@ -23,6 +23,8 @@ import TrainingDataKeras as TD
 # https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
 # https://machinelearningmastery.com/how-to-develop-a-conditional-generative-adversarial-network-from-scratch/
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
+
+# https://machinelearningmastery.com/how-to-develop-an-auxiliary-classifier-gan-ac-gan-from-scratch-with-keras/
 # ###################################################################
 
 ANN = CONF.ANN_GAN()
@@ -39,54 +41,43 @@ class GAN_training:
         self.traindata = traindata
         self.testdata = testdata
 
-    def Classification_model(self):
-        # input vector
-        in_vector = keras.layers.Input(shape= (self.n_input,))
-
-        for layer in range(ANN.Discriminator['architecture']['hidden_layers']):
-            merge = keras.layers.Dense(ANN.Discriminator['architecture']['neuron_hidden'], \
-                activation = 'relu')(in_vector)
-
-        out_layer = keras.layers.Dense(1, activation = 'sigmoid')(merge)
-
-        # define model
-        model = keras.models.Model(in_vector, out_layer)
-
-        # compile model
-        opt = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
-        model.compile(loss = 'binary_crossentropy', optimizer = opt, \
-            metrics = ['accuracy'])
-
-        return model
-
     def Discriminator_model(self):
+
+        init = keras.initializers.RandomNormal(stddev=0.02)
+
         # label input
-        in_label = keras.layers.Input(shape=(1,))
+        # in_label = keras.layers.Input(shape=(1,))
+
         # embedding for categorical input
         # li = keras.layers.Embedding(self.n_classes, self.n_input)(in_label)
         # input vector
         in_vector = keras.layers.Input(shape= (self.n_input,))
         #concat label as a channel
-        merge = keras.layers.Concatenate()([in_vector, in_label])
+        # merge = keras.layers.Concatenate()([in_vector, in_label])
 
+        fe = in_vector
         for layer in range(ANN.Discriminator['architecture']['hidden_layers']):
-            merge = keras.layers.Dense(ANN.Discriminator['architecture']['neuron_hidden'], \
-                activation = 'relu')(merge)
+            fe = keras.layers.Dense(ANN.Discriminator['architecture']['neuron_hidden'], \
+                activation = 'relu', kernel_initializer=init)(fe)
 
-        out_layer = keras.layers.Dense(1, activation = 'sigmoid')(merge)
+
+        # real/fake output
+        out_1 = keras.layers.Dense(1, activation = 'sigmoid')(fe)
+        # class label output
+        out_2 = keras.layers.Dense(self.n_classes, activation = 'softmax')(fe)
 
         # define model
-        model = keras.models.Model([in_vector, in_label], out_layer)
+        model = keras.models.Model(in_vector, [out_1, out_2])
 
         # compile model
         opt = keras.optimizers.Adam(lr=0.0002, beta_1=0.5)
-        model.compile(loss = 'binary_crossentropy', optimizer = opt, \
-            metrics = ['accuracy'])
+        model.compile(loss = ['binary_crossentropy', 'sparse_categorical_crossentropy'], optimizer = opt)
 
         return model
             
     def Generator_model(self, latent_dim):
-        
+        init = keras.initializers.RandomNormal(stddev=0.02)
+
         # label input 
         in_label = keras.layers.Input(shape=(1,))
         #embedding for categorical input 
@@ -112,20 +103,15 @@ class GAN_training:
     def define_GAN(self, Generator, Discriminator):
         # make weights in the discriminator not trainable
         Discriminator.trainable = False
-        # get noise and label inputs from generator model
-        gen_noise, gen_label = Generator.input
-
-        # get output from the generator model
-        gen_output = Generator.output
 
         # connect output and label input from generator as inputs to discriminator
-        gan_output = Discriminator([gen_output, gen_label])
+        gan_output = Discriminator(Generator.output)
 
         # define gan model as taking noise and label and outputting a classification
-        model = keras.models.Model([gen_noise, gen_label], gan_output)
+        model = keras.models.Model(Generator.input, gan_output)
         
         # compile model
-        model.compile(loss='binary_crossentropy', optimizer='adam')
+        model.compile(loss=['binary_crossentropy', 'sparse_categorical_crossentropy'], optimizer='adam')
         return model
 
     def select_supervised_samples(self ):
@@ -153,13 +139,16 @@ class GAN_training:
         y = np.ones((n,1)) # Label 1 indicates they are real
         return [x,labels], y
 
-    def generate_latent_points(self, latent_dim, n_samples):
+    def generate_latent_points(self, latent_dim, n_samples, n_class = False):
         # generate points in the latent space
         x_input = np.random.randn(latent_dim * n_samples)
         # reshape into a batch of inputs for the network
         x_input = x_input.reshape(n_samples, latent_dim)
         # Generate labels
-        labels = np.random.randint(0, self.n_classes, n_samples)
+        if type(n_class) == bool: # False, normal with all classes
+            labels = np.random.randint(0, self.n_classes, n_samples)
+        else:
+            labels = np.array([n_class for _ in range(n_samples)])
         return [x_input, labels]
 
     def generate_fake_samples(self, Generator, latent_dim, n_samples):
@@ -173,11 +162,11 @@ class GAN_training:
 
         return [X, labels_input], y
 
-    def summarize_performance(self, epoch, Generator, Discriminator_sup,\
+    def summarize_performance(self, epoch, Generator,\
                     latent_dim, n_samples = 100 ):
 
         # prepare fake examples
-        x_fake, y_fake = self.generate_fake_samples(Generator, latent_dim, n_samples)
+        [x_fake, _], _ = self.generate_fake_samples(Generator, latent_dim, n_samples)
 
         # Real samples
         x_real, y_real = self.traindata
@@ -213,28 +202,27 @@ class GAN_training:
                 # get randomly selected 'real' samples
                 [X_real, labels_real], y_real = self.generate_real_samples(self.traindata, half_batch)
                 # update discriminator model weights
-                d_loss1, _ = Discriminator.train_on_batch([X_real, labels_real], y_real)
+                _, d_r1, d_r2= Discriminator.train_on_batch(X_real, [y_real, labels_real])
 
                 # generate fake samples
                 [X_fake, labels], y_fake = self.generate_fake_samples(Generator, latent_dim, half_batch)
                 # update discriminator model weights
-                d_loss2, _ = Discriminator.train_on_batch([X_fake, labels], y_fake)
+                _, d_f, d_f2 = Discriminator.train_on_batch(X_fake, [y_fake, labels])
 
                 # prepare points in latent space as input for the generator
                 [z_input, labels_input] = self.generate_latent_points(latent_dim, ANN.Training['n_batch'])
                 # create inverted labels for the fake samples 
                 y_gan = np.ones((ANN.Training['n_batch'], 1))
                 # update the generator via de discriminator's error
-                g_loss = GAN.train_on_batch([z_input, labels_input], y_gan)
+                _, g_1, g_2 = GAN.train_on_batch([z_input, labels_input], [y_gan, labels_input])
 
-                print('>%d, %d/%d, d1=%.3f, d2=%.3f g=%.3f' %
-				(i+1, j+1, bat_per_epo, d_loss1, d_loss2, g_loss))
+                print('>%d, dr[%.3f,%.3f], df[%.3f,%.3f], g[%.3f,%.3f]' % (i+1, d_r1,d_r2, d_f,d_f2, g_1,g_2))
             
 
-            # serialize weights to HDF5
-            Generator.save_weights("./trainedCNet_GAN_cond/Generator.h5")
-            Discriminator.save_weights("./trainedCNet_GAN_cond/Discriminator.h5")
-            print("Saved model to disk")
+        # serialize weights to HDF5
+        Generator.save_weights("./trainedCNet_GAN_cond_aux/Generator.h5")
+        Discriminator.save_weights("./trainedCNet_GAN_cond_aux/Discriminator.h5")
+        print("Saved model to disk")
 
     def start(self):
         latent_dim = ANN.Training['latent_dim']
@@ -252,19 +240,20 @@ class GAN_training:
         # Train model
         self.train(Generator, Discriminator, GAN, latent_dim)
 
-    def generate_samples(self, n_samples, latent_dim, namefile):
+    def generate_samples(self, n_samples, latent_dim, namefile, n_class = 1):
         # Load trained generator
         loaded_model = self.Generator_model(latent_dim)
         # load weights into new model
-        loaded_model.load_weights("./trainedCNet_GAN_cond/Generator.h5")
+        loaded_model.load_weights("./trainedCNet_GAN_cond_aux/Generator.h5")
         print("Loaded model from disk")
 
         # Create samples
-        [x, labels], y  = self.generate_fake_samples(loaded_model, latent_dim, n_samples)
-        save_input = np.column_stack((labels,x))
-
+        latent_points, labels = self.generate_latent_points(latent_dim, n_samples, n_class = n_class)
+        X = loaded_model.predict([latent_points, labels])
+        save_fake_input = np.column_stack((labels, X))
+        
         # Add real samples
-        save_real_input = np.column_stack((np.ones(self.n_examples), self.dataset_np.input_data_std))
+        save_real_input = np.column_stack((self.dataset_np.output, self.dataset_np.input_data_std))
 
         # Save to file
         with open(namefile, "w") as myfile:
@@ -277,9 +266,9 @@ class GAN_training:
                         myfile.write(str(value) + "\n")
 
         with open(namefile, "a") as myfile:
-            for i, line in enumerate(save_input):
+            for i, line in enumerate(save_fake_input):
                 for value in line:
-                    if value != save_input[i, -1]:
+                    if value != save_fake_input[i, -1]:
                         myfile.write(str(value) + " ")
                     else:
                         myfile.write(str(value) + "\n")
@@ -294,16 +283,9 @@ class GAN_training:
         plt.show()
 
     def evaluate_discriminator(self):
-        loaded_model = self.Classification_model()
-        ref_model = self.Discriminator_model()
+        loaded_model = self.Discriminator_model()
         # load weights into new model
-        ref_model.load_weights("./trainedCNet_GAN_cond/Discriminator.h5")
-
-        # Transfer weights from discriminator to classificator
-        weights = ref_model.get_weights()
-        print(weights)
-        weights = np.delete(weights, [1,2], 0)
-        loaded_model.set_weights(weights)
+        loaded_model.load_weights("./trainedCNet_GAN_cond_aux/Discriminator.h5")
 
         # Predict outcome with discriminator
         predictions = loaded_model.predict(self.testdata[0])
@@ -358,9 +340,9 @@ if __name__ == "__main__":
     perceptron.get_traintestdata( traindata, testdata)
     # perceptron.start() # Train GAN
 
-    nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    # perceptron.generate_samples(30, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
-     #                           # Label indicates if it is real (1) or fake (0)
+    nameFile = "./databaseANN/RealplusGAN/fakesamples.txt"
+    perceptron.generate_samples(100, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+                               # Label indicates if it is real (1) or fake (0)
     # perceptron.see_samples(nameFile)
 
-    perceptron.evaluate_discriminator()
+    # perceptron.evaluate_discriminator()
