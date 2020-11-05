@@ -194,7 +194,7 @@ class Dataset:
             else:
                 self.output_2d[i,:] = np.array([0,1])
 
-    def equalizeclasses(self, en):
+    def equalizeclasses(self, en, error = False):
         indexes = np.where(self.output == 1)[0]
         indexes_un = np.arange(0, self.nsamples,1)
         indexes_un = np.delete(indexes_un, indexes)
@@ -202,20 +202,26 @@ class Dataset:
 
         self.input_data_std_e = np.zeros((2*len(indexes) + en, len(self.input_data[0,:])))
         self.output_e = np.zeros(2*len(indexes) + en)
-        self.error_std_e = np.zeros((2*len(indexes) + en, len(self.error[0,:])))
+        
+        if error == True:
+            self.error_std_e = np.zeros((2*len(indexes) + en, len(self.error[0,:])))
         for i in range(len(indexes)):
             self.input_data_std_e[2*i,:] = self.input_data_std[indexes[i],:]
             self.output_e[2*i] = self.output[indexes[i]]
-            self.error_std_e[2*i,:] = self.error_std[indexes[i],:]
+            
+            if error == True:
+                self.error_std_e[2*i,:] = self.error_std[indexes[i],:]
+                self.error_std_e[2*i+1,:] = self.error_std[indexes_un[i],:]
             
             self.input_data_std_e[2*i+1,:] = self.input_data_std[indexes_un[i],:]
             self.output_e[2*i+1] = self.output[indexes_un[i]]
-            self.error_std_e[2*i+1,:] = self.error_std[indexes_un[i],:]
+            
 
         # fill with unfeasible data
         self.input_data_std_e[2*len(indexes)+2:,:] = self.input_data_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
         self.output_e[2*len(indexes)+2:] = self.output[indexes_un[len(indexes)+2:len(indexes)+en]]
-        self.error_std_e[2*len(indexes)+2:,:] = self.error_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
+        if error == True:
+            self.error_std_e[2*len(indexes)+2:,:] = self.error_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
 
         self.n_examples = 2*len(indexes)
 
@@ -292,7 +298,7 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     # dataset_np.convertLabels()
 
     if equalize == True:
-        dataset_np.equalizeclasses(50)
+        dataset_np.equalizeclasses(50, error = error)
 
 
     return dataset_np

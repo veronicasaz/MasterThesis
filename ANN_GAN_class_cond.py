@@ -347,7 +347,7 @@ if __name__ == "__main__":
 
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
-    dataset_np = TD.LoadNumpy(train_file_path)
+    dataset_np = TD.LoadNumpy(train_file_path, error = True)
     traindata, testdata = TD.splitData_class(dataset_np)
 
     
@@ -356,11 +356,11 @@ if __name__ == "__main__":
     ###############################################
     perceptron = GAN_training(dataset_np)
     perceptron.get_traintestdata( traindata, testdata)
-    # perceptron.start() # Train GAN
+    perceptron.start() # Train GAN
 
     nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    # perceptron.generate_samples(30, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
-     #                           # Label indicates if it is real (1) or fake (0)
-    # perceptron.see_samples(nameFile)
+    perceptron.generate_samples(60, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+                               # Label indicates if it is real (1) or fake (0)
+    perceptron.see_samples(nameFile)
 
-    perceptron.evaluate_discriminator()
+    # perceptron.evaluate_discriminator()

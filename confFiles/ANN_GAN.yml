@@ -3,20 +3,20 @@ Database:
  
 Discriminator:
  architecture:
-  hidden_layers: 1 # number of hidden layers
-  neuron_hidden: 5 # number of neurons in each hidden layer
+  hidden_layers: 2 # number of hidden layers
+  neuron_hidden: 20 # number of neurons in each hidden layer
   regularizer_value: 0.001
   regularization: True
 
 Generator:
  architecture:
-  hidden_layers: 3 # number of hidden layers
-  neuron_hidden: 50 # number of neurons in each hidden layer
+  hidden_layers: 2 # number of hidden layers
+  neuron_hidden: 20 # number of neurons in each hidden layer
   regularizer_value: 0.001
   regularization: True
  
 Training:
- latent_dim: 80 # latent dimension of the GAN
+ latent_dim: 50 # latent dimension of the GAN
  n_batch: 10 # size of the batch, must be lower than twice the size of the real dataset
  n_epochs: 10 # number of iterations
  n_eval: 10 # show accuracy every n_eval iterations

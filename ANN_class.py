@@ -212,7 +212,10 @@ if __name__ == "__main__":
     # TD.plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
     
-    dataset_np = TD.LoadNumpy(train_file_path_fake,  error = False, plotDistribution = False)
+    dataset_np = TD.LoadNumpy(train_file_path_fake, 
+                                equalize = True,
+                                error = False, 
+                                plotDistribution = False)
     # TD.plotInitialDataPandas(train_file_path_fake, pairplot= True, 
     #                         corrplot= False, 
     #                         inputsplotbar = False, 
@@ -227,9 +230,9 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
-    # perceptron.evaluateTest()
+    perceptron.training()
+    perceptron.plotTraining()
+    perceptron.evaluateTest()
     
     print("EVALUATE")
 
