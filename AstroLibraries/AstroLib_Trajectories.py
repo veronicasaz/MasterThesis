@@ -654,13 +654,16 @@ class shapingMethod:
         [k1, phi, k0, theta, k1_s, s, c, gamma, r, fsol] = param
 
         # gamma 1 is known. gamma2:
-        gamma2 = np.arctan( -np.tan(gamma1) - k2*np.log(r1/r2) / np.tan(k2*theta_b/2)  )
+        # gamma2 = np.arctan( -np.tan(gamma1) - k2*np.log(r1/r2) / np.tan(k2*theta_b/2)  )
+        gamma2 = np.arctan(k1*k2*np.cos(k2*theta_b+phi))
 
         # magnitude of the velocities
         theta_dot_1 = np.sqrt( self.mu/r1**3 / \
                     (np.tan(gamma1)**2 + k1*k2**2*np.sin(phi) + 1) )
-        r_dot = r1*theta_dot_1* ( k1*k2*np.cos(phi))
+        r1_dot = r1*theta_dot_1* ( k1*k2*np.cos(phi))
         v1 = theta_dot_1/ np.cos(gamma1)
+
+        print("Must be equal",v1, r1_dot/np.sin(gamma1))
 
 
         theta_dot_2 = np.sqrt( self.mu/r2**3 / \
@@ -668,8 +671,16 @@ class shapingMethod:
         r2_dot = r2*theta_dot_2* ( k1*k2*np.cos(k2*theta_b+phi))
         v2 = theta_dot_2/ np.cos(gamma2)
 
-        print("in function", theta_dot_1, v1)
-        return [v1, gamma1], [v2, gamma2]
+        c = np.cos(k2*(0+2*np.pi*0+phi))
+        s = np.sin(k2*(0+2*np.pi*0+phi))
+        a_T = self.mu/r1**2 * (-1*N) / (2*np.cos(gamma1)) *\
+            ( np.tan(gamma1) / ( np.tan(gamma1)**2 + k1*k2**2*s+1) - \
+                ( k1*k2**3*c - 2*k1*k2**2*s*np.tan(gamma1) ) /\
+                     (np.tan(gamma1)**2 +k1*k2**2*s+1)**2 )
+
+        print('klsdjflksdj',gamma1*180/np.pi,gamma2*180/np.pi)
+        # return [v1, gamma1], [v2, gamma2], a_T
+        return [r1_dot, theta_dot_1], [r2_dot, theta_dot_2], a_T
 
     def plot_sphere(self, r1, r2, psi, gamma1, N):
         k2 = self.k2
@@ -698,11 +709,11 @@ class shapingMethod:
         plt.xlim((-2*r2,2*r2))
         plt.ylim((-2*r2, 2*r2))
         plt.grid(alpha = 0.5)
-        # plt.axis('equal')
+        plt.axis('equal')
         
         plt.show()
 
-    def start(self, r1, r2, psi, t_t, k2):
+    def start(self, r1, r2, psi, t_t, k2, plot = False):
         N = np.arange(0,4,1)
         lim = t_t # in days
 
@@ -711,10 +722,11 @@ class shapingMethod:
         steps = 300
         num = 1/1000  
 
-        labelSize = 15
-        fig, ax = plt.subplots(1,1, figsize = (9,6))
-        plt.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95,
-        hspace=0.40,wspace=0.25)
+        if plot == True:
+            labelSize = 15
+            fig, ax = plt.subplots(1,1, figsize = (9,6))
+            plt.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95,
+            hspace=0.40,wspace=0.25)
 
         # Save gamma and TOF 
         gammaOptim_v = np.zeros(len(N))
@@ -727,29 +739,29 @@ class shapingMethod:
             for j in range(len(gamma1)):
                 TOF[j], param = self.S(self.k2,r1, r2, psi, N[i], gamma1[j], steps)
                 TOF[j] = AL_BF.sec2days(TOF[j])
-
-            plt.plot(gamma1, TOF,label = r'N = %i, $\gamma_m$=%0.4f rad, $\gamma_M$=%0.4f rad '%(N[i],gamma1[0],gamma1[-1]))
             
             gammaOptim_v[i], TOFopt_v[i] = self.gammaOpt(gamma1, TOF, lim)
 
-            if gammaOptim_v[i] == False:
-                plt.scatter(gammaOptim_v[i], TOFopt_v[i] ,label = 'No solution')
-            else:
-                plt.scatter(gammaOptim_v[i], TOFopt_v[i], s= 100,label = '$\gamma_1$ = %0.4f rad, TOF = %0.4f days'%(gammaOptim_v[i],TOFopt_v[i]))
+            if plot == True:
+                plt.plot(gamma1, TOF,label = r'N = %i, $\gamma_m$=%0.4f rad, $\gamma_M$=%0.4f rad '%(N[i],gamma1[0],gamma1[-1]))
+                if gammaOptim_v[i] == False:
+                    plt.scatter(gammaOptim_v[i], TOFopt_v[i] ,label = 'No solution')
+                else:
+                    plt.scatter(gammaOptim_v[i], TOFopt_v[i], s= 100,label = '$\gamma_1$ = %0.4f rad, TOF = %0.4f days'%(gammaOptim_v[i],TOFopt_v[i]))
 
+        if plot == True:
+            xAxis = np.linspace(gamma1[0], gamma1[-1],num= 100)
+            yAxis = np.ones(len(xAxis))*lim
+            plt.plot(xAxis, yAxis,'r-')
 
-        xAxis = np.linspace(gamma1[0], gamma1[-1],num= 100)
-        yAxis = np.ones(len(xAxis))*lim
-        plt.plot(xAxis, yAxis,'r-')
-
-        plt.xlabel('$\gamma_1$',size = labelSize)
-        plt.ylabel('TOF (days)',size = labelSize)
-        plt.ylim([0,2*lim])
-        plt.tick_params(axis ='both', which='major', labelsize = labelSize)
-        plt.tick_params(axis ='both', which='minor', labelsize = labelSize)
-        plt.legend()
-        plt.grid(alpha=0.5)
-        plt.show()
+            plt.xlabel('$\gamma_1$',size = labelSize)
+            plt.ylabel('TOF (days)',size = labelSize)
+            plt.ylim([0,2*lim])
+            plt.tick_params(axis ='both', which='major', labelsize = labelSize)
+            plt.tick_params(axis ='both', which='minor', labelsize = labelSize)
+            plt.legend()
+            plt.grid(alpha=0.5)
+            plt.show()
 
         return gammaOptim_v
 

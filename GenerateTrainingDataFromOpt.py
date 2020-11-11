@@ -11,12 +11,59 @@ from AstroLibraries import AstroLib_2BP as AL_2BP
 
 import LoadConfigFiles as CONFIG
 
+def to_helioc(r, v, gamma):
+    v_body = np.array([v*np.sin(gamma), \
+                        v*np.cos(gamma),\
+                        0])
+
+    # Convert to heliocentric
+    angle = np.arctan2(r[1], r[0])
+    v_h = AL_BF.rot_matrix(v_body, angle, 'z')
+
+    return v_h
+
+def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
+    r_1_norm = np.linalg.norm( r_1 )
+    r_2_norm = np.linalg.norm( r_2 )
+
+    dot = np.dot(r_1[0:2], r_2[0:2])      # dot product between [x1, y1] and [x2, y2]
+    det = r_1[0]*r_2[1] - r_2[0]*r_1[1]     # determinant
+    psi = np.arctan2(det, dot) 
+    psi = AL_BF.convertRange(psi, 'rad', 0 ,2*np.pi)
+    
+    k2 = [1/24, 1/12, 1/6, 1/4, 1/3, 1/2]
+    N = np.arange(0,4,1)
+
+    eSin = AL_TR.shapingMethod(mu / Cts.AU_m**3)
+    v1_opt = 1e8 # random high value
+    for k2_i in k2:
+        gammaOptim_v = eSin.start(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, t_t, k2_i)
+        
+        for j in range(len(N)):
+            if gammaOptim_v[j] != 0:
+                # eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, gammaOptim_v[Ni], Ni)
+                v1, v2 = eSin.calculateVel(N[j], gammaOptim_v[N[j]], r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+
+                v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1])
+                v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1]) 
+                # With respect to the body
+                v1_E = v_1-v_E
+                v2_M = v_2-v_M
+
+                if np.linalg.norm(v1) < v1_opt:
+                    v1_opt = np.linalg.norm(v1_E)
+                    v2_opt = np.linalg.norm(v2_M)
+                    k2_opt = k2_i
+                    gammaOptim_opt = gammaOptim_v[j]
+
+    return v1_opt, v2_opt
 
 if __name__ == "__main__":
     ########################
     # Initial settings
     ########################
     Cts = AL_BF.ConstantsBook()
+    sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
     SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
     
     Fit = Fitness(Nimp = SF.Nimp) # Load fitness class
@@ -45,7 +92,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 5000 # number of training samples. 
+    nsamples = 10 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -58,7 +105,42 @@ if __name__ == "__main__":
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
-    Lambert = True # Use lambert or not
+
+    # EXPOSIN
+    Exposin = True # use exposin or not
+    if Exposin == True:
+        earthephem = pk.planet.jpl_lp('earth')
+        marsephem = pk.planet.jpl_lp('mars')
+
+        notvalid = list()
+        for i in range(nsamples):
+            t_0 = samples_Lambert[i, 6]
+            t_t = samples_Lambert[i, 7]
+
+            r_0, vE = earthephem.eph(t_0)
+            r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
+
+            v1_opt, v2_opt = exposin_opt(r_0, r_1, vE, vM, AL_BF.sec2days(t_t), sun.mu)
+
+            vi1 = np.linalg.norm(v1_opt)
+            vi2 = np.linalg.norm(v2_opt)
+
+            if vi1 >= (SF.bnds[0][0] ) and  vi1 <= (SF.bnds[0][1] ) and \
+                vi2 >= (SF.bnds[3][0] ) and  vi2 <= (SF.bnds[3][1] ):
+                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v_1_opt, "cartesian")
+                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v_2_opt, "cartesian")
+            else:
+                notvalid.append(i)
+
+        # Delete not valid rows:
+        sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
+
+        t = (time.time() - start_time) 
+        print("Samples", nsamples, "Non valid", len(notvalid))
+        print("Time for Exposin", t)
+
+    # LAMBERT
+    Lambert = False # Use lambert or not
     if Lambert == True:
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')

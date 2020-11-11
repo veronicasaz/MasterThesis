@@ -213,7 +213,7 @@ if __name__ == "__main__":
     # dataset_np = TD.LoadNumpy(train_file_path, plotDistribution = True)
     
     dataset_np = TD.LoadNumpy(train_file_path_fake, 
-                                equalize = True,
+                                equalize = False,
                                 error = False, 
                                 plotDistribution = False)
     # TD.plotInitialDataPandas(train_file_path_fake, pairplot= True, 

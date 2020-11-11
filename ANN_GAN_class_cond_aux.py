@@ -251,6 +251,12 @@ class GAN_training:
         latent_points, labels = self.generate_latent_points(latent_dim, n_samples, n_class = n_class)
         X = loaded_model.predict([latent_points, labels])
         save_fake_input = np.column_stack((labels, X))
+
+        # Create samples (unfeasible)
+        latent_points, labels = self.generate_latent_points(latent_dim, n_samples, n_class = 0)
+        X = loaded_model.predict([latent_points, labels])
+        save_fake_input2 = np.column_stack((labels, X))
+        save_fake_input = np.vstack((save_fake_input, save_fake_input2))
         
         # Add real samples
         save_real_input = np.column_stack((self.dataset_np.output, self.dataset_np.input_data_std))
@@ -340,7 +346,7 @@ if __name__ == "__main__":
     ###############################################
     perceptron = GAN_training(dataset_np)
     perceptron.get_traintestdata( traindata, testdata)
-    perceptron.start() # Train GAN
+    # perceptron.start() # Train GAN
 
     nameFile = "./databaseANN/RealplusGAN/fakesamples.txt"
     perceptron.generate_samples(100, ANN.Training['latent_dim'], nameFile) # Database with real and fake data. 
