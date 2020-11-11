@@ -106,7 +106,7 @@ class Fitness:
         # print("mass",m_fuel, "Error", Error)
         return f
 
-    def calculateFitness(self, DecV, optMode = True, plot = False):
+    def calculateFitness(self, DecV, optMode = True, plot = False, thrust = 'free' ):
         """
         calculateFitness: obtain the value of the fitness function
         INPUTS:
@@ -164,8 +164,11 @@ class Fitness:
         self.f = self.objFunction(self.m_fuel, self.Error)
         return self.f
 
-    def calculateFeasibility(self, DecV, optMode = True, printValue = False):
+    def calculateFeasibility(self, DecV, optMode = True, thrust = 'free', 
+        printValue = False, plot = False):
         """
+            thrust = free: direction determined by two angles in heliocentric frame.
+                    tangential: thrust applied in the direction of motion
         """
         FIT = CONF.FEAS
         
@@ -195,8 +198,9 @@ class Fitness:
         self.SV_f_corrected = np.append(self.r_p1, -self.vf) # - to propagate backwards
 
         # Sims-Flanagan
-        SV_list_forw = self.__SimsFlanagan(self.SV_0, saveState=True)
-        SV_list_back = self.__SimsFlanagan(self.SV_f_corrected, backwards = True, saveState=True)
+        SV_list_forw = self.__SimsFlanagan(self.SV_0, saveState=True, thrust = thrust)
+        SV_list_back = self.__SimsFlanagan(self.SV_f_corrected, backwards = True,\
+             saveState=True, thrust = thrust)
 
         # convert back propagation so that the signs of velocity match
         SV_list_back_corrected = np.copy(SV_list_back)
@@ -214,6 +218,11 @@ class Fitness:
         value = fc1 * FIT['factor_pos'] + fc2 * FIT['factor_vel']
         if printValue == True:
             print("Value: ", value)
+
+        if plot == True:
+            # print(np.flipud(SV_list_back))
+            self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
+
         return value # *1000 so that in 
                                                             # tol they are in same order of mag
 
@@ -238,7 +247,7 @@ class Fitness:
 
         return m_current
 
-    def __SimsFlanagan(self, SV_i, backwards = False, saveState = False):
+    def __SimsFlanagan(self, SV_i, thrust = 'free',  backwards = False, saveState = False):
         """
         __SimsFlanagan:
             No impulse is not applied in the state 0 or final.
@@ -265,11 +274,17 @@ class Fitness:
 
             # Add impulse if not in last point
             if imp != self.Nimp:
-                if backwards == True:
-                    SV_i[3:] -= self.DeltaV_list[imp, :] * self.DeltaV_max # Reduce the impulses
-                else:
-                    SV_i[3:] += self.DeltaV_list[imp, :] * self.DeltaV_max
-        
+                if thrust == 'free':
+                    if backwards == True:
+                        SV_i[3:] -= self.DeltaV_list[imp, :] * self.DeltaV_max # Reduce the impulses
+                    else:
+                        SV_i[3:] += self.DeltaV_list[imp, :] * self.DeltaV_max
+                elif thrust == 'tangential':
+                    if backwards == True:
+                        SV_i[3:] -= SV_i[3:]/np.linalg.norm(SV_i[3:])* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max # Reduce the impulses
+                    else:
+                        SV_i[3:] += SV_i[3:]/np.linalg.norm(SV_i[3:])* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max
+
         if saveState == True:
             return SV_list # All states
         else:
