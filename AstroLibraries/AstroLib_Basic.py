@@ -145,6 +145,16 @@ def convert3dvector(vector, typevector):
 
     return vector2 
 
+def rot_matrix(v, alpha, axis):
+    if axis == 'z':
+        rot_m = np.array([
+                [np.cos(alpha), -np.sin(alpha), 0],
+                [np.sin(alpha), np.cos(alpha), 0],
+                [0, 0 ,1] ])
+        
+    v2 = np.dot(rot_m, v)
+    return v2
+
 def writeData(data, mode, title):
     """
     writeData: write data into file
@@ -163,7 +173,8 @@ def writeData(data, mode, title):
 ################################################################################
 
 # pykep Constants
-AU = pk.AU
+AU = pk.AU # in km
+AU_m = pk.AU*1000 # in m
 mu_S = pk.MU_SUN
 mu_E = pk.MU_EARTH
 v_E = pk.EARTH_VELOCITY
@@ -183,6 +194,7 @@ class ConstantsBook:
         self.G = 6.67408e-11 #m^3kg^-1s^-2 Universal Gravitational parameter
 
         self.AU = 149597870.66 #km Astronomical unit
+        self.AU_m = self.AU*1000
         self.DSid = 86164.1004 #s Lenght of the sidereal day
         self.i_Delfi = 98.0 #deg Inclination orbit Delfi-c3
         self.i_ENVISAT = 98.5 #deg Inclination orbit ENVISAT

@@ -440,8 +440,80 @@ def propagateSimsFlanaganForward():
     print("Final", Fit.rv_final)
     print("Theoretical final", r_M,  AL_BF.convert3dvector(decv[3:6], "polar")+v_M)
 
-    # Verified
+def test_Exposin():
+
+    # Verify with example
+    print("VERIFICATION")
+    r1 = 1
+    r2 =  5
+    psi = np.pi/2
+    k2 = 1/4
+
+    # eSin = AL_TR.shapingMethod(sun.mu / Cts.AU_m**3)
+    # gammaOptim_v = eSin.start(r1, r2, psi, 365*1.5, k2) # verified
+    # Ni = 1
+    # print(gammaOptim_v)
+    # eSin.plot_sphere(r1, r2, psi, gammaOptim_v[Ni], Ni) # verified
+
+    # Real life case
+    sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
+    earth = AL_2BP.Body('earth', 'blue', mu = Cts.mu_E_m)
+    mars = AL_2BP.Body('mars', 'red', mu = Cts.mu_M_m)
+
+    # Calculate trajectory of the bodies based on ephem
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
     
+    date0 = np.array([27,1,2018,0])
+    t0 = AL_Eph.DateConv(date0,'calendar') #To JD
+    t_t = 250
+
+    r_E, v_E = earthephem.eph( t0.JD_0 )
+    r_M, v_M = marsephem.eph(t0.JD_0+ t_t )
+
+    r_1 = r_E 
+    r_2 = r_M 
+    r_1_norm = np.linalg.norm( r_1 )
+    r_2_norm = np.linalg.norm( r_2 )
+    
+    dot = np.dot(r_1[0:2], r_2[0:2])      # dot product between [x1, y1] and [x2, y2]
+    det = r_1[0]*r_2[1] - r_2[0]*r_1[1]     # determinant
+    psi = np.arctan2(det, dot) 
+    psi = AL_BF.convertRange(psi, 'rad', 0 ,2*np.pi)
+    
+    k2 = 1/12
+
+    eSin = AL_TR.shapingMethod(sun.mu / Cts.AU_m**3)
+    gammaOptim_v = eSin.start(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, t_t, k2)
+    
+    Ni = 1
+    eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, gammaOptim_v[Ni], Ni)
+    v1, v2 = eSin.calculateVel(Ni, gammaOptim_v[Ni], r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+
+
+    print(v1[0]*Cts.AU_m, v1[1], v2[0]*Cts.AU_m, v2[1])
+
+    # To heliocentric coordinates (2d approximation)
+    def to_helioc(r, v, gamma):
+        v_body = np.array([v*np.sin(gamma), \
+                           v*np.cos(gamma),\
+                           0])
+
+        # Convert to heliocentric
+        angle = np.arctan2(r[1], r[0])
+        v_h = AL_BF.rot_matrix(v_body, angle, 'z')
+
+        return v_h
+
+    v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1])
+    v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1])
+    print("Helioc vel", v_1, v_2)
+    print("with respect to body ", v_1-v_E, v_2-v_M)
+
+    v_1_E = np.linalg.norm(v_1)
+    
+
+
 if __name__ == "__main__":
     # pykepephem()
     # changeReferenceFrame()
@@ -454,4 +526,5 @@ if __name__ == "__main__":
     # print("Universal propagation")
     # propagateUniversalLambert()
     # propagateSimsFlanagan()
-    propagateSimsFlanaganForward()
+    # propagateSimsFlanaganForward()
+    test_Exposin()
