@@ -16,6 +16,7 @@ from AstroLibraries import AstroLib_2BP as AL_2BP
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 from AstroLibraries import AstroLib_Trajectories as AL_TR
+from AstroLibraries import AstroLib_ShapingMethod as AL_Sh
 
 
 import LoadConfigFiles as CONFIG
@@ -449,7 +450,7 @@ def test_Exposin():
     psi = np.pi/2
     k2 = 1/4
 
-    # eSin = AL_TR.shapingMethod(sun.mu / Cts.AU_m**3)
+    # eSin = AL_Sh.shapingMethod(sun.mu / Cts.AU_m**3)
     # gammaOptim_v = eSin.start(r1, r2, psi, 365*1.5, k2) # verified
     # Ni = 1
     # print(gammaOptim_v)
@@ -466,7 +467,7 @@ def test_Exposin():
     
     date0 = np.array([27,1,2018,0])
     t0 = AL_Eph.DateConv(date0,'calendar') #To JD
-    t_t = 250
+    t_t = 350
 
     r_E, v_E = earthephem.eph( t0.JD_0 )
     r_M, v_M = marsephem.eph(t0.JD_0+ t_t )
@@ -481,14 +482,17 @@ def test_Exposin():
     psi = np.arctan2(det, dot) 
     psi = AL_BF.convertRange(psi, 'rad', 0 ,2*np.pi)
     
-    k2 = 1/4
+    k2 = 1/12
 
-    eSin = AL_TR.shapingMethod(sun.mu / Cts.AU_m**3)
-    gammaOptim_v = eSin.start(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, t_t, k2)
+    eSin = AL_Sh.shapingMethod(sun.mu / Cts.AU_m**3)
+    gammaOptim_v = eSin.calculategamma1(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, \
+        t_t, k2, plot = True)
     
     Ni = 1
-    eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, gammaOptim_v[Ni], Ni)
-    v1, v2, a_T = eSin.calculateVel(Ni, gammaOptim_v[Ni], r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+    eSin.calculateExposin(Ni, gammaOptim_v[Ni],r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi )
+    eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+    v1, v2 = eSin.terminalVel(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+    a = eSin.calculateThrustProfile(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
     print('a', a_T*Cts.AU_m)
 
     print("body coord", v1, v2)
@@ -507,7 +511,6 @@ def test_Exposin():
     v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1]*Cts.AU_m)
     v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1]*Cts.AU_m) # r1 was assumed to be in y = 0
 
-    print(v_1, v_2)
     # def to_helioc(r, v, gamma):
     #     v_body = np.array([v*np.sin(gamma), \
     #                        v*np.cos(gamma),\
