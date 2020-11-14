@@ -287,13 +287,15 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
+    dataset_np.standardizationInputs()
     if error == True:
+        dataset_np.standardizationError()
         if plotErrors == True:
             dataset_np.plotDistributionOfErrors()
 
-        dataset_np.standardizationError()
+        
 
-    dataset_np.standardizationInputs()
+    
     
     # dataset_np.convertLabels()
 

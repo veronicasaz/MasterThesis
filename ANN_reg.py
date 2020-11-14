@@ -210,14 +210,16 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
     # TD.plotInitialDataPandas(train_file_path, pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
     # dataset_np = TD.LoadNumpy(train_file_path, 
                             # plotDistribution = False, 
                             # plotErrors =True)
-    dataset_np = TD.LoadNumpy(train_file_path)
+    dataset_np = TD.LoadNumpy(train_file_path, error= True,\
+            equalize = True,
+            plotDistribution=True, plotErrors=True)
     traindata, testdata = TD.splitData_reg(dataset_np)
 
     

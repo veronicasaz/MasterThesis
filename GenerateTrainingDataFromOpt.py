@@ -115,7 +115,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 7 # number of training samples. 
+    nsamples = 10000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     
 
     # EXPOSIN
-    Exposin = True # use exposin or not
+    Exposin = False # use exposin or not
     if Exposin == True:
         earthephem = pk.planet.jpl_lp('earth')
         marsephem = pk.planet.jpl_lp('mars')
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         print("Time for Exposin", t)
 
     # LAMBERT
-    Lambert = False # Use lambert or not
+    Lambert = True # Use lambert or not
     if Lambert == True:
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')
@@ -223,8 +223,8 @@ if __name__ == "__main__":
         print("Samples", nsamples, "Non valid", len(notvalid))
         print("Time for Lambert", t)
 
-    else: 
-        sample_inputs = samples_Lambert 
+    # else: 
+    #     sample_inputs = samples_Lambert 
 
     for i in range(len(sample_inputs)): # Correct angles to be between 0 and 2pi
         sample_inputs[i,1] = AL_BF.convertRange(sample_inputs[i,1], 'rad', 0, 2*np.pi)

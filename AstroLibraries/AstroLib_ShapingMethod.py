@@ -107,8 +107,8 @@ class shapingMethod:
         gammaOpt: calculate the intersection with the reference point
         """
         index = np.where(abs(TOF-lim) == min(abs(TOF-lim)) )
-        if abs(TOF[index]  - lim)> 10 :
-            return False, False
+        if abs(TOF[index]  - lim)> 10 or len(index[0]) == 0:
+            return 0,0
         else:
             return gamma[index], TOF[index]
 
@@ -256,7 +256,7 @@ class shapingMethod:
             if plot == True:
                 plt.plot(gamma1, TOF,\
                     label = r'N = %i, $\gamma_m$=%0.4f rad, $\gamma_M$=%0.4f rad '%(N[i],gamma1[0],gamma1[-1]))
-                if self.gammaOptim_v[i] == False:
+                if self.gammaOptim_v[i] == 0:
                     plt.scatter(self.gammaOptim_v[i], self.TOFopt_v[i] ,label = 'No solution')
                 else:
                     plt.scatter(self.gammaOptim_v[i], self.TOFopt_v[i], s= 100,\
