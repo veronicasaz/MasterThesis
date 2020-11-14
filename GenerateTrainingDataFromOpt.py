@@ -8,13 +8,12 @@ import AstroLibraries.AstroLib_Basic as AL_BF
 from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_OPT as AL_OPT
 from AstroLibraries import AstroLib_2BP as AL_2BP
+from AstroLibraries import AstroLib_ShapingMethod as AL_Sh
 
 import LoadConfigFiles as CONFIG
 
-def to_helioc(r, v, gamma):
-    v_body = np.array([v*np.sin(gamma), \
-                        v*np.cos(gamma),\
-                        0])
+def to_helioc(r, vx, vy):
+    v_body = np.array([vx, vy, 0])
 
     # Convert to heliocentric
     angle = np.arctan2(r[1], r[0])
@@ -31,21 +30,25 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
     psi = np.arctan2(det, dot) 
     psi = AL_BF.convertRange(psi, 'rad', 0 ,2*np.pi)
     
-    k2 = [1/24, 1/12, 1/6, 1/4, 1/3, 1/2]
-    N = np.arange(0,4,1)
+    k2 = [1/12, 1/6, 1/4, 1/2]
+    N = np.arange(0,2,1)
 
-    eSin = AL_TR.shapingMethod(mu / Cts.AU_m**3)
+    eSin = AL_Sh.shapingMethod(mu / Cts.AU_m**3)
     v1_opt = 1e8 # random high value
     for k2_i in k2:
-        gammaOptim_v = eSin.start(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, t_t, k2_i)
+        gammaOptim_v = eSin.calculategamma1(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, \
+        t_t, k2_i, plot = False)
         
         for j in range(len(N)):
             if gammaOptim_v[j] != 0:
+                eSin.calculateExposin(j, gammaOptim_v[j],r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi )
                 # eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, gammaOptim_v[Ni], Ni)
-                v1, v2 = eSin.calculateVel(N[j], gammaOptim_v[N[j]], r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+                v1, v2 = eSin.terminalVel(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
+                t, a_T = eSin.calculateThrustProfile(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
 
-                v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1])
-                v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1]) 
+                v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1]*Cts.AU_m)
+                v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1]*Cts.AU_m)
+                
                 # With respect to the body
                 v1_E = v_1-v_E
                 v2_M = v_2-v_M
@@ -53,10 +56,30 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
                 if np.linalg.norm(v1) < v1_opt:
                     v1_opt = np.linalg.norm(v1_E)
                     v2_opt = np.linalg.norm(v2_M)
+                    v1_opt_v = v1_E
+                    v2_opt_v = v2_M
                     k2_opt = k2_i
                     gammaOptim_opt = gammaOptim_v[j]
 
-    return v1_opt, v2_opt
+    # Calculate acceleration vector
+    acc_vector = np.zeros((SF.Nimp*3))
+    for i in range(SF.Nimp):
+        # Acceleration on segment is average of extreme accelerations
+        t_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) *i
+        t_i1 = AL_BF.days2sec(t_t) / (SF.Nimp+1) *(i+1)
+
+        #find acceleration at a certain time
+        a_i = eSin.accelerationAtTime(t_i)
+        a_i1 = eSin.accelerationAtTime(t_i1)
+        
+        a = (a_i+a_i1)/2 # find the acceleration at a certain time
+        deltav_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) * a*Cts.AU_m
+        acc_vector[3*i]  = abs(deltav_i) /1000
+        acc_vector[3*i+1]= 0
+        acc_vector[3*i+2] = 0
+
+
+    return v1_opt_v, v2_opt_v, acc_vector
 
 if __name__ == "__main__":
     ########################
@@ -92,7 +115,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 10 # number of training samples. 
+    nsamples = 7 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -120,15 +143,16 @@ if __name__ == "__main__":
             r_0, vE = earthephem.eph(t_0)
             r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
 
-            v1_opt, v2_opt = exposin_opt(r_0, r_1, vE, vM, AL_BF.sec2days(t_t), sun.mu)
-
+            v1_opt, v2_opt, acc_vector = exposin_opt(r_0, r_1, vE, vM, AL_BF.sec2days(t_t), sun.mu)
+            print("Here", v1_opt, v2_opt)
             vi1 = np.linalg.norm(v1_opt)
             vi2 = np.linalg.norm(v2_opt)
 
             if vi1 >= (SF.bnds[0][0] ) and  vi1 <= (SF.bnds[0][1] ) and \
                 vi2 >= (SF.bnds[3][0] ) and  vi2 <= (SF.bnds[3][1] ):
-                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v_1_opt, "cartesian")
-                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v_2_opt, "cartesian")
+                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1_opt, "cartesian")
+                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2_opt, "cartesian")
+                    samples_Lambert[i, 8:] = acc_vector
             else:
                 notvalid.append(i)
 

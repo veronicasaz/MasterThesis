@@ -280,10 +280,12 @@ class Fitness:
                     else:
                         SV_i[3:] += self.DeltaV_list[imp, :] * self.DeltaV_max
                 elif thrust == 'tangential':
+                    # If magnitude is backwards:
+                    sign = np.sign( np.dot(SV_i[3:], self.DeltaV_list[imp, :]) )
                     if backwards == True:
-                        SV_i[3:] -= SV_i[3:]/np.linalg.norm(SV_i[3:])* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max # Reduce the impulses
+                        SV_i[3:] -= SV_i[3:]/np.linalg.norm(SV_i[3:])* sign* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max # Reduce the impulses
                     else:
-                        SV_i[3:] += SV_i[3:]/np.linalg.norm(SV_i[3:])* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max
+                        SV_i[3:] += SV_i[3:]/np.linalg.norm(SV_i[3:])* sign* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max
 
         if saveState == True:
             return SV_list # All states

@@ -26,8 +26,11 @@ class shapingMethod:
         gamma1_min = np.arctan( k2/2 * ( -np.log(r1/r2) / np.tan(k2*theta/2) - np.sqrt(delta)))
         gamma1_max = np.arctan( k2/2 * ( -np.log(r1/r2) / np.tan(k2*theta/2) + np.sqrt(delta)))
 
-        h = num*(gamma1_max-gamma1_min) #Interval
-        gamma1 = np.arange(gamma1_min, gamma1_max +h, h)
+        if (gamma1_max-gamma1_min) > 0: # valid interval
+            h = num*(gamma1_max-gamma1_min) #Interval
+            gamma1 = np.arange(gamma1_min, gamma1_max +h, h)
+        else:
+            gamma1 = np.array([gamma1_max])
 
         return gamma1
 
@@ -143,11 +146,14 @@ class shapingMethod:
 
     def calculateThrustProfile(self, N, r1, r2):
         
+        steps = 300
+
         # THRUST PROFILE: thrust changes with gamma and theta
         theta = np.linspace(0, 2*np.pi*(self.N+1), 2000)
         r = np.zeros(len(theta))
         gamma = np.zeros(len(theta))
         a = np.zeros(len(theta))
+        t = np.zeros(len(theta))
         
         for i in range(len(theta)):
             r[i] = self.k0 * np.exp( self.k1*np.sin(self.k2*(theta[i]) +self.phi ) )
@@ -158,25 +164,37 @@ class shapingMethod:
             ( 1/(np.tan( gamma[i])**2 + self.k1*self.k2**2*s + 1) -\
             (self.k2**2*(1-2*self.k1*s))/(np.tan(gamma[i])**2+self.k1*self.k2**2*s+1)**2 )
 
+            args0 = [self.k0, self.k1, self.k2, self.phi]
+            t[i], args = self.simpson(self.f, 0, theta[i], steps, args0) #call simpson's method
 
-        plt.plot(AL_BF.rad2deg(theta), a,'o-')
-        plt.grid(alpha = 0.5)
-        plt.show()
-        # gamma = gamma2
-        # s = np.sin(k2*(theta_b+phi))
-        # a_T2 = self.mu/r2**2 * np.tan(gamma)/(2*np.cos(gamma)) *\
-        #     ( 1/(np.tan( gamma)**2 + k1*k2**2*s + 1) -\
-        #     (k2**2*(1-2*k1*s))/(np.tan(gamma)**2+k1*k2**2*s+1)**2 )
+        # plt.plot(AL_BF.rad2deg(theta), a,'o-')
+        # plt.grid(alpha = 0.5)
+        # plt.show()
 
 
-        # gamma = gamma1
-        # s = np.sin(k2*(phi))
-        # a_T1 = self.mu/r2**2 * np.tan(gamma)/(2*np.cos(gamma)) *\
-        #     ( 1/(np.tan( gamma)**2 + k1*k2**2*s + 1) -\
-        #     (k2**2*(1-2*k1*s))/(np.tan(gamma)**2+k1*k2**2*s+1)**2 )
 
-        # a_T = (a_T1+a_T2)/2
-        # print('klsdjflksdj',gamma1*180/np.pi,gamma2*180/np.pi)
+        self.t_f = np.polyfit(t, a, 11) # acceleration as a function of time
+        # plt.plot(t, a,'o-')
+
+        # a_i = np.zeros(len(t))
+        # for i in range(len(t)):
+        #     a_i[i] = self.accelerationAtTime(t[i])
+
+        # plt.plot(t, a_i, color = 'red')
+
+        # plt.grid(alpha = 0.5)
+        # plt.show()
+
+
+        return t, a
+
+    def accelerationAtTime(self, t):
+        a_i = 0
+        for exp in range(len(self.t_f)):
+            a_i += self.t_f[exp] * t**(len(self.t_f)-1-exp)
+
+        return a_i
+
         
 
     def plot_sphere(self, r1, r2, psi):
