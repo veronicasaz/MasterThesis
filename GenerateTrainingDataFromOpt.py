@@ -74,7 +74,7 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
         
         a = (a_i+a_i1)/2 # find the acceleration at a certain time
         deltav_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) * a*Cts.AU_m
-        acc_vector[3*i]  = abs(deltav_i) /1000
+        acc_vector[3*i]  = abs(deltav_i) /100
         acc_vector[3*i+1]= 0
         acc_vector[3*i+2] = 0
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 10000 # number of training samples. 
+    nsamples = 1000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -128,9 +128,10 @@ if __name__ == "__main__":
         samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
             high = SF.bnds[decv][1], size = nsamples)
     
-
     # EXPOSIN
     Exposin = False # use exposin or not
+    Lambert = False # Use lambert or not
+
     if Exposin == True:
         earthephem = pk.planet.jpl_lp('earth')
         marsephem = pk.planet.jpl_lp('mars')
@@ -164,8 +165,8 @@ if __name__ == "__main__":
         print("Time for Exposin", t)
 
     # LAMBERT
-    Lambert = True # Use lambert or not
-    if Lambert == True:
+    
+    elif Lambert == True:
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')
         marsephem = pk.planet.jpl_lp('mars')
@@ -223,8 +224,8 @@ if __name__ == "__main__":
         print("Samples", nsamples, "Non valid", len(notvalid))
         print("Time for Lambert", t)
 
-    # else: 
-    #     sample_inputs = samples_Lambert 
+    else: 
+        sample_inputs = samples_Lambert 
 
     for i in range(len(sample_inputs)): # Correct angles to be between 0 and 2pi
         sample_inputs[i,1] = AL_BF.convertRange(sample_inputs[i,1], 'rad', 0, 2*np.pi)

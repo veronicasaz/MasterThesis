@@ -62,7 +62,7 @@ class shapingMethod:
    
         fsol = np.sqrt(r**3 * (np.tan(gamma)**2 + k1*k2**2*s +1 ) / mu)
 
-        args = [theta, k1*s, s, c, gamma, r*Cts.AU_m, fsol**2]
+        args = [theta, k1*s, s, c, gamma, r*Cts.AU, fsol**2]
     
         return fsol, args
 
@@ -174,16 +174,16 @@ class shapingMethod:
 
 
         self.t_f = np.polyfit(t, a, 11) # acceleration as a function of time
-        # plt.plot(t, a,'o-')
+        plt.plot(t, a,'o-')
 
-        # a_i = np.zeros(len(t))
-        # for i in range(len(t)):
-        #     a_i[i] = self.accelerationAtTime(t[i])
+        a_i = np.zeros(len(t))
+        for i in range(len(t)):
+            a_i[i] = self.accelerationAtTime(t[i])
 
-        # plt.plot(t, a_i, color = 'red')
+        plt.plot(t, a_i, color = 'red')
 
-        # plt.grid(alpha = 0.5)
-        # plt.show()
+        plt.grid(alpha = 0.5)
+        plt.show()
 
 
         return t, a

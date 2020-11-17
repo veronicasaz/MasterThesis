@@ -484,16 +484,16 @@ def test_Exposin():
     
     k2 = 1/12
 
-    eSin = AL_Sh.shapingMethod(sun.mu / Cts.AU_m**3)
-    gammaOptim_v = eSin.calculategamma1(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi, \
+    eSin = AL_Sh.shapingMethod(sun.mu / AL_BF.AU**3)
+    gammaOptim_v = eSin.calculategamma1(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi, \
         t_t, k2, plot = False)
     
     Ni = 1
-    eSin.calculateExposin(Ni, gammaOptim_v[Ni],r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi )
-    # eSin.plot_sphere(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
-    v1, v2 = eSin.terminalVel(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
-    t, a_T = eSin.calculateThrustProfile(r_1_norm / Cts.AU_m, r_2_norm / Cts.AU_m, psi)
-    # print('a', a_T*Cts.AU_m)
+    eSin.calculateExposin(Ni, gammaOptim_v[Ni],r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi )
+    eSin.plot_sphere(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+    v1, v2 = eSin.terminalVel(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+    t, a_T = eSin.calculateThrustProfile(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+    # print('a', a_T*AL_BF.AU)
 
 
     print("body coord", v1, v2)
@@ -509,8 +509,8 @@ def test_Exposin():
 
         return v_h
 
-    v_1 = to_helioc(r_1, v1[0]*Cts.AU_m, v1[1]*Cts.AU_m)
-    v_2 = to_helioc(r_2, v2[0]*Cts.AU_m, v2[1]*Cts.AU_m) 
+    v_1 = to_helioc(r_1, v1[0]*AL_BF.AU, v1[1]*AL_BF.AU)
+    v_2 = to_helioc(r_2, v2[0]*AL_BF.AU, v2[1]*AL_BF.AU) 
 
     # def to_helioc(r, v, gamma):
     #     v_body = np.array([v*np.sin(gamma), \
@@ -556,9 +556,9 @@ def test_Exposin():
         
         a = (a_i+a_i1)/2 # find the acceleration at a certain time
         print("a", a_i, a_i1, a)
-        deltav_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) * a*Cts.AU_m
+        deltav_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) * a*AL_BF.AU
         print(deltav_i)
-        decv[8+3*i] = deltav_i /1000
+        decv[8+3*i] = deltav_i /100
         decv[8+3*i+1] = 0
         decv[8+3*i+2] = 0
 

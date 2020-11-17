@@ -174,7 +174,6 @@ def writeData(data, mode, title):
 
 # pykep Constants
 AU = pk.AU # in km
-AU_m = pk.AU*1000 # in m
 mu_S = pk.MU_SUN
 mu_E = pk.MU_EARTH
 v_E = pk.EARTH_VELOCITY

@@ -1,4 +1,5 @@
 import os
+import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
 import tensorflow as tf
@@ -150,14 +151,14 @@ class ANN_reg:
                     self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
                     self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
             else:
-                predictions_unscaled = self.dataset_np.inverseStandardizationError(pred_test) #Obtain predictions in actual 
-                true_value = self.dataset_np.inverseStandardizationError(self.testdata[1]) #Obtain predictions in actual
+                predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
+                true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
 
                 self.Error_pred_unscale = np.zeros((len(pred_test),2)) 
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
-                    print("%e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
-                    print("%e, %e"%(true_value[i,0], true_value[i,1] ))
+                    print("Predictions, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
+                    print("True value, %e, %e"%(true_value[i,0], true_value[i,1] ))
                     print("------------------------")
                     self.Error_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
                     self.Error_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
@@ -210,19 +211,21 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
+    # train_file_path = "./databaseANN/ErrorIncluded/LimitEp_1e7_Ev_1e3/trainingData_Feas_big.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
-    # TD.plotInitialDataPandas(train_file_path, pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
+    # TD.plotInitialDataPandasError(train_file_path, pairplot= True, corrplot= True)
     # dataset_np = TD.LoadNumpy(train_file_path, 
                             # plotDistribution = False, 
                             # plotErrors =True)
     dataset_np = TD.LoadNumpy(train_file_path, error= True,\
             equalize = True,
             plotDistribution=True, plotErrors=True)
+    
     traindata, testdata = TD.splitData_reg(dataset_np)
 
-    
+    # sys.exit(0)
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
@@ -230,6 +233,8 @@ if __name__ == "__main__":
     perceptron.get_traintestdata(traindata, testdata)
     perceptron.training()
     perceptron.plotTraining()
+
+
     
     print("EVALUATE")
     predictions = perceptron.predict(fromFile=True, rescale = False)

@@ -1,11 +1,11 @@
 Database:
- scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ scaling: 0 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
 
 Training:
  train_size: 0.9 # % of the data for training, the rest is testing
  n_splits: 5 # 
  n_repeats: 5 # 
- epochs: 150
+ epochs: 10
  random_state: 1 #
  learning_rate: 0.001
  regularization: True

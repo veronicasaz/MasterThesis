@@ -53,8 +53,11 @@ def join_files(file_path, filename):
     myfile.close()
     np.savetxt(filename, dataset)
 
+
+
 class Dataset:
-    def __init__(self, file_path, dataset_preloaded = False, shuffle = True, error = True):
+    def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
+        error = True, equalize = False):
         # Load with numpy
         if type(dataset_preloaded) == bool:
 
@@ -82,17 +85,49 @@ class Dataset:
         self.nsamples = len(self.dataset[:,0])
 
         
-        self.output = dataset[:,0]
+        self.output = self.dataset[:,0]
         if error == True:
-            self.input_data = dataset[:,7:]
-            error_p = [np.linalg.norm(dataset[i, 1:4]) for i in range(self.nsamples)]
-            error_v = [np.linalg.norm(dataset[i, 4:7]) for i in range(self.nsamples)]
+            self.input_data = self.dataset[:,7:]
+            error_p = [np.linalg.norm(self.dataset[i, 1:4]) for i in range(self.nsamples)]
+            error_v = [np.linalg.norm(self.dataset[i, 4:7]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
         else:
-            self.input_data = dataset[:,1:]
+            self.input_data = self.dataset[:,1:]
+
         self.n_input = self.input_data.shape[1]
         self.n_classes = 2
+
+        if equalize == True:
+            self.equalize_fun(self.error[:,0])
+
+    def equalize_fun(self, base_vector):
+        """
+        equalize_fun: eliminate most common samples based on a criterion 
+        INPUTS:
+            x: database
+            column: column to equalize
+        """
+        # By orders of magnitude
+        indexes = [ int(np.log10( base_vector[i] )) for i in range(self.nsamples)  ]
+
+        counter = np.zeros(12)
+        for i in np.arange(0,12,1):
+            counter[i] = indexes.count(i)
+
+        mean = int( np.mean(counter[np.nonzero(counter)]) )
+
+        indexes_delete = list()
+        for j in range(len(counter)):
+            if counter[j] > mean: # more samples than it should
+                ii = np.where((np.array(indexes) == j))[0]
+                np.random.shuffle(ii)
+                a = (ii[0:int(counter[j])-mean]).tolist()
+                indexes_delete.extend( a )
+
+        self.input_data = np.delete(self.input_data, indexes_delete, 0)
+        self.output = np.delete(self.output, indexes_delete, 0)
+        self.error = np.delete(self.error, indexes_delete, 0)
 
     def statisticsFeasible(self):
         self.count_feasible = np.count_nonzero(self.output)
@@ -151,11 +186,48 @@ class Dataset:
         plt.show()
 
 
+    def commonStandardization(self):
+        """
+        standardize inputs and errors together
+        """
+        if ANN_datab['scaling'] == 0:
+            self.scaler = MinMaxScaler()
+        elif ANN_datab['scaling'] == 1:
+            self.scaler = StandardScaler()
+
+        self.error[:,0] /= AL_BF.AU # Normalize with AU
+        self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+
+        database = np.column_stack((self.error, self.input_data))
+        self.scaler.fit(database)
+
+        database2 = self.scaler.transform(database)
+        self.error_std = database2[:,0:2]
+        self.input_data_std = database2[:,2:]
+
+
+    def commonInverseStandardization(self, y, x):
+        database = np.column_stack((y,x))
+        print(np.shape(x), np.shape(y))
+        
+        x2 = self.scaler.inverse_transform(database)
+        E = x2[:, 0:2]
+        I = x2[:, 2:]
+        E[:,0] *= AL_BF.AU # Normalize with AU
+        E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+
+        return E, I
+
     def standardizationInputs(self):
+        if ANN_datab['scaling'] == 0:
+            self.scaler = MinMaxScaler()
+        elif ANN_datab['scaling'] == 1:
+            self.scaler = StandardScaler()
         # Standarization of the inputs
-        scaler = StandardScaler()
-        scaler.fit(self.input_data)
-        self.input_data_std = scaler.transform(self.input_data)
+        # scaler = StandardScaler()
+        self.scaler.fit(self.input_data)
+        self.input_data_std = self.scaler.transform(self.input_data)
+        
     
 
     def standardizationError(self):
@@ -275,10 +347,45 @@ def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
         plt.show()
         print("Here2")
 
+def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = False):
+    feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
+    labels_feas = feasible_txt.columns.values
+
+    database = np.loadtxt(train_file_path, skiprows = 1)
+    Ep = [np.linalg.norm(database[i,1:4]) for i in range(len(database[:,0]))]
+    Ev = [np.linalg.norm(database[i,4:7]) for i in range(len(database[:,0]))]
+
+    database_2 = np.column_stack((Ep, Ev))
+    database_2 = np.column_stack((database_2, database[:,7:]))
+
+    labels =['Ep', 'Ev']
+    labels.extend(labels_feas[7:])
+
+    df = pd.DataFrame(data=database_2, columns =  labels)
+
+    if pairplot == True: # pairplot
+        sns.pairplot(df)
+        plt.tight_layout()
+        plt.savefig("./databaseANN/ErrorIncluded/Pairplot.png", dpi = 100)
+        plt.show()
+
+    if corrplot == True: # correlations matrix
+        sns.set_theme(style="white") 
+        corr_mat = df.corr()
+        fig, ax = plt.subplots(figsize =(20,12))
+        cmap = sns.color_palette("mako", as_cmap=True)
+        sns.heatmap(corr_mat, vmax = 1.0, square= True, ax=ax, \
+            annot=True, cmap=cmap)
+        plt.tight_layout()
+        plt.savefig("./databaseANN/ErrorIncluded/Corrplot.png", dpi = 100)
+        plt.show()   
+
+
 def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     equalize = False, error = False):
     # Load with numpy to see plot
-    dataset_np = Dataset(train_file_path, shuffle = True, error = error)
+    dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
+        equalize = equalize)
 
     # Plot distribution of feasible/unfeasible
     if plotDistribution == True:
@@ -287,9 +394,10 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
-    dataset_np.standardizationInputs()
+    dataset_np.commonStandardization()
+    # dataset_np.standardizationInputs()
     if error == True:
-        dataset_np.standardizationError()
+        # dataset_np.standardizationError()
         if plotErrors == True:
             dataset_np.plotDistributionOfErrors()
 
@@ -299,8 +407,6 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     
     # dataset_np.convertLabels()
 
-    if equalize == True:
-        dataset_np.equalizeclasses(50, error = error)
 
 
     return dataset_np
