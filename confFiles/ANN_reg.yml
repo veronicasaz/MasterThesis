@@ -1,11 +1,12 @@
 Database:
- scaling: 0 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ type_stand: 0 # 0- common standardization, 1-input-output separated, 2-input-output-output separated
 
 Training:
  train_size: 0.9 # % of the data for training, the rest is testing
  n_splits: 5 # 
  n_repeats: 5 # 
- epochs: 10
+ epochs: 50
  random_state: 1 #
  learning_rate: 0.001
  regularization: True

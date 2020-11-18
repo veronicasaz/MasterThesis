@@ -197,9 +197,12 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
     plt.show()
 
 if __name__ == "__main__":
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
+    train_file_path = "./Results/TrainingPopulation/OptRegression/trainingData_Feas_big2.txt"
 
-    dataset_np = DTS.LoadNumpy(train_file_path)
+    dataset_np = DTS.LoadNumpy(train_file_path, error= True,\
+            equalize = True,
+            plotDistribution=False, plotErrors=False)
+    # dataset_np = DTS.LoadNumpy(train_file_path)
     traindata, testdata = DTS.splitData_reg(dataset_np)
     perceptron = ANN_reg(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
@@ -213,8 +216,8 @@ if __name__ == "__main__":
 
 
     # ACCURACY
-    # optArch(perceptron,  dv_HL, dv_NH)
-    # optTra(perceptron, dv_SP, dv_RP, dv_EP)
+    optArch(perceptron,  dv_HL, dv_NH)
+    optTra(perceptron, dv_SP, dv_RP, dv_EP)
     
     plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP)
 

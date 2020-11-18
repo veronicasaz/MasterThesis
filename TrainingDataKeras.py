@@ -116,6 +116,7 @@ class Dataset:
             counter[i] = indexes.count(i)
 
         mean = int( np.mean(counter[np.nonzero(counter)]) )
+        print("equalize", counter)
 
         indexes_delete = list()
         for j in range(len(counter)):
@@ -220,17 +221,15 @@ class Dataset:
 
     def standardizationInputs(self):
         if ANN_datab['scaling'] == 0:
-            self.scaler = MinMaxScaler()
+            self.scaler_I = MinMaxScaler()
         elif ANN_datab['scaling'] == 1:
-            self.scaler = StandardScaler()
+            self.scaler_I = StandardScaler()
         # Standarization of the inputs
         # scaler = StandardScaler()
-        self.scaler.fit(self.input_data)
-        self.input_data_std = self.scaler.transform(self.input_data)
-        
-    
+        self.scaler_I.fit(self.input_data)
+        self.input_data_std = self.scaler_I.transform(self.input_data)
 
-    def standardizationError(self):
+    def standardizationError(self, sep = False):
         # Normalization of errors TODO: eliminate and inlcude in database already
         self.error[:,0] /= AL_BF.AU # Normalize with AU
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
@@ -238,23 +237,51 @@ class Dataset:
         # Standarization of the error
         if ANN_datab['scaling'] == 0:
             self.scaler = MinMaxScaler()
-            self.scaler.fit(self.error)
-            self.error_std = self.scaler.transform(self.error) 
+            self.scalerEp = MinMaxScaler()
+            self.scalerEv = MinMaxScaler()
+
 
         elif ANN_datab['scaling'] == 1:
             self.scaler = StandardScaler()
-            self.scaler.fit(self.error)
-            self.error_std = self.scaler.transform(self.error) 
+            self.scalerEp = StandardScaler()
+            self.scalerEv = StandardScaler()
         
-        elif ANN_datab['scaling'] == 2:
-            self.scaler = Normalizer()
-            transformer = Normalizer(0).fit
+        if sep == False:
+            self.scaler.fit(self.error)
+            self.error_std = self.scaler.transform(self.error)
+        else:
+            self.error_std = np.zeros(np.shape(self.error))
+
+            self.scalerEp.fit(self.error[:,0].reshape(-1, 1) )
+            self.error_std[:,0] = self.scalerEp.transform(self.error[:,0].reshape(-1, 1)).flatten()
+            self.scalerEv.fit(self.error[:,1].reshape(-1, 1))
+            self.error_std[:,1] = self.scalerEv.transform(self.error[:,1].reshape(-1, 1)).flatten()
+    
+        # elif ANN_datab['scaling'] == 2:
+        #     self.scaler = Normalizer()
+        #     transformer = Normalizer(0).fit
         
 
-    def inverseStandardizationError(self, x):
-        x2 = self.scaler.inverse_transform(x)
-        x2[:,0] *= AL_BF.AU # Normalize with AU
-        x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+    def inverseStandardization(self, x, typeR='E'):
+        """
+            typeR: E, rescale errors together
+                  Ep, rescale error pos
+                  Ev, rescale error vel
+                  I, rescale input
+        """
+        if typeR == 'E':
+            x2 = self.scaler.inverse_transform(x)
+            x2[:,0] *= AL_BF.AU # Normalize with AU
+            x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+        elif typeR == 'Ep':
+            x2 = self.scalerEp.inverse_transform(x.reshape(-1,1)).flatten()
+            x2 *= AL_BF.AU # Normalize with AU
+        elif typeR == 'Ev':
+            x2 = self.scalerEv.inverse_transform(x.reshape(-1,1)).flatten()
+            x2 = x2 * AL_BF.AU / AL_BF.year2sec(1)
+        elif typeR == 'I':
+            x2 = self.scalerI.inverse_transform(x)
+        
         return x2
         
 
@@ -364,7 +391,8 @@ def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = Fal
     df = pd.DataFrame(data=database_2, columns =  labels)
 
     if pairplot == True: # pairplot
-        sns.pairplot(df)
+        g = sns.pairplot(df)
+        # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
         plt.savefig("./databaseANN/ErrorIncluded/Pairplot.png", dpi = 100)
         plt.show()
@@ -382,7 +410,7 @@ def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = Fal
 
 
 def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
-    equalize = False, error = False):
+    equalize = False, error = False, standardization = 'common'):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
         equalize = equalize)
@@ -394,12 +422,18 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
-    dataset_np.commonStandardization()
-    # dataset_np.standardizationInputs()
-    if error == True:
-        # dataset_np.standardizationError()
-        if plotErrors == True:
-            dataset_np.plotDistributionOfErrors()
+    if standardization == 0: # common
+        dataset_np.commonStandardization()
+    elif standardization == 1: #'input_output'
+        dataset_np.standardizationInputs()
+        if error == True:
+            dataset_np.standardizationError(sep=False)
+    elif standardization == 2: #'input_sepoutput'
+        dataset_np.standardizationInputs()
+        dataset_np.standardizationError(sep=True)
+            
+    if plotErrors == True:
+        dataset_np.plotDistributionOfErrors()
 
         
 

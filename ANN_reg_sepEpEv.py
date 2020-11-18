@@ -24,10 +24,8 @@ import TrainingDataKeras as TD
 ###################################################################
 
 ANN = CONF.ANN_reg()
-ANN_datab = ANN.ANN_datab
 ANN_train = ANN.ANN_train
 ANN_archic = ANN.ANN_archic
-
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -152,23 +150,8 @@ class ANN_reg:
                     self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
                     self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
             else:
-                if ANN_datab['type_stand'] == 0:
-                    predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
-                    true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-                elif ANN_datab['type_stand'] == 1:
-                    predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
-                    true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
-                elif ANN_datab['type_stand'] == 2:
-                    predictions_unscaled = np.zeros(np.shape(pred_test))
-                    true_value = np.zeros(np.shape(self.testdata[1]))
-
-                    #Ep
-                    predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Ep') #Obtain predictions in actual 
-                    true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Ep') #Obtain predictions in actual
-                    #Ev
-                    predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ev') #Obtain predictions in actual 
-                    true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ev') #Obtain predictions in actual
-
+                predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
+                true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
 
                 self.Error_pred_unscale = np.zeros((len(pred_test),2)) 
                 for i in range(len(predictions_unscaled)):
@@ -227,18 +210,21 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_noLambert.txt"
+    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big2.txt"
     # train_file_path = "./databaseANN/ErrorIncluded/LimitEp_1e7_Ev_1e3/trainingData_Feas_big.txt"
     # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
 
-    TD.plotInitialDataPandasError(train_file_path, pairplot= True, corrplot= True)
+    # TD.plotInitialDataPandasError(train_file_path, pairplot= True, corrplot= True)
+    # dataset_np = TD.LoadNumpy(train_file_path, 
+                            # plotDistribution = False, 
+                            # plotErrors =True)
     dataset_np = TD.LoadNumpy(train_file_path, error= True,\
-            equalize = True, standardization =ANN_datab['type_stand'],
+            equalize = True, standardization='input_sepoutput',
             plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 
-    sys.exit(0)
+    # sys.exit(0)
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################
