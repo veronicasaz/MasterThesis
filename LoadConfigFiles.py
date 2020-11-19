@@ -31,7 +31,7 @@ class SimsFlan_config:
 class OPT_config:
     def __init__(self):
         with open("./confFiles/OPT_config.yml") as file:
-            OPT_config = yaml.load(file, Loader=yaml.FullLoader)
+            self.OPT_config = yaml.load(file, Loader=yaml.FullLoader)
 
         self.MBH = OPT_config['MBH']
         self.MBH_generateDatabase = OPT_config['MBH_generateDatabase']
@@ -41,14 +41,14 @@ class OPT_config:
 class Fitness_config:
     def __init__(self):
         with open("./confFiles/Fitness_config.yml") as file:
-            Fit_config = yaml.load(file, Loader=yaml.FullLoader)
+            self.Fit_config = yaml.load(file, Loader=yaml.FullLoader)
 
         # self.FEAS = Fit_config['FEASIB']
 
 class ANN:
     def __init__(self):
         with open("./confFiles/ANN.yml") as file:
-            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+            self.ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
         # self.ANN_archic = ANN_config['Architecture']
         # self.ANN_train = ANN_config['Training']
@@ -56,7 +56,7 @@ class ANN:
 class ANN_reg:
     def __init__(self):
         with open("./confFiles/ANN_reg.yml") as file:
-            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+            self.ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
         # self.ANN_datab = ANN_config['Database']
         # self.ANN_archic = ANN_config['Architecture']
@@ -65,7 +65,7 @@ class ANN_reg:
 class ANN_GAN:
     def __init__(self):
         with open("./confFiles/ANN_GAN.yml") as file:
-            ANN_config = yaml.load(file, Loader = yaml.FullLoader)
+            self.ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
         # self.ANN_datab = ANN_config['Database']
         # self.Discriminator = ANN_config['Discriminator']

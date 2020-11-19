@@ -22,7 +22,8 @@ import TrainingDataKeras as TD
 # https://machinelearningmastery.com/semi-supervised-generative-adversarial-network/
 # https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
 ###################################################################['
-ANN'] = CONF.ANN_GAN()
+ANN_C = CONF.ANN_GAN()
+ANN = ANN_C.ANN_config
 
 class GAN_training:
     def __init__(self, dataset):

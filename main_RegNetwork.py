@@ -16,7 +16,9 @@ import time
 ########################
 # Sims Flanagan
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
-FIT = CONFIG.Fitness_config()
+FIT_C = CONFIG.Fitness_config()
+FIT = FIT_C.Fit_config
+
 Fitness = Fitness(Nimp = SF.Nimp)
 
 # Database for inverse standardization
@@ -29,14 +31,16 @@ ANN.load_model_fromFile()
 
 # optimization
 opt_config = CONFIG.OPT_config()
+EA = opt_config.EA
+MBH = opt.config.MBH
 
 ########################
 # Calculate fitness
 ########################
 def f(DecV):
     # Mass
-    mass = np.zeros((opt_config['EA']['ind']))
-    for i in range(opt_config['EA']['ind']):
+    mass = np.zeros((EA['ind']))
+    for i in range(EA['ind']):
         mass[i] = Fitness.calculateMass(DecV[i,:])
 
     # Error
@@ -70,12 +74,12 @@ def EA(): # Evolutionary Algorithm
     # Optimize outer loop
     start_time = time.time()
     f_min, Best = AL_OPT.EvolAlgorithm(f, SF.bnds , x_add = False, \
-        ind = opt_config['EA']['ind'], 
-        max_iter = opt_config['EA']['iterat'],
-        max_iter_success = opt_config['EA']['itersuccess'],
-        elitism = opt_config['EA']['elitism'], 
-        mutation = opt_config['EA']['mutat'], 
-        immig = opt_config['EA']['immig'],
+        ind = EA['ind'], 
+        max_iter = EA['iterat'],
+        max_iter_success = EA['itersuccess'],
+        elitism = EA['elitism'], 
+        mutation = EA['mutat'], 
+        immig = EA['immig'],
         bulk_fitness = True )
     t = (time.time() - start_time) 
 
@@ -97,13 +101,13 @@ def MBH_self():
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep,\
-                niter = opt_config['MBH']['niter_total'], 
-                niter_local = opt_config['MBH']['niter_local'], \
-                niter_sucess = opt_config['MBH']['niter_success'], 
+                niter = MBH['niter_total'], 
+                niter_local = MBH['niter_local'], \
+                niter_sucess = MBH['niter_success'], 
                 bnds = SF.bnds, \
-                jumpMagnitude = opt_config['MBH']['jumpMagnitude'], 
-                tolLocal = opt_config['MBH']['tolLocal'],\
-                tolGlobal = opt_config['MBH']['tolGlobal'], 
+                jumpMagnitude = MBH['jumpMagnitude'], 
+                tolLocal = MBH['tolLocal'],\
+                tolGlobal = MBH['tolGlobal'], 
                 cons = cons)
     
     t = (time.time() - start_time) 

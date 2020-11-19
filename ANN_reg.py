@@ -23,7 +23,8 @@ import TrainingDataKeras as TD
 # https://machinelearningmastery.com/deep-learning-models-for-multi-output-regression/
 ###################################################################
 
-ANN = CONF.ANN_reg()
+ANN_reg = CONF.ANN_reg()
+ANN = ANN_reg.ANN_config
 
 class ANN_reg:
     def __init__(self, dataset):

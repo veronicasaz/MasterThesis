@@ -15,9 +15,11 @@ from math import floor, ceil
 import AstroLibraries.AstroLib_Basic as AL_BF 
 import LoadConfigFiles as CONF
 
-ANN = CONF.ANN_reg()
+ANN_reg = CONF.ANN_reg()
+ANN = ANN_reg.ANN_config
 
-FIT = CONF.Fitness_config()
+FIT_C = CONF.Fitness_config()
+FIT = FIT_C.Fit_config
 
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q

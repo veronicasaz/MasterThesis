@@ -10,7 +10,8 @@ from AstroLibraries import AstroLib_Ephem as AL_Eph
 from AstroLibraries import AstroLib_Plots as AL_Plot
 
 import LoadConfigFiles as CONFIG
-CONF = CONFIG.Fitness_config()
+CONF_C = CONFIG.Fitness_config()
+CONF = CONF_C.Fit_config
 
 class Fitness:
     def __init__(self, *args, **kwargs):

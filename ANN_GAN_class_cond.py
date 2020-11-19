@@ -25,7 +25,8 @@ import TrainingDataKeras as TD
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
 # ###################################################################
 
-ANN = CONF.ANN_GAN()
+ANN_C = CONF.ANN_GAN()
+ANN = ANN_C.ANN_config
 
 class GAN_training:
     def __init__(self, dataset):

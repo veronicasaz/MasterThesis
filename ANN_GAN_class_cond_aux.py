@@ -26,8 +26,8 @@ import TrainingDataKeras as TD
 
 # https://machinelearningmastery.com/how-to-develop-an-auxiliary-classifier-gan-ac-gan-from-scratch-with-keras/
 # ###################################################################
-
-ANN = CONF.ANN_GAN()
+ANN_C = CONF.ANN_GAN()
+ANN = ANN_C.ANN_config
 
 class GAN_training:
     def __init__(self, dataset):

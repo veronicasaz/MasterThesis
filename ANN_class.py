@@ -20,7 +20,8 @@ import TrainingDataKeras as TD
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
 
-ANN = CONF.ANN()
+ANN_C = CONF.ANN()
+ANN = ANN_C.ANN_config
 
 class ANN:
     def __init__(self, dataset):

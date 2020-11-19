@@ -15,7 +15,8 @@ import TrainingDataKeras as DTS
 
 train_file_path = "./databaseANN/trainingData_Feas.txt"
 
-ANN = CONF.ANN()
+ANN_C = CONF.ANN()
+ANN = ANN_C.ANN_config
 
 class ANN:
     def __init__(self, traindata, testdata):

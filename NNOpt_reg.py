@@ -4,9 +4,11 @@ from tensorflow import keras
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
+import matplotlib.gridspec as gs
 import seaborn as sns
 from math import floor, ceil
+
+import time
 
 from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler 
@@ -15,7 +17,8 @@ from sklearn.model_selection import RepeatedKFold
 import LoadConfigFiles as CONF
 import TrainingDataKeras as DTS
 
-ANN = CONF.ANN_reg()
+ANN_reg = CONF.ANN_reg()
+ANN = ANN_reg.ANN_config
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -117,7 +120,7 @@ def optArch(perceptron, dv_HL, dv_NH):
 
 def optTra(perceptron, dv_SP, dv_RP, dv_EP):
     test_accuracy_Matrix_train = np.zeros((len(dv_SP), len(dv_RP)))
-    test_accuracy_Matrix_train2 = np.zeros((len(dv_EP)))
+    test_accuracy_Matrix_train2 = np.zeros((len(dv_EP), 2 ))
     dv0 = 5
     dv1 = 40
     dv4 = 100
@@ -132,8 +135,12 @@ def optTra(perceptron, dv_SP, dv_RP, dv_EP):
     dv3 = 2
     for k, dv4 in enumerate(dv_EP):
         dv = [dv0, dv1, dv2, dv3, dv4]
+        t0 = time.time()
         test_accuracy = perceptron.training(dv)
-        test_accuracy_Matrix_train2[k] = test_accuracy
+        tf = (time.time() - t0) 
+        print('Time network eval', tf)
+        test_accuracy_Matrix_train2[k, 0] = test_accuracy
+        test_accuracy_Matrix_train2[k, 1] = tf
                 
     FileName2 =  "./Results/TrainingPopulation/NNoptimization_reg_train_test.txt"
     FileName3 =  "./Results/TrainingPopulation/NNoptimization_reg_train_test2.txt"
@@ -150,7 +157,6 @@ def optTra(perceptron, dv_SP, dv_RP, dv_EP):
     f.close()
 
 
-
 def loadData(): 
     
     test_acc_arch = np.loadtxt("./Results/TrainingPopulation/OptRegression/NNoptimization_reg_arch_test.txt")
@@ -163,10 +169,12 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
     te1, te2, te22 = loadData()
     color = ['red', 'green', 'blue', 'black', 'orange', 'yellow']
     
-    fig = plt.figure(figsize=(12,12))
+    fig = plt.figure(figsize=(12,12), constrained_layout=True)
+    gs = fig.add_gridspec(3, 2)
+
     fig.suptitle("Sweep parameter \n Regression Network", fontsize=16)
     
-    ax = fig.add_subplot(3,1, 1)
+    ax = fig.add_subplot(gs[0,:])
     for i in range(len(dv_HL)):
         plt.plot(dv_NH, te1[i, :], 'x-', c = color[i], label = dv_HL[i])
     plt.xlabel('Neurons per layer')
@@ -174,7 +182,7 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
     plt.grid()
     plt.legend(title = "Hidden layers")
 
-    ax = fig.add_subplot(3,1,2)
+    ax = fig.add_subplot(gs[1,:])
     for i in range(len(dv_SP)):
         plt.plot(dv_RP, te2[i, :], 'x-', c = color[i], label = dv_SP[i])
     plt.xlabel('Training repeats')
@@ -182,10 +190,16 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
     plt.grid()
     plt.legend(title = "Training splits")
 
-    ax = fig.add_subplot(3,1,3)
-    plt.plot(dv_EP, te22, 'x-', c = color[i])
+    ax = fig.add_subplot(gs[2,0])
+    plt.plot(dv_EP, te22[:,0], 'x-', c = color[i])
     plt.xlabel('Training epochs')
     plt.ylabel('Training MAE')
+    plt.grid()
+
+    ax = fig.add_subplot(gs[2,1])
+    plt.plot(dv_EP, te22[:,1], 'x-', c = color[i])
+    plt.xlabel('Training epochs')
+    plt.ylabel('Computation time (s)')
     plt.grid()
 
     # plt.tight_layout()
@@ -197,7 +211,7 @@ if __name__ == "__main__":
     train_file_path = "./Results/TrainingPopulation/OptRegression/trainingData_Feas_big2.txt"
 
     dataset_np = DTS.LoadNumpy(train_file_path, error= True,\
-            equalize = True,
+            equalize = True, standardization =ANN['Database']['type_stand'],
             plotDistribution=False, plotErrors=False)
     # dataset_np = DTS.LoadNumpy(train_file_path)
     traindata, testdata = DTS.splitData_reg(dataset_np)
@@ -213,7 +227,7 @@ if __name__ == "__main__":
 
 
     # ACCURACY
-    optArch(perceptron,  dv_HL, dv_NH)
+    # optArch(perceptron,  dv_HL, dv_NH)
     optTra(perceptron, dv_SP, dv_RP, dv_EP)
     
     plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP)
