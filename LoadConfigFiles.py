@@ -43,31 +43,31 @@ class Fitness_config:
         with open("./confFiles/Fitness_config.yml") as file:
             Fit_config = yaml.load(file, Loader=yaml.FullLoader)
 
-        self.FEAS = Fit_config['FEASIB']
+        # self.FEAS = Fit_config['FEASIB']
 
 class ANN:
     def __init__(self):
         with open("./confFiles/ANN.yml") as file:
             ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
-        self.ANN_archic = ANN_config['Architecture']
-        self.ANN_train = ANN_config['Training']
+        # self.ANN_archic = ANN_config['Architecture']
+        # self.ANN_train = ANN_config['Training']
 
 class ANN_reg:
     def __init__(self):
         with open("./confFiles/ANN_reg.yml") as file:
             ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
-        self.ANN_datab = ANN_config['Database']
-        self.ANN_archic = ANN_config['Architecture']
-        self.ANN_train = ANN_config['Training']
+        # self.ANN_datab = ANN_config['Database']
+        # self.ANN_archic = ANN_config['Architecture']
+        # self.ANN_train = ANN_config['Training']
 
 class ANN_GAN:
     def __init__(self):
         with open("./confFiles/ANN_GAN.yml") as file:
             ANN_config = yaml.load(file, Loader = yaml.FullLoader)
         
-        self.ANN_datab = ANN_config['Database']
-        self.Discriminator = ANN_config['Discriminator']
-        self.Generator = ANN_config['Generator']
-        self.Training = ANN_config['Training']
+        # self.ANN_datab = ANN_config['Database']
+        # self.Discriminator = ANN_config['Discriminator']
+        # self.Generator = ANN_config['Generator']
+        # self.Training = ANN_config['Training']

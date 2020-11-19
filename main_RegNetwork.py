@@ -35,8 +35,8 @@ opt_config = CONFIG.OPT_config()
 ########################
 def f(DecV):
     # Mass
-    mass = np.zeros((opt_config.EA['ind']))
-    for i in range(opt_config.EA['ind']):
+    mass = np.zeros((opt_config['EA']['ind']))
+    for i in range(opt_config['EA']['ind']):
         mass[i] = Fitness.calculateMass(DecV[i,:])
 
     # Error
@@ -61,18 +61,21 @@ def f(DecV):
     print(feas[0:5,:])
     print(fc1[0:5], fc2[0:5], mass[0:5])
 
-    value = fc1 * FIT.FEAS['factor_pos'] + \
-            fc2 * FIT.FEAS['factor_vel'] + \
-            mass * FIT.FEAS['factor_mass']
+    value = fc1 * FIT['FEASIB']['factor_pos'] + \
+            fc2 * FIT['FEASIB']['factor_vel'] + \
+            mass * FIT['FEASIB']['factor_mass']
     return value 
 
 def EA(): # Evolutionary Algorithm
     # Optimize outer loop
-    EA = opt_config.EA
     start_time = time.time()
     f_min, Best = AL_OPT.EvolAlgorithm(f, SF.bnds , x_add = False, \
-        ind = EA['ind'], max_iter = EA['iterat'], max_iter_success = EA['itersuccess'],
-        elitism = EA['elitism'], mutation = EA['mutat'], immig = EA['immig'],
+        ind = opt_config['EA']['ind'], 
+        max_iter = opt_config['EA']['iterat'],
+        max_iter_success = opt_config['EA']['itersuccess'],
+        elitism = opt_config['EA']['elitism'], 
+        mutation = opt_config['EA']['mutat'], 
+        immig = opt_config['EA']['immig'],
         bulk_fitness = True )
     t = (time.time() - start_time) 
 
@@ -84,7 +87,6 @@ def EA(): # Evolutionary Algorithm
     Fitness.printResult()
 
 def MBH_self():
-    MBH = opt_config.MBH
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
@@ -95,10 +97,14 @@ def MBH_self():
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep,\
-                niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
-                niter_sucess = MBH['niter_success'], bnds = SF.bnds, \
-                jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
-                tolGlobal = MBH['tolGlobal'], cons = cons)
+                niter = opt_config['MBH']['niter_total'], 
+                niter_local = opt_config['MBH']['niter_local'], \
+                niter_sucess = opt_config['MBH']['niter_success'], 
+                bnds = SF.bnds, \
+                jumpMagnitude = opt_config['MBH']['jumpMagnitude'], 
+                tolLocal = opt_config['MBH']['tolLocal'],\
+                tolGlobal = opt_config['MBH']['tolGlobal'], 
+                cons = cons)
     
     t = (time.time() - start_time) 
     print("Min4", fmin_4, 'time', t)

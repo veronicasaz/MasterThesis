@@ -170,7 +170,6 @@ class Fitness:
             thrust = free: direction determined by two angles in heliocentric frame.
                     tangential: thrust applied in the direction of motion
         """
-        FIT = CONF.FEAS
         
         ########################################################################
         # DecV
@@ -215,7 +214,7 @@ class Fitness:
         fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
 
-        value = fc1 * FIT['factor_pos'] + fc2 * FIT['factor_vel']
+        value = fc1 * CONF['FEASIB']['factor_pos'] + fc2 * CONF['FEASIB']['factor_vel']
         if printValue == True:
             print("Value: ", value)
 
@@ -341,8 +340,8 @@ class Fitness:
     
     def studyFeasibility(self):
         
-        if np.linalg.norm(self.Error[0:3]) <= CONF.FEAS['feas_ep'] and \
-            np.linalg.norm(self.Error[3:]) <= CONF.FEAS['feas_ev']: 
+        if np.linalg.norm(self.Error[0:3]) <= CONF['FEASIB']['feas_ep'] and \
+            np.linalg.norm(self.Error[3:]) <= CONF['FEASIB']['feas_ev']: 
             feasible = 1
         else:
             feasible = 0

@@ -43,8 +43,8 @@ class GAN_training:
         # input vector
         in_vector = keras.layers.Input(shape= (self.n_input,))
 
-        for layer in range(ANN.Discriminator['architecture']['hidden_layers']):
-            merge = keras.layers.Dense(ANN.Discriminator['architecture']['neuron_hidden'], \
+        for layer in range(ANN['Discriminator']['architecture']['hidden_layers']):
+            merge = keras.layers.Dense(ANN['Discriminator']['architecture']['neuron_hidden'], \
                 activation = 'relu')(in_vector)
 
         out_layer = keras.layers.Dense(1, activation = 'sigmoid')(merge)
@@ -69,8 +69,8 @@ class GAN_training:
         #concat label as a channel
         merge = keras.layers.Concatenate()([in_vector, in_label])
 
-        for layer in range(ANN.Discriminator['architecture']['hidden_layers']):
-            merge = keras.layers.Dense(ANN.Discriminator['architecture']['neuron_hidden'], \
+        for layer in range(ANN['Discriminator']['architecture']['hidden_layers']):
+            merge = keras.layers.Dense(ANN['Discriminator']['architecture']['neuron_hidden'], \
                 activation = 'relu')(merge)
 
         out_layer = keras.layers.Dense(1, activation = 'sigmoid')(merge)
@@ -98,8 +98,8 @@ class GAN_training:
         # merge label and input
         merge = keras.layers.Concatenate()([in_lat, in_label])
 
-        for layer in range(ANN.Generator['architecture']['hidden_layers']):
-            merge = keras.layers.Dense(ANN.Generator['architecture']['neuron_hidden'], \
+        for layer in range(ANN['Generator']['architecture']['hidden_layers']):
+            merge = keras.layers.Dense(ANN['Generator']['architecture']['neuron_hidden'], \
                 activation = 'relu')(merge)
 
         out_layer = keras.layers.Dense(self.n_input, activation = 'linear')(merge)
@@ -194,20 +194,20 @@ class GAN_training:
     def train(self, Generator, Discriminator, GAN, latent_dim):
     
         # calculate the number of batches per training epoch
-        bat_per_epo = int(len(self.traindata[1])/ ANN.Training['n_batch'])
+        bat_per_epo = int(len(self.traindata[1])/ ANN['Training']['n_batch'])
         # calculate the number of training iterations
-        n_steps = bat_per_epo * ANN.Training['n_epochs']
+        n_steps = bat_per_epo * ANN['Training']['n_epochs']
         # calculate the size of half a batch of samples
-        half_batch = int(ANN.Training['n_batch'] / 2)
+        half_batch = int(ANN['Training']['n_batch'] / 2)
         print('n_epochs=%d, n_batch=%d, 1/2=%d, b/e=%d, steps=%d' % 
-                (ANN.Training['n_epochs'], 
-                ANN.Training['n_batch'], 
+                (ANN['Training']['n_epochs'], 
+                ANN['Training']['n_batch'], 
                 half_batch, 
                 bat_per_epo, 
                 n_steps))
 
         # manually enumerate epochs
-        for i in range(ANN.Training['n_epochs']):
+        for i in range(ANN['Training']['n_epochs']):
             #enumerate batches over the training set
             for j in range(bat_per_epo):
                 # get randomly selected 'real' samples
@@ -221,9 +221,9 @@ class GAN_training:
                 d_loss2, _ = Discriminator.train_on_batch([X_fake, labels], y_fake)
 
                 # prepare points in latent space as input for the generator
-                [z_input, labels_input] = self.generate_latent_points(latent_dim, ANN.Training['n_batch'])
+                [z_input, labels_input] = self.generate_latent_points(latent_dim, ANN['Training']['n_batch'])
                 # create inverted labels for the fake samples 
-                y_gan = np.ones((ANN.Training['n_batch'], 1))
+                y_gan = np.ones((ANN['Training']['n_batch'], 1))
                 # update the generator via de discriminator's error
                 g_loss = GAN.train_on_batch([z_input, labels_input], y_gan)
 
@@ -237,7 +237,7 @@ class GAN_training:
             print("Saved model to disk")
 
     def start(self):
-        latent_dim = ANN.Training['latent_dim']
+        latent_dim = ANN['Training']['latent_dim']
 
         # Create discriminator models
         Discriminator = self.Discriminator_model()
@@ -359,7 +359,7 @@ if __name__ == "__main__":
     perceptron.start() # Train GAN
 
     nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    perceptron.generate_samples(60, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+    perceptron.generate_samples(60, ANN['Training']['latent_dim'], nameFile) # Datbase with real and fake data. 
                                # Label indicates if it is real (1) or fake (0)
     perceptron.see_samples(nameFile)
 

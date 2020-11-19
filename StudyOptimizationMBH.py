@@ -14,7 +14,6 @@ import time
 
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
 opt_config = CONFIG.OPT_config()
-MBH = opt_config.MBH
 
 def runOpt(stepMagn, iterGlobal):
     ########################
@@ -61,9 +60,9 @@ def runOpt(stepMagn, iterGlobal):
             print("##################################################")
             start_time = time.time()
             fmin, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep, \
-                niter = iterGlobal[i], niter_local = MBH['niter_local'], \
-                niter_success = MBH['niter_success'], bnds = SF.bnds, jumpMagnitude = stepMagn[j], \
-                tolLocal = MBH['tolLocal'], tolGlobal = MBH['tolGlobal'])
+                niter = iterGlobal[i], niter_local = opt_config['MBH']['niter_local'], \
+                niter_success = opt_config['MBH']['niter_success'], bnds = SF.bnds, jumpMagnitude = stepMagn[j], \
+                tolLocal = opt_config['MBH']['tolLocal'], tolGlobal = opt_config['MBH']['tolGlobal'])
             t = (time.time() - start_time) 
             fit = FitnessF.calculateFitness(fmin, optMode = True, plot = False)
             

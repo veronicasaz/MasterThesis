@@ -16,11 +16,8 @@ import AstroLibraries.AstroLib_Basic as AL_BF
 import LoadConfigFiles as CONF
 
 ANN = CONF.ANN_reg()
-ANN_train = ANN.ANN_train
-ANN_datab = ANN.ANN_datab
 
 FIT = CONF.Fitness_config()
-FIT_FEAS = FIT.FEAS
 
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
@@ -140,8 +137,8 @@ class Dataset:
         # Plot limit lines for feasibility
         x = [min(self.error[:,0]) , max(self.error[:,0]) ]
         y = [min(self.error[:,1]) , max(self.error[:,1]) ]
-        plt.plot(FIT_FEAS['feas_ep'] / AL_BF.AU*np.ones(len(y)), y)
-        plt.plot(x, FIT_FEAS['feas_ev'] / AL_BF.AU * AL_BF.year2sec(1) *np.ones(len(x)))
+        plt.plot(FIT['FEASIB']['feas_ep'] / AL_BF.AU*np.ones(len(y)), y)
+        plt.plot(x, FIT['FEASIB']['feas_ev'] / AL_BF.AU * AL_BF.year2sec(1) *np.ones(len(x)))
         plt.xscale("log")
         plt.yscale("log")
         plt.show()
@@ -191,9 +188,9 @@ class Dataset:
         """
         standardize inputs and errors together
         """
-        if ANN_datab['scaling'] == 0:
+        if ANN['Database']['scaling'] == 0:
             self.scaler = MinMaxScaler()
-        elif ANN_datab['scaling'] == 1:
+        elif ANN['Database']['scaling'] == 1:
             self.scaler = StandardScaler()
 
         self.error[:,0] /= AL_BF.AU # Normalize with AU
@@ -220,9 +217,9 @@ class Dataset:
         return E, I
 
     def standardizationInputs(self):
-        if ANN_datab['scaling'] == 0:
+        if ANN['Database']['scaling'] == 0:
             self.scaler_I = MinMaxScaler()
-        elif ANN_datab['scaling'] == 1:
+        elif ANN['Database']['scaling'] == 1:
             self.scaler_I = StandardScaler()
         # Standarization of the inputs
         # scaler = StandardScaler()
@@ -235,13 +232,13 @@ class Dataset:
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
         # Standarization of the error
-        if ANN_datab['scaling'] == 0:
+        if ANN['Database']['scaling'] == 0:
             self.scaler = MinMaxScaler()
             self.scalerEp = MinMaxScaler()
             self.scalerEv = MinMaxScaler()
 
 
-        elif ANN_datab['scaling'] == 1:
+        elif ANN['Database']['scaling'] == 1:
             self.scaler = StandardScaler()
             self.scalerEp = StandardScaler()
             self.scalerEv = StandardScaler()
@@ -257,7 +254,7 @@ class Dataset:
             self.scalerEv.fit(self.error[:,1].reshape(-1, 1))
             self.error_std[:,1] = self.scalerEv.transform(self.error[:,1].reshape(-1, 1)).flatten()
     
-        # elif ANN_datab['scaling'] == 2:
+        # elif ANN['Database']['scaling'] == 2:
         #     self.scaler = Normalizer()
         #     transformer = Normalizer(0).fit
         
@@ -452,7 +449,7 @@ def splitData_class( dataset_np, equalize = False):
     else:
         train_x, train_y = dataset_np.input_data_std, dataset_np.output
 
-    train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
+    train_cnt = floor(train_x.shape[0] * ANN['Training']['train_size'])
     x_train = train_x[0:train_cnt]
     y_train = train_y[0:train_cnt]
     x_test = train_x[train_cnt:]  
@@ -466,7 +463,7 @@ def splitData_reg(dataset_np, equalize = False):
     else:
         train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
 
-    train_cnt = floor(train_x.shape[0] * ANN_train['train_size'])
+    train_cnt = floor(train_x.shape[0] * ANN['Training']['train_size'])
     x_train = train_x[0:train_cnt]
     y_train = train_y[0:train_cnt]
     x_test = train_x[train_cnt:]  

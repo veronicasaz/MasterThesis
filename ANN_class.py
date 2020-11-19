@@ -21,9 +21,6 @@ import TrainingDataKeras as TD
 ###################################################################
 
 ANN = CONF.ANN()
-ANN_train = ANN.ANN_train
-ANN_archic = ANN.ANN_archic
-
 
 class ANN:
     def __init__(self, dataset):
@@ -42,33 +39,33 @@ class ANN:
         model = keras.Sequential()
 
 
-        if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+        if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     input_dim = self.n_input,
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
             
-            for layer in range(ANN_archic['hidden_layers']-1):
+            for layer in range(ANN['Architecture']['hidden_layers']-1):
                 model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
         else:
             model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     input_dim = self.n_input,
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializera))
             
-            for layer in range(ANN_archic['hidden_layers']-1):
+            for layer in range(ANN['Architecture']['hidden_layers']-1):
                 model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
@@ -97,9 +94,9 @@ class ANN:
         
         # Train
         self.history = self.model.fit(self.traindata[0], self.traindata[1], 
-                    validation_split= ANN_train['validation_size'],
-                    epochs = ANN_train['training_epochs'], 
-                    batch_size = ANN_train['batch_size'] )
+                    validation_split= ANN['Training']['validation_size'],
+                    epochs = ANN['Training']['training_epochs'], 
+                    batch_size = ANN['Training']['batch_size'] )
         
         self.model.save_weights(self.checkpoint_path)
 
@@ -191,7 +188,7 @@ class ANN:
         weights_h = list()
         bias_h = list()
 
-        for layer in range(ANN_archic['hidden_layers']):
+        for layer in range(ANN['Architecture']['hidden_layers']):
             weights_h.append( self.model.layers[layer].get_weights()[0] )
             bias_h.append( self.model.layers[layer].get_weights()[1] )
 

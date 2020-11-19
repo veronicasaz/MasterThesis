@@ -50,12 +50,14 @@ def f_class(DecV):
    
 def EA(): # Evolutionary Algorithm
     # Optimize outer loop
-    EA = opt_config.EA
     start_time = time.time()
     f_min, Best = AL_OPT.EvolAlgorithm_cons(f, SF.bnds , x_add = False, \
-        ind = EA['ind'], max_iter = EA['iterat'], max_iter_success = EA['itersuccess'],
-        elitism = EA['elitism'], mutation = EA['mutat'], immig = EA['immig'],\
-            cons = [f_class, EA['penalty'] ] )
+        ind = opt_config['EA']['ind'], max_iter = opt_config['EA']['iterat'], \
+        max_iter_success = opt_config['EA']['itersuccess'],
+        elitism = opt_config['EA']['elitism'], \
+        mutation = opt_config['EA']['mutat'], \
+        immig = opt_config['EA']['immig'],\
+        cons = [f_class, opt_config['EA']['penalty'] ] )
     t = (time.time() - start_time) 
 
     print("Min", f_min,'time',t)    
@@ -64,7 +66,6 @@ def EA(): # Evolutionary Algorithm
     Fitness.printResult()
 
 def MBH_self():
-    MBH = opt_config.MBH
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
@@ -75,10 +76,13 @@ def MBH_self():
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep,\
-                niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
-                niter_sucess = MBH['niter_success'], bnds = SF.bnds, \
-                jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
-                tolGlobal = MBH['tolGlobal'], cons = cons)
+                niter = opt_config['MBH']['niter_total'], \
+                niter_local = opt_config['MBH']['niter_local'], \
+                niter_sucess = opt_config['MBH']['niter_success'], \
+                bnds = SF.bnds, \
+                jumpMagnitude = opt_config['MBH']['jumpMagnitude'], \
+                tolLocal = opt_config['MBH']['tolLocal'],\
+                tolGlobal = opt_config['MBH']['tolGlobal'], cons = cons)
     
     t = (time.time() - start_time) 
     print("Min4", fmin_4, 'time', t)

@@ -21,9 +21,8 @@ import TrainingDataKeras as TD
 ###################################################################
 # https://machinelearningmastery.com/semi-supervised-generative-adversarial-network/
 # https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
-###################################################################
-
-ANN = CONF.ANN_GAN()
+###################################################################['
+ANN'] = CONF.ANN_GAN()
 
 class GAN_training:
     def __init__(self, dataset):
@@ -46,33 +45,33 @@ class GAN_training:
         model_sup = keras.Sequential()
 
         for model in [model_sup, model_uns]:
-            if ANN.Discriminator['architecture']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+            if ANN['Discriminator']['architecture']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
                 model.add(keras.layers.Dense(
-                        ANN.Discriminator['architecture']['neuron_hidden'], 
+                        ANN['Discriminator']['architecture']['neuron_hidden'], 
                         input_dim = self.n_input,
                         activation='relu', 
                         use_bias=True, bias_initializer='zeros',
                         kernel_initializer = initializer,
-                        kernel_regularizer= keras.regularizers.l2(ANN.Discriminator['architecture']['regularizer_value']) ))
+                        kernel_regularizer= keras.regularizers.l2(ANN['Discriminator']['architecture']['regularizer_value']) ))
 
-                for layer in range(ANN.Discriminator['architecture']['hidden_layers']-1):
+                for layer in range(ANN['Discriminator']['architecture']['hidden_layers']-1):
                     model.add(keras.layers.Dense(
-                        ANN.Discriminator['architecture']['neuron_hidden'], 
+                        ANN['Discriminator']['architecture']['neuron_hidden'], 
                         activation='relu', 
                         use_bias=True, bias_initializer='zeros',
                         kernel_initializer = initializer,
-                        kernel_regularizer= keras.regularizers.l2(ANN.Discriminator['architecture']['regularizer_value']) ))
+                        kernel_regularizer= keras.regularizers.l2(ANN['Discriminator']['architecture']['regularizer_value']) ))
             else:
                 model.add(keras.layers.Dense(
-                        ANN.Discriminator['architecture']['neuron_hidden'], 
+                        ANN['Discriminator']['architecture']['neuron_hidden'], 
                         input_dim = self.n_input,
                         activation='relu', 
                         use_bias=True, bias_initializer='zeros',
                         kernel_initializer = initializer))
 
-                for layer in range(ANN.Discriminator['architecture']['hidden_layers'] -1):
+                for layer in range(ANN['Discriminator']['architecture']['hidden_layers'] -1):
                     model.add(keras.layers.Dense(
-                        ANN.Discriminator['architecture']['neuron_hidden'], 
+                        ANN['Discriminator']['architecture']['neuron_hidden'], 
                         activation='relu', 
                         use_bias=True, bias_initializer='zeros',
                         kernel_initializer = initializer) )
@@ -94,32 +93,32 @@ class GAN_training:
         
         model = keras.Sequential()
 
-        if ANN.Generator['architecture']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+        if ANN['Generator']['architecture']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             model.add(keras.layers.Dense(
-                    ANN.Generator['architecture']['neuron_hidden'], 
+                    ANN['Generator']['architecture']['neuron_hidden'], 
                     activation='relu', 
                     input_dim = latent_dim,
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN.Generator['architecture']['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Generator']['architecture']['regularizer_value']) ))
                     
-            for layer in range(ANN.Generator['architecture']['hidden_layers']-1):
+            for layer in range(ANN['Generator']['architecture']['hidden_layers']-1):
                 model.add(keras.layers.Dense(
-                    ANN.Generator['architecture']['neuron_hidden'], 
+                    ANN['Generator']['architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
                     kernel_regularizer= keras.regularizers.l2(ANN.Generator['architecture']['regularizer_value']) ))
         else:
             model.add(keras.layers.Dense(
-                    ANN.Generator['architecture']['neuron_hidden'], 
+                    ANN['Generator']['architecture']['neuron_hidden'], 
                     activation='relu', 
                     input_dim = latent_dim,
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
-            for layer in range(ANN.Generator['architecture']['hidden_layers']-1):
+            for layer in range(ANN['Generator']['architecture']['hidden_layers']-1):
                 model.add(keras.layers.Dense(
-                    ANN.Generator['architecture']['neuron_hidden'], 
+                    ANN['Generator']['architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
@@ -206,14 +205,14 @@ class GAN_training:
     def train(self, Generator, Discriminator_uns, Discriminator_sup, GAN, latent_dim):
     
         # calculate the number of batches per training epoch
-        bat_per_epo = int(len(self.traindata[1])/ ANN.Training['n_batch'])
+        bat_per_epo = int(len(self.traindata[1])/ ANN['Training']['n_batch'])
         # calculate the number of training iterations
-        n_steps = bat_per_epo * ANN.Training['n_epochs']
+        n_steps = bat_per_epo * ANN['Training']['n_epochs']
         # calculate the size of half a batch of samples
-        half_batch = int(ANN.Training['n_batch'] / 2)
+        half_batch = int(ANN['Training']['n_batch'] / 2)
         print('n_epochs=%d, n_batch=%d, 1/2=%d, b/e=%d, steps=%d' % 
-                (ANN.Training['n_epochs'], 
-                ANN.Training['n_batch'], 
+                (ANN['Training']['n_epochs'], 
+                ANN['Training']['n_batch'], 
                 half_batch, 
                 bat_per_epo, 
                 n_steps))
@@ -223,7 +222,7 @@ class GAN_training:
         print("Size of supervised samples", X_sup.shape, y_sup.shape)
 
         # manually enumerate epochs
-        for i in range(ANN.Training['n_epochs']):
+        for i in range(ANN['Training']['n_epochs']):
             # update supervised discriminator (c)
             [Xsup_real, ysup_real], _ = self.generate_real_samples([X_sup, y_sup], half_batch)
             c_loss, c_acc = Discriminator_sup.train_on_batch(Xsup_real, ysup_real)
@@ -235,8 +234,8 @@ class GAN_training:
             d_loss2 = Discriminator_uns.train_on_batch(X_fake, y_fake)
 
             # update generator
-            X_gan, y_gan = self.generate_latent_points(latent_dim, ANN.Training['n_batch']), \
-                                                        np.ones((ANN.Training['n_batch'], 1))
+            X_gan, y_gan = self.generate_latent_points(latent_dim, ANN['Training']['n_batch']), \
+                                                        np.ones((ANN['Training']['n_batch'], 1))
             g_loss = GAN.train_on_batch(X_gan, y_gan)
             # summarize loss on this batch
             print('>%d, c[%.3f,%.0f], d[%.3f,%.3f], g[%.3f]' % (i+1, c_loss, c_acc*100, d_loss1, d_loss2, g_loss))
@@ -250,7 +249,7 @@ class GAN_training:
         print("Saved model to disk")
 
     def start(self):
-        latent_dim = ANN.Training['latent_dim']
+        latent_dim = ANN['Training']['latent_dim']
 
         # Create discriminator models
         Discriminator_uns, Discriminator_sup = self.Discriminator_model()
@@ -366,7 +365,7 @@ if __name__ == "__main__":
     perceptron.start() # Train GAN
 
     nameFile = "./databaseANN/GAN/RealvsFakeData/fakesamples.txt"
-    perceptron.generate_samples(60, ANN.Training['latent_dim'], nameFile) # Datbase with real and fake data. 
+    perceptron.generate_samples(60, ANN['Training']['latent_dim'], nameFile) # Datbase with real and fake data. 
      #                           # Label indicates if it is real (1) or fake (0)
     perceptron.see_samples(nameFile)
 

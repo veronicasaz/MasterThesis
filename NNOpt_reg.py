@@ -16,9 +16,6 @@ import LoadConfigFiles as CONF
 import TrainingDataKeras as DTS
 
 ANN = CONF.ANN_reg()
-ANN_train = ANN.ANN_train
-ANN_archic = ANN.ANN_archic
-
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -34,14 +31,14 @@ class ANN_reg:
         
         model = keras.Sequential()
 
-        if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+        if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(dv[0]):
                 model.add(keras.layers.Dense(
                     dv[1], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
         else:
             for layer in range(dv[0]):
                 model.add(keras.layers.Dense(
@@ -70,7 +67,7 @@ class ANN_reg:
         # define evaluation procedure
         cv = RepeatedKFold(n_splits=dv[2], 
                         n_repeats=dv[3], 
-                        random_state=ANN_train['random_state'])
+                        random_state=ANN['Training']['random_state'])
 
         # enumerate folds
         for train_ix, test_ix in cv.split(X):

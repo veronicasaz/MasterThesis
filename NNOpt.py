@@ -16,8 +16,6 @@ import TrainingDataKeras as DTS
 train_file_path = "./databaseANN/trainingData_Feas.txt"
 
 ANN = CONF.ANN()
-ANN_train = ANN.ANN_train
-ANN_archic = ANN.ANN_archic
 
 class ANN:
     def __init__(self, traindata, testdata):
@@ -55,7 +53,7 @@ class ANN:
         
         # Train
         self.history = self.model.fit(self.traindata[0], self.traindata[1], 
-                    validation_split= ANN_train['validation_size'],
+                    validation_split= ANN['Training']['validation_size'],
                     epochs = dv[2], 
                     batch_size = dv[3] )
 

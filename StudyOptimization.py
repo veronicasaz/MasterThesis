@@ -14,7 +14,6 @@ import time
 
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
 opt_config = CONFIG.OPT_config()
-EA = opt_config.EA
 
 def runOpt(IND, ITER):
     ########################
@@ -57,7 +56,7 @@ def runOpt(IND, ITER):
             print("##################################################")
             start_time = time.time()
             f_min, Best = AL_OPT.EvolAlgorithm(f, SF.bnds , x_add = False, \
-                ind = IND[i], max_iter = ITER[j], max_iter_success = EA['itersuccess'] )
+                ind = IND[i], max_iter = ITER[j], max_iter_success = opt_config['EA']['itersuccess'] )
             t = (time.time() - start_time) 
             fit = FitnessF.calculateFitness(f_min, optMode = True, plot = False)
             

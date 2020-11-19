@@ -24,10 +24,6 @@ import TrainingDataKeras as TD
 ###################################################################
 
 ANN = CONF.ANN_reg()
-ANN_datab = ANN.ANN_datab
-ANN_train = ANN.ANN_train
-ANN_archic = ANN.ANN_archic
-
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -45,18 +41,18 @@ class ANN_reg:
         
         model = keras.Sequential()
 
-        if ANN_train['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
-            for layer in range(ANN_archic['hidden_layers']):
+        if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
+            for layer in range(ANN['Architecture']['hidden_layers']):
                 model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN_archiANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archic['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN_archiANN['Architecture']['regularizer_value']) ))
         else:
-            for layer in range(ANN_archic['hidden_layers']):
+            for layer in range(ANN_archiANN['Architecture']['hidden_layers']):
                 model.add(keras.layers.Dense(
-                    ANN_archic['neuron_hidden'], 
+                    ANN_archiANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
@@ -83,9 +79,9 @@ class ANN_reg:
         results = list()
 
         # define evaluation procedure
-        cv = RepeatedKFold(n_splits=ANN_train['n_splits'], 
-                        n_repeats=ANN_train['n_repeats'], 
-                        random_state=ANN_train['random_state'])
+        cv = RepeatedKFold(n_splits=ANN['Training']['n_splits'], 
+                        n_repeats=ANN['Training']['n_repeats'], 
+                        random_state=ANN['Training']['random_state'])
 
         # enumerate folds
         self.history = []
@@ -97,7 +93,7 @@ class ANN_reg:
             self.model = self.create_model()
             # fit model
             self.history.append( self.model.fit(X_train, y_train, verbose=2, 
-                    epochs=ANN_train['epochs'],
+                    epochs=ANN['Training']['epochs'],
                     callbacks=[cp_callback])    )
             # evaluate model on test set: mean absolute error
             mae = self.model.evaluate(X_test, y_test, verbose=0)
@@ -152,13 +148,13 @@ class ANN_reg:
                     self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
                     self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
             else:
-                if ANN_datab['type_stand'] == 0:
+                if ANN['Database']['type_stand'] == 0:
                     predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
                     true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-                elif ANN_datab['type_stand'] == 1:
+                elif ANN['Database']['type_stand'] == 1:
                     predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                     true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
-                elif ANN_datab['type_stand'] == 2:
+                elif ANN['Database']['type_stand'] == 2:
                     predictions_unscaled = np.zeros(np.shape(pred_test))
                     true_value = np.zeros(np.shape(self.testdata[1]))
 
@@ -213,7 +209,7 @@ class ANN_reg:
         weights_h = list()
         bias_h = list()
 
-        for layer in range(ANN_archic['hidden_layers']):
+        for layer in range(ANN['Architecture']['hidden_layers']):
             weights_h.append( self.model.layers[layer].get_weights()[0] )
             bias_h.append( self.model.layers[layer].get_weights()[1] )
 
@@ -233,7 +229,7 @@ if __name__ == "__main__":
 
     TD.plotInitialDataPandasError(train_file_path, pairplot= True, corrplot= True)
     dataset_np = TD.LoadNumpy(train_file_path, error= True,\
-            equalize = True, standardization =ANN_datab['type_stand'],
+            equalize = True, standardization =ANN['Database']['type_stand'],
             plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
