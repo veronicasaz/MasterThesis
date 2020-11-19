@@ -278,3 +278,110 @@ class shapingMethod:
             plt.show()
 
         return self.gammaOptim_v
+
+if __name__ == "__main__":
+
+    # Verify with example
+    print("VERIFICATION")
+    r1 = 1
+    r2 =  5
+    psi = np.pi/2
+    k2 = 1/4
+
+    eSin = AL_Sh.shapingMethod(sun.mu / Cts.AU_m**3)
+    gammaOptim_v = eSin.start(r1, r2, psi, 365*1.5, k2) # verified
+    Ni = 1
+    print(gammaOptim_v)
+    eSin.plot_sphere(r1, r2, psi, gammaOptim_v[Ni], Ni) # verified
+
+    # Real life case
+    sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
+    earth = AL_2BP.Body('earth', 'blue', mu = Cts.mu_E_m)
+    mars = AL_2BP.Body('mars', 'red', mu = Cts.mu_M_m)
+
+    # Calculate trajectory of the bodies based on ephem
+    earthephem = pk.planet.jpl_lp('earth')
+    marsephem = pk.planet.jpl_lp('mars')
+    
+    date0 = np.array([27,1,2018,0])
+    t0 = AL_Eph.DateConv(date0,'calendar') #To JD
+    t_t = 350
+
+    r_E, v_E = earthephem.eph( t0.JD_0 )
+    r_M, v_M = marsephem.eph(t0.JD_0+ t_t )
+
+    r_1 = r_E 
+    r_2 = r_M 
+    r_1_norm = np.linalg.norm( r_1 )
+    r_2_norm = np.linalg.norm( r_2 )
+    
+    dot = np.dot(r_1[0:2], r_2[0:2])      # dot product between [x1, y1] and [x2, y2]
+    det = r_1[0]*r_2[1] - r_2[0]*r_1[1]     # determinant
+    psi = np.arctan2(det, dot) 
+    psi = AL_BF.convertRange(psi, 'rad', 0 ,2*np.pi)
+    
+    k2 = 1/12
+
+    eSin = AL_Sh.shapingMethod(sun.mu / AL_BF.AU**3)
+    gammaOptim_v = eSin.calculategamma1(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi, \
+        t_t, k2, plot = False)
+    
+    Ni = 1
+    eSin.calculateExposin(Ni, gammaOptim_v[Ni],r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi )
+    eSin.plot_sphere(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+    v1, v2 = eSin.terminalVel(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+    t, a_T = eSin.calculateThrustProfile(r_1_norm / AL_BF.AU, r_2_norm / AL_BF.AU, psi)
+
+    # To heliocentric coordinates (2d approximation)
+    def to_helioc(r, vx, vy):
+        v_body = np.array([vx, vy, 0])
+        # Convert to heliocentric
+        angle = np.arctan2(r[1], r[0])
+        v_h = AL_BF.rot_matrix(v_body, angle, 'z')
+
+        return v_h
+
+    v_1 = to_helioc(r_1, v1[0]*AL_BF.AU, v1[1]*AL_BF.AU)
+    v_2 = to_helioc(r_2, v2[0]*AL_BF.AU, v2[1]*AL_BF.AU) 
+
+    print("Helioc vel", v_1, v_2)
+    print("with respect to body ", v_1-v_E, v_2-v_M)
+
+    v_1_E = np.linalg.norm(v_1-v_E)
+    v_2_M = np.linalg.norm(v_2-v_M)
+
+    print("Final vel", v_1_E, v_2_M)
+    
+    ################################################3
+    # Propagate with terminal velocity vectors
+    SF = CONFIG.SimsFlan_config()    
+    Fit = Fitness(Nimp = SF.Nimp)
+
+    decv = np.zeros(len(SF.bnds))
+    decv[6] = t0.JD_0
+    decv[7] = AL_BF.days2sec(t_t)
+    decv[0:3] = AL_BF.convert3dvector(v_1-v_E,'cartesian')
+    decv[3:6] = AL_BF.convert3dvector(v_2- v_M,'cartesian')
+
+    print('decv', decv[0:9])
+    
+    for i in range(SF.Nimp):
+        # Acceleration on segment is average of extreme accelerations
+        t_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) *i
+        t_i1 = AL_BF.days2sec(t_t) / (SF.Nimp+1) *(i+1)
+
+        #find acceleration at a certain time
+        a_i = eSin.accelerationAtTime(t_i)
+        a_i1 = eSin.accelerationAtTime(t_i1)
+        
+        a = (a_i+a_i1)/2 # find the acceleration at a certain time
+        print("a", a_i, a_i1, a)
+        deltav_i = AL_BF.days2sec(t_t) / (SF.Nimp+1) * a*AL_BF.AU
+        print(deltav_i)
+        decv[8+3*i] = deltav_i /100
+        decv[8+3*i+1] = 0
+        decv[8+3*i+2] = 0
+
+    Fit.calculateFeasibility(decv, plot = True, thrust = 'tangential')
+    Fit.printResult()
+ 
