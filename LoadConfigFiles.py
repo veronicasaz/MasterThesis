@@ -33,10 +33,10 @@ class OPT_config:
         with open("./confFiles/OPT_config.yml") as file:
             self.OPT_config = yaml.load(file, Loader=yaml.FullLoader)
 
-        self.MBH = OPT_config['MBH']
-        self.MBH_generateDatabase = OPT_config['MBH_generateDatabase']
-        self.EA = OPT_config['EA']
-        self.CS = OPT_config['coordS']
+        self.MBH = self.OPT_config['MBH']
+        self.MBH_generateDatabase = self.OPT_config['MBH_generateDatabase']
+        self.EA = self.OPT_config['EA']
+        self.CS = self.OPT_config['coordS']
 
 class Fitness_config:
     def __init__(self):

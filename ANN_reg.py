@@ -45,15 +45,15 @@ class ANN_reg:
         if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(ANN['Architecture']['hidden_layers']):
                 model.add(keras.layers.Dense(
-                    ANN_archiANN['Architecture']['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN_archiANN['Architecture']['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
         else:
-            for layer in range(ANN_archiANN['Architecture']['hidden_layers']):
+            for layer in range(ANN['Architecture']['hidden_layers']):
                 model.add(keras.layers.Dense(
-                    ANN_archiANN['Architecture']['neuron_hidden'], 
+                    ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer) )
@@ -224,18 +224,18 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_noLambert.txt"
-    # train_file_path = "./databaseANN/ErrorIncluded/LimitEp_1e7_Ev_1e3/trainingData_Feas_big.txt"
-    # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
+    # train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_noLambert.txt"
+    train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_noLambert.txt"
+    save_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/"
 
-    TD.plotInitialDataPandasError(train_file_path, pairplot= True, corrplot= True)
-    dataset_np = TD.LoadNumpy(train_file_path, error= True,\
+    # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
+    dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= True,\
             equalize = True, standardization =ANN['Database']['type_stand'],
-            plotDistribution=False, plotErrors=False)
+            plotDistribution=True, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 
-    sys.exit(0)
+    # sys.exit(0)
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################

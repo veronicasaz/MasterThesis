@@ -311,7 +311,7 @@ class Fitness:
             self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
 
 
-    def DecV2inputV(self, newDecV = 0):
+    def DecV2inputV(self, typeinputs, newDecV = 0):
 
         if type(newDecV) != int:
             self.adaptDecisionVector_simplified(newDecV)
@@ -320,22 +320,29 @@ class Fitness:
         inputs[0] = self.t_t
         inputs[1] = self.m0
 
-        t_1 = self.t0 + AL_BF.sec2days(self.t_t)
+        if typeinputs == "deltakeplerian":
+            t_1 = self.t0 + AL_BF.sec2days(self.t_t)
 
-        elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
-        elem_f = self.marsephem.osculating_elements(pk.epoch(t_1, 'mjd2000'))
+            elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
+            elem_f = self.marsephem.osculating_elements(pk.epoch(t_1, 'mjd2000'))
 
-        K_0 = np.array(elem_0)
-        K_f = np.array(elem_f)
+            K_0 = np.array(elem_0)
+            K_f = np.array(elem_f)
 
-        # Mean anomaly to true anomaly
-        K_0[-1] = AL_2BP.Kepler(K_0[-1], K_0[1], 'Mean')[0]
-        K_f[-1] = AL_2BP.Kepler(K_f[-1], K_f[1], 'Mean')[0]
+            # Mean anomaly to true anomaly
+            K_0[-1] = AL_2BP.Kepler(K_0[-1], K_0[1], 'Mean')[0]
+            K_f[-1] = AL_2BP.Kepler(K_f[-1], K_f[1], 'Mean')[0]
 
-        inputs[2:] = K_f - K_0
-        inputs[2] = abs(inputs[2]) # absolute value
-        inputs[3] = abs(inputs[3]) # absolute value
-        inputs[4] = np.cos(inputs[4])# cosine
+            inputs[2:] = K_f - K_0
+            inputs[2] = abs(inputs[2]) # absolute value
+            inputs[3] = abs(inputs[3]) # absolute value
+            inputs[4] = np.cos(inputs[4])# cosine
+        
+        elif typeinputs == "cartesian":
+            delta_r = np.array(self.r_p1) - np.array(self.r_p0)
+            delta_v = np.array(self.vf) - np.array(self.v0)  
+            inputs[2:5] = delta_r
+            inputs[5:] = delta_v
 
         return inputs
     
@@ -348,30 +355,43 @@ class Fitness:
             feasible = 0
         return feasible
 
-    def savetoFile(self):
+    def savetoFile(self, typeinputs, filepath_feas, filepath_m):
         """
         savetoFile: save input parameters for neural network and the fitness and
         feasibility
 
         Append to file
-        save in different columns. 
-            1: label: 0 unfeasible, 1 feasible
-            2: t_t: transfer time in s
-            3: m0: initial mass of the spacecraft
-            4: difference in semi-major axis of the origin and goal
-            5: difference in eccentricity of the origin and goal
-            6: cosine of the difference in inclination
-            7: difference in RAANs
-            8: difference in omega
-            9: difference in true anomaly
 
             max m0 should be added
+        INPUTS: 
+            typeinputs: "deltakeplerian" or "cartesian"
+                        save in different columns. 
+                deltakeplerian:
+                1: label: 0 unfeasible, 1 feasible
+                2: t_t: transfer time in s
+                3: m0: initial mass of the spacecraft
+                4: difference in semi-major axis of the origin and goal
+                5: difference in eccentricity of the origin and goal
+                6: cosine of the difference in inclination
+                7: difference in RAANs
+                8: difference in omega
+                9: difference in true anomaly
+                cartesian:
+                1: label: 0 unfeasible, 1 feasible
+                2: t_t: transfer time in s
+                3: m0: initial mass of the spacecraft
+                4: delta x
+                5: delta y
+                6: delta z
+                7: delta vx including the velocity of the spacecraft              
+                8: delta vy                
+                9: delta vz 
         """
-        feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Feas.txt"
-        massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
+        feasibilityFileName = filepath_feas
+        massFileName = filepath_m
         
         # Inputs 
-        inputs = self.DecV2inputV()
+        inputs = self.DecV2inputV(typeinputs)
 
         # Feasibility
         feasible = self.studyFeasibility()

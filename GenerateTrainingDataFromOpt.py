@@ -93,14 +93,23 @@ if __name__ == "__main__":
     def f(DecV):
         return Fit.calculateFeasibility(DecV)
 
+    typeinputs = "cartesian"
+
     ####################
     # FILE CREATION
     ####################
-    feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Feas.txt"
-    massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
-    Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
-        "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
-        "Delta_omega", "Delta_theta"]
+    feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas.txt"
+    massFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Opt.txt"
+    
+    if typeinputs == "deltakeplerian":
+        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
+            "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
+            "Delta_omega", "Delta_theta"]
+    elif typeinputs == "cartesian":
+        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
+            "Delta_y", "Delta_z", "Delta_vx",\
+            "Delta_vy", "Delta_vz"]
+
     for fileName in [feasibilityFileName, massFileName]:
         with open(fileName, "w") as myfile:
             for i in Heading:
@@ -115,7 +124,7 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 1000 # number of training samples. 
+    nsamples = 5000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -130,7 +139,7 @@ if __name__ == "__main__":
     
     # EXPOSIN
     Exposin = False # use exposin or not
-    Lambert = False # Use lambert or not
+    Lambert = True # Use lambert or not
 
     if Exposin == True:
         earthephem = pk.planet.jpl_lp('earth')
@@ -254,7 +263,7 @@ if __name__ == "__main__":
         print("-------------------------------")
         sample = sample_inputs[i_sample, :]
         fvalue = Fit.calculateFeasibility(sample, printValue = True)
-        Fit.savetoFile() # saves the current values
+        Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
         
         Fit.printResult()
         
@@ -267,6 +276,6 @@ if __name__ == "__main__":
         
         fvalue = f(xmin)
         print(xmin)
-        Fit.savetoFile()
+        Fit.savetoFile(typeinputs, feasibilityFileName, massFileName)
         Fit.printResult()
         

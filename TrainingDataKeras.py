@@ -156,7 +156,7 @@ class Dataset:
             ax.text(i, v+5, str(v), color='black', fontweight='bold')
         plt.show()
 
-    def plotDistributionOfErrors(self):
+    def plotDistributionOfErrors(self, save_file_path):
         # fig = plt.figure(figsize = (30,30))
         
         # Error in position
@@ -169,7 +169,7 @@ class Dataset:
             plt.yscale("log")
 
         plt.tight_layout()
-        plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorPosition_std.png", dpi = 100)
+        plt.savefig(save_file_path+"Inputs_ErrorPosition_std.png", dpi = 100)
         plt.show()
 
         # Error in velocity
@@ -182,7 +182,7 @@ class Dataset:
             plt.yscale("log")
 
         plt.tight_layout()
-        plt.savefig("./databaseANN/ErrorIncluded/Inputs_ErrorVelocity_std.png", dpi = 100)
+        plt.savefig(save_file_path+"Inputs_ErrorVelocity_std.png", dpi = 100)
         plt.show()
 
 
@@ -373,7 +373,7 @@ def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
         plt.show()
         print("Here2")
 
-def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = False):
+def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False, corrplot = False):
     feasible_txt = pd.read_csv(train_file_path, sep=" ", header = 0)
     labels_feas = feasible_txt.columns.values
 
@@ -393,7 +393,7 @@ def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = Fal
         g = sns.pairplot(df)
         # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
-        plt.savefig("./databaseANN/ErrorIncluded/Pairplot.png", dpi = 100)
+        plt.savefig(save_file_path+"/Pairplot.png", dpi = 100)
         plt.show()
 
     if corrplot == True: # correlations matrix
@@ -404,11 +404,11 @@ def plotInitialDataPandasError(train_file_path, pairplot = False, corrplot = Fal
         sns.heatmap(corr_mat, vmax = 1.0, square= True, ax=ax, \
             annot=True, cmap=cmap)
         plt.tight_layout()
-        plt.savefig("./databaseANN/ErrorIncluded/Corrplot.png", dpi = 100)
+        plt.savefig(save_file_path+"Corrplot.png", dpi = 100)
         plt.show()   
 
 
-def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
+def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErrors = False,\
     equalize = False, error = False, standardization = 'common'):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
@@ -432,7 +432,7 @@ def LoadNumpy(train_file_path, plotDistribution = False, plotErrors = False,\
         dataset_np.standardizationError(sep=True)
             
     if plotErrors == True:
-        dataset_np.plotDistributionOfErrors()
+        dataset_np.plotDistributionOfErrors(save_file_path)
 
         
 
