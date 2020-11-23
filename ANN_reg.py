@@ -61,7 +61,7 @@ class ANN_reg:
         model.add(keras.layers.Dense(self.n_classes) ) # output layer
        
         # Compile
-        model.compile(loss='mae', optimizer ='adam')
+        model.compile(loss='mse', optimizer ='adam')
 
         return model
             
@@ -224,14 +224,14 @@ if __name__ == "__main__":
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
-    # train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_noLambert.txt"
-    train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_noLambert.txt"
+    # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
+    train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_big.txt"
     save_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/"
 
     # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= True,\
-            equalize = True, standardization =ANN['Database']['type_stand'],
-            plotDistribution=True, plotErrors=False)
+            equalize = False, standardization =ANN['Database']['type_stand'],
+            plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 

@@ -93,19 +93,31 @@ if __name__ == "__main__":
     def f(DecV):
         return Fit.calculateFeasibility(DecV)
 
-    typeinputs = "cartesian"
-
+    nsamples = 1000 # number of training samples. 
+    typeinputs = "deltakeplerian"
+    Exposin = False # use exposin or not
+    Lambert = False # Use lambert or not
     ####################
     # FILE CREATION
     ####################
-    feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas.txt"
-    massFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Opt.txt"
-    
+    # 
+
     if typeinputs == "deltakeplerian":
+        if Exposin == False and Lambert == False:
+            feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_noLambert.txt"
+        elif Exposin == True or Lambert == True:
+            feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Lambert.txt"
+        massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
         Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
             "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
             "Delta_omega", "Delta_theta"]
+
     elif typeinputs == "cartesian":
+        if Exposin == False and Lambert == False:
+            feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_noLambert.txt"
+        elif Exposin == True or Lambert == True:
+            feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Lambert.txt"
+        massFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Opt.txt"
         Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
             "Delta_y", "Delta_z", "Delta_vx",\
             "Delta_vy", "Delta_vz"]
@@ -124,7 +136,6 @@ if __name__ == "__main__":
     ####################
     # CREATION OF RANDOM POPULATION
     ####################
-    nsamples = 5000 # number of training samples. 
     samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
 
     ####################
@@ -138,8 +149,6 @@ if __name__ == "__main__":
             high = SF.bnds[decv][1], size = nsamples)
     
     # EXPOSIN
-    Exposin = False # use exposin or not
-    Lambert = True # Use lambert or not
 
     if Exposin == True:
         earthephem = pk.planet.jpl_lp('earth')
@@ -263,7 +272,8 @@ if __name__ == "__main__":
         print("-------------------------------")
         sample = sample_inputs[i_sample, :]
         fvalue = Fit.calculateFeasibility(sample, printValue = True)
-        Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
+        if Lambert == False:
+            Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
         
         Fit.printResult()
         

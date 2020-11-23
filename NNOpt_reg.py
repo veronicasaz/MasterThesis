@@ -209,8 +209,9 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
 
 if __name__ == "__main__":
     train_file_path = "./Results/TrainingPopulation/OptRegression/trainingData_Feas_big2.txt"
+    save_file_path = ""
 
-    dataset_np = DTS.LoadNumpy(train_file_path, error= True,\
+    dataset_np = DTS.LoadNumpy(train_file_path, save_file_path, error= True,\
             equalize = True, standardization =ANN['Database']['type_stand'],
             plotDistribution=False, plotErrors=False)
     # dataset_np = DTS.LoadNumpy(train_file_path)
@@ -219,15 +220,15 @@ if __name__ == "__main__":
     perceptron.get_traintestdata(traindata, testdata)
 
     # hidden_layers, neuron_hidden, n_spilts, n_repeats
-    dv_HL = [2, 5, 8]
-    dv_NH = [3, 5, 10, 20, 50, 80, 100]
+    dv_HL = [2, 5, 8, 15]
+    dv_NH = [3, 5, 10, 20, 50, 80, 100, 250, 500]
     dv_SP = [2, 4, 5, 8, 15]
     dv_RP = [2, 3, 5, 8 ]
     dv_EP = [10, 20, 30, 50, 100, 150]
 
 
     # ACCURACY
-    # optArch(perceptron,  dv_HL, dv_NH)
+    optArch(perceptron,  dv_HL, dv_NH)
     # optTra(perceptron, dv_SP, dv_RP, dv_EP)
     
     plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP)
