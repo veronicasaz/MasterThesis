@@ -172,15 +172,27 @@ class Dataset:
 
     def plotDistributionOfErrors(self, save_file_path):
         # fig = plt.figure(figsize = (30,30))
-        
+        colors = ['black', 'red', 'green', 'blue']
+
         # Error in position
         fig = plt.figure(figsize = (15,15))
         for i in range(self.n_input):
             ax = fig.add_subplot(self.n_input//2, 2, i+1)
-            ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
+
+            if self.labelType != False:
+                for j in reversed(range(self.labelType)): # how many files are there
+                    indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
+
+                    ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 0],\
+                         color = colors[j], marker = 'o', alpha = 0.5)
+            else:
+                ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
+            
+            # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
+            
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in position")
-            plt.yscale("log")
+            ax.set_yscale('log')
 
         plt.tight_layout()
         plt.savefig(save_file_path+"Inputs_ErrorPosition_std.png", dpi = 100)
@@ -190,10 +202,19 @@ class Dataset:
         fig = plt.figure(figsize = (15,15))
         for i in range(self.n_input):
             ax = fig.add_subplot(self.n_input//2, 2, i+1)
-            ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
+
+            if self.labelType != False:
+                for j in reversed(range(self.labelType)): # how many files are there
+                    indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
+
+                    ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 1],\
+                         color = colors[j], marker = 'o', alpha = 0.5)
+            else:
+                ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in velocity")
             plt.yscale("log")
+            ax.set_ylim((1e-5, 1.01e0))
 
         plt.tight_layout()
         plt.savefig(save_file_path+"Inputs_ErrorVelocity_std.png", dpi = 100)
@@ -488,14 +509,14 @@ if __name__ == "__main__":
     base = "./databaseANN/Organized/cartesian/"
     file_path = [base + 'Random.txt', base +'Random_opt.txt']
     
-    # Join files together 
+    # Join files together into 1
     file_path_together = base +'Together.txt'
-    # join_files(file_path, file_path_together)
+    join_files(file_path, file_path_together)
 
 
     # See inputs
     save_file_path = base # save error plots
-    plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
-    # dataset_np = LoadNumpy(file_path_together, save_file_path, error= True,\
-    #         equalize = False, standardization =ANN['Database']['type_stand'],
-    #         plotDistribution=False, plotErrors=True, labelType = True)
+    # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
+    dataset_np = LoadNumpy(file_path_together, save_file_path, error= True,\
+            equalize = False, standardization =ANN['Database']['type_stand'],
+            plotDistribution=False, plotErrors=True, labelType = 2)

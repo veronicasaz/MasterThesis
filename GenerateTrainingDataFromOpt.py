@@ -16,7 +16,7 @@ import LoadConfigFiles as CONFIG
 
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
 
-def createFile(typeinputs, creationMethod, evaluate, optimize):
+def createFile(typeinputs, creationMethod, evaluate, optimize, appendToFile):
     fileName = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod + '.txt'
     fileName_opt = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod +'_opt' + '.txt'
 
@@ -29,7 +29,7 @@ def createFile(typeinputs, creationMethod, evaluate, optimize):
             "Delta_y", "Delta_z", "Delta_vx",\
             "Delta_vy", "Delta_vz"]
 
-    if evaluate == True:
+    if evaluate == True and appendToFile == False:
         with open(fileName, "w") as myfile:
             for i in Heading:
                 if i != Heading[-1]:
@@ -39,7 +39,7 @@ def createFile(typeinputs, creationMethod, evaluate, optimize):
             myfile.write("\n")
         myfile.close()
 
-    if optimize == True:
+    if optimize == True and appendToFile == False:
         with open(fileName_opt, "w") as myfile:
             for i in Heading:
                 if i != Heading[-1]:
@@ -153,18 +153,21 @@ if __name__ == "__main__":
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
     evaluate = True # save file with evaluated data
-    optimize = True # save file with optimization data
+    optimize = False # save file with optimization data
     samples_rand = 10000 # samples with random mor hypercube initialization
     samples_E = 1000 # samples for exposin
     samples_L = 1000 # samples for Lambert 
     samples_opt = 20 # number of samples to be optimized
 
+    appendToFile = False # append instead of creating a new file. To increase the number of values
 
+
+    sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
     ####################
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt = \
-            createFile(typeinputs, creationMethod, evaluate, optimize)
+            createFile(typeinputs, creationMethod, evaluate, optimize, appendToFile)
     
     ####################
     # DATABASE CREATION

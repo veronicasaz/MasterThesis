@@ -225,13 +225,14 @@ if __name__ == "__main__":
     # LOAD TRAINING DATA
     ###############################################
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
-    train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_big.txt"
-    save_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/"
+
+    save_file_path =  "./databaseANN/Organized/cartesian/"
+    train_file_path = save_file_path + 'Together.txt'
 
     # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= True,\
             equalize = False, standardization =ANN['Database']['type_stand'],
-            plotDistribution=False, plotErrors=False)
+            plotDistribution=False, plotErrors=False, labelType = 2)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 

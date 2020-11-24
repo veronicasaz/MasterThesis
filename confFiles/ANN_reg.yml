@@ -1,5 +1,5 @@
 Database:
- scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ scaling: 0 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
  type_stand: 1 # 0- common standardization, 1-input-output separated, 2-input-output-output separated
 
 Training:
