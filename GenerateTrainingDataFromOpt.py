@@ -1,6 +1,7 @@
 import numpy as np
 import pykep as pk
 import time
+from pyDOE import *
 
 from FitnessFunction_normalized import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
@@ -11,6 +12,44 @@ from AstroLibraries import AstroLib_2BP as AL_2BP
 from AstroLibraries import AstroLib_ShapingMethod as AL_Sh
 
 import LoadConfigFiles as CONFIG
+
+
+SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
+
+def createFile(typeinputs, creationMethod, evaluate, optimize):
+    fileName = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod + '.txt'
+    fileName_opt = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod +'_opt' + '.txt'
+
+    if typeinputs == 'deltakeplerian':
+        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
+            "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
+            "Delta_omega", "Delta_theta"]
+    elif typeinputs == "cartesian":
+        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
+            "Delta_y", "Delta_z", "Delta_vx",\
+            "Delta_vy", "Delta_vz"]
+
+    if evaluate == True:
+        with open(fileName, "w") as myfile:
+            for i in Heading:
+                if i != Heading[-1]:
+                    myfile.write(i +" ")
+                else:
+                    myfile.write(i)
+            myfile.write("\n")
+        myfile.close()
+
+    if optimize == True:
+        with open(fileName_opt, "w") as myfile:
+            for i in Heading:
+                if i != Heading[-1]:
+                    myfile.write(i +" ")
+                else:
+                    myfile.write(i)
+            myfile.write("\n")
+        myfile.close()
+
+    return fileName, fileName_opt
 
 def to_helioc(r, vx, vy):
     v_body = np.array([vx, vy, 0])
@@ -81,83 +120,84 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
 
     return v1_opt_v, v2_opt_v, acc_vector
 
+def latinhypercube(ninputs, samples):
+    lhd = lhs(ninputs, samples=samples)
+    # lhd = norm(loc=0, scale=1).ppf(lhd)  # this applies to both factors here
+
+    dataset = np.zeros(np.shape(lhd))
+    for item in range(len(SF.bnds)):
+        f = SF.bnds[item][1] - SF.bnds[item][0]
+        a = np.ones((samples)) * SF.bnds[item][0]
+        dataset[:,item] = lhd[:, item] * f + a
+
+    return dataset
+
+
 if __name__ == "__main__":
     ########################
     # Initial settings
     ########################
     Cts = AL_BF.ConstantsBook()
     sun = AL_2BP.Body('sun', 'yellow', mu = Cts.mu_S_m)
-    SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
     
     Fit = Fitness(Nimp = SF.Nimp) # Load fitness class
     def f(DecV):
         return Fit.calculateFeasibility(DecV)
 
-    nsamples = 1000 # number of training samples. 
-    typeinputs = "deltakeplerian"
-    Exposin = False # use exposin or not
-    Lambert = False # Use lambert or not
+    ######################################
+    # CHOICE OF GENERATION OF THE DATABASE
+    ######################################
+    # TO MODIFY
+    typeinputs = "cartesian" # cartesian or deltakeplerian
+    creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
+    lhypercube = True # Use latin hypercube for initial distribution of samples. 
+                        #  only if creation method is Random or optimized
+    evaluate = True # save file with evaluated data
+    optimize = True # save file with optimization data
+    samples_rand = 10000 # samples with random mor hypercube initialization
+    samples_E = 1000 # samples for exposin
+    samples_L = 1000 # samples for Lambert 
+    samples_opt = 20 # number of samples to be optimized
+
+
     ####################
     # FILE CREATION
     ####################
-    # 
-
-    if typeinputs == "deltakeplerian":
-        if Exposin == False and Lambert == False:
-            feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_noLambert.txt"
-        elif Exposin == True or Lambert == True:
-            feasibilityFileName = "./databaseANN/ErrorIncluded/trainingData_Lambert.txt"
-        massFileName = "./databaseANN/ErrorIncluded/trainingData_Opt.txt"
-        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
-            "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
-            "Delta_omega", "Delta_theta"]
-
-    elif typeinputs == "cartesian":
-        if Exposin == False and Lambert == False:
-            feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_noLambert.txt"
-        elif Exposin == True or Lambert == True:
-            feasibilityFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Lambert.txt"
-        massFileName = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Opt.txt"
-        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
-            "Delta_y", "Delta_z", "Delta_vx",\
-            "Delta_vy", "Delta_vz"]
-
-    for fileName in [feasibilityFileName, massFileName]:
-        with open(fileName, "w") as myfile:
-            for i in Heading:
-                if i != Heading[-1]:
-                    myfile.write(i +" ")
-                else:
-                    myfile.write(i)
-            myfile.write("\n")
-        myfile.close()
-
-
+    feasibilityFileName, feasibilityFileName_opt = \
+            createFile(typeinputs, creationMethod, evaluate, optimize)
+    
     ####################
-    # CREATION OF RANDOM POPULATION
-    ####################
-    samples_Lambert = np.zeros((nsamples, len(SF.bnds)))
+    # DATABASE CREATION
+    ####################    
+    if creationMethod == 'Lambert' or creationMethod == 'Exposin': # leave the 6 first inputs empty to calculate
+        samples_initial = np.zeros((nsamples, len(SF.bnds)))
+        for decv in range(6,len(SF.bnds)): # Add impulses that won't be used for Lambert
+            samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
+                high = SF.bnds[decv][1], size = nsamples)
+    else:
+        if lhypercube == True:
+            samples_initial = latinhypercube(len(SF.bnds), samples_rand)
+        else:
+            samples_initial = np.zeros((nsamples, len(SF.bnds)))
+            for decv in range(len(SF.bnds)): 
+                samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
+                    high = SF.bnds[decv][1], size = nsamples)
+        
 
     ####################
     # CHOICE OF RANDOM POPULATION WITH LAMBERT
     ####################
     start_time = time.time()
 
-    # for decv in range(6,8):
-    for decv in range(6,len(SF.bnds)): # Add impulses that won't be used for Lambertt
-        samples_Lambert[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
-            high = SF.bnds[decv][1], size = nsamples)
-    
     # EXPOSIN
-
-    if Exposin == True:
+    if creationMethod == 'Exposin':
         earthephem = pk.planet.jpl_lp('earth')
         marsephem = pk.planet.jpl_lp('mars')
 
         notvalid = list()
         for i in range(nsamples):
-            t_0 = samples_Lambert[i, 6]
-            t_t = samples_Lambert[i, 7]
+            t_0 = samples_initial[i, 6]
+            t_t = samples_initial[i, 7]
 
             r_0, vE = earthephem.eph(t_0)
             r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
@@ -169,30 +209,22 @@ if __name__ == "__main__":
 
             if vi1 >= (SF.bnds[0][0] ) and  vi1 <= (SF.bnds[0][1] ) and \
                 vi2 >= (SF.bnds[3][0] ) and  vi2 <= (SF.bnds[3][1] ):
-                    samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1_opt, "cartesian")
-                    samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2_opt, "cartesian")
-                    samples_Lambert[i, 8:] = acc_vector
+                    samples_initial[i, 0:3] = AL_BF.convert3dvector(v1_opt, "cartesian")
+                    samples_initial[i, 3:6] = AL_BF.convert3dvector(v2_opt, "cartesian")
+                    samples_initial[i, 8:] = acc_vector
             else:
                 notvalid.append(i)
 
-        # Delete not valid rows:
-        sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
-
-        t = (time.time() - start_time) 
-        print("Samples", nsamples, "Non valid", len(notvalid))
-        print("Time for Exposin", t)
-
     # LAMBERT
-    
-    elif Lambert == True:
+    elif creationMethod == 'Lambert':
         # Lambert for calculation of the velocity vectors 
         earthephem = pk.planet.jpl_lp('earth')
         marsephem = pk.planet.jpl_lp('mars')
 
         notvalid = list()
         for i in range(nsamples):
-            t_0 = samples_Lambert[i, 6]
-            t_t = samples_Lambert[i, 7]
+            t_0 = samples_initial[i, 6]
+            t_t = samples_initial[i, 7]
 
             r_0, vE = earthephem.eph(t_0)
             r_1, vM = marsephem.eph(t_0 + AL_BF.sec2days(t_t))
@@ -224,8 +256,8 @@ if __name__ == "__main__":
                 if v_i >= (SF.bnds[0][0] ) and  v_i <= (SF.bnds[0][1] ) and \
                 v_i2 >= (SF.bnds[3][0] ) and  v_i2 <= (SF.bnds[3][1] ):
                     if abs(v_i2 - v_i) < v_i_prev or rev == 0:
-                        samples_Lambert[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
-                        samples_Lambert[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
+                        samples_initial[i, 0:3] = AL_BF.convert3dvector(v1[rev]-vE, "cartesian")
+                        samples_initial[i, 3:6] = AL_BF.convert3dvector(v2[rev]-vM, "cartesian")
                         v_i_prev = abs(v_i2 - v_i)
 
                     # Choose the revolutions with the lowest velocity at the earth
@@ -233,31 +265,41 @@ if __name__ == "__main__":
                 elif rev == len(v1)-1 and v_i_prev == 1e12:
                     notvalid.append(i)
                     # sample_inputs[i,:] = np.zeros(len(SF.bnds))
+    
+    else:
+        notvalid = [] # Not eliminate anything
 
-                
-        # Delete not valid rows:
-        sample_inputs = np.delete(samples_Lambert, notvalid, axis = 0)
+    # Delete not valid rows:
+    sample_inputs = np.delete(samples_initial, notvalid, axis = 0)
 
-        t = (time.time() - start_time) 
-        print("Samples", nsamples, "Non valid", len(notvalid))
-        print("Time for Lambert", t)
+    t = (time.time() - start_time) 
+    print( "Non valid", len(notvalid))
+    print("Time for initial discrimination", t)
 
-    else: 
-        sample_inputs = samples_Lambert 
 
-    for i in range(len(sample_inputs)): # Correct angles to be between 0 and 2pi
+    # Correct angles to be between 0 and 2pi 
+    for i in range(len(sample_inputs)): 
         sample_inputs[i,1] = AL_BF.convertRange(sample_inputs[i,1], 'rad', 0, 2*np.pi)
         sample_inputs[i,2] = AL_BF.convertRange(sample_inputs[i,2], 'rad', 0, 2*np.pi)
         sample_inputs[i,4] = AL_BF.convertRange(sample_inputs[i,4], 'rad', 0, 2*np.pi)
         sample_inputs[i,5] = AL_BF.convertRange(sample_inputs[i,5], 'rad', 0, 2*np.pi)
 
 
-
-    # print(sample_inputs)
-    # sample_inputs = samples_Lambert
-
     ####################
     # EVALUATION OF EACH SAMPLE
+    ####################
+    if evaluate == True:
+        for i_sample in range(len(sample_inputs)):
+            print("-------------------------------")
+            print("Sample %i"%i_sample)
+            print("-------------------------------")
+            sample = sample_inputs[i_sample, :]
+            fvalue = Fit.calculateFeasibility(sample, printValue = False)
+            Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+            # Fit.printResult()
+
+    ####################
+    # OPTIMIZE
     # The idea is to use each sample and optimize it so that it is easier to 
     # find feasible trajectories
     # Only the initial and the optimized trajectokry will be saved
@@ -266,26 +308,26 @@ if __name__ == "__main__":
     MBH = opt_config.MBH_generateDatabase
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
     
-    for i_sample in range(len(sample_inputs)):
-        print("-------------------------------")
-        print("Sample %i"%i_sample)
-        print("-------------------------------")
-        sample = sample_inputs[i_sample, :]
-        fvalue = Fit.calculateFeasibility(sample, printValue = True)
-        if Lambert == False:
-            Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
-        
-        Fit.printResult()
-        
-        # optimize starting from sample
-        xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
-                niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
-                niter_success = MBH['niter_success'], bnds = SF.bnds, \
-                jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
-                tolGlobal = MBH['tolGlobal'])
-        
-        fvalue = f(xmin)
-        print(xmin)
-        Fit.savetoFile(typeinputs, feasibilityFileName, massFileName)
-        Fit.printResult()
+    if optimize == True:
+        for i_sample in range(samples_opt):
+            print("-------------------------------")
+            print("Sample %i"%i_sample)
+            print("-------------------------------")
+            sample = sample_inputs[i_sample, :]
+            fvalue = Fit.calculateFeasibility(sample, printValue = True)
+            # Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
+            # Not needed as saved before        
+            Fit.printResult()
+            
+            # optimize starting from sample
+            xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
+                    niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
+                    niter_success = MBH['niter_success'], bnds = SF.bnds, \
+                    jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
+                    tolGlobal = MBH['tolGlobal'])
+            
+            fvalue = f(xmin)
+            print(xmin)
+            Fit.savetoFile(typeinputs, feasibilityFileName_opt)
+            Fit.printResult()
         

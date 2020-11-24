@@ -355,7 +355,7 @@ class Fitness:
             feasible = 0
         return feasible
 
-    def savetoFile(self, typeinputs, filepath_feas, filepath_m):
+    def savetoFile(self, typeinputs, filepath_feas):
         """
         savetoFile: save input parameters for neural network and the fitness and
         feasibility
@@ -388,7 +388,7 @@ class Fitness:
                 9: delta vz 
         """
         feasibilityFileName = filepath_feas
-        massFileName = filepath_m
+        # massFileName = filepath_m
         
         # Inputs 
         inputs = self.DecV2inputV(typeinputs)

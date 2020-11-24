@@ -25,11 +25,14 @@ FIT = FIT_C.Fit_config
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
 def join_files(file_path, filename):
-    dataset_i = np.loadtxt(file_path[0], skiprows = 1)
-    # TODO: eliminate. Eliminate columns for error
-    dataset = np.delete(dataset_i, [1,2,3,4,5,6],1)
-    for file_i in file_path[1:]:
-        dataset_i = np.loadtxt(file_i, skiprows = 1) 
+    dataset = np.loadtxt(file_path[0], skiprows = 1)
+    label = np.ones(len(dataset[:,0])) * 0
+    dataset = np.column_stack((dataset, label))
+
+    for i, file_i in enumerate(file_path[1:]):
+        dataset_i = np.loadtxt(file_i, skiprows = 1)
+        label = np.ones(len(dataset_i[:,0]))* (i+1)
+        dataset_i = np.column_stack((dataset_i, label))
 
         dataset = np.vstack((dataset, dataset_i))
 
@@ -42,21 +45,26 @@ def join_files(file_path, filename):
         labels = line.split(" ")
     fh.close()
 
+    labels.append( 'Datatype')
+
+    # Save labels
     with open(filename, "w") as myfile:
         for i in labels:
             if i != labels[-1]:
                 myfile.write(i +" ")
             else:
-                myfile.write(i)
-        myfile.write("\n")
+                myfile.write(i+"\n")
+        np.savetxt(myfile, dataset)
     myfile.close()
-    np.savetxt(filename, dataset)
-
-
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
-        error = True, equalize = False):
+        error = True, equalize = False, labelType = False):
+        """
+        labelType == True: the last column of the database is an integer indicating from which file it comes 
+        """
+        self.labelType = labelType
+
         # Load with numpy
         if type(dataset_preloaded) == bool:
 
@@ -86,13 +94,19 @@ class Dataset:
         
         self.output = self.dataset[:,0]
         if error == True:
-            self.input_data = self.dataset[:,7:]
+            if labelType == False:
+                self.input_data = self.dataset[:,7:]
+            else:
+                self.input_data = self.dataset[:,7:-1]
             error_p = [np.linalg.norm(self.dataset[i, 1:4]) for i in range(self.nsamples)]
             error_v = [np.linalg.norm(self.dataset[i, 4:7]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
         else:
-            self.input_data = self.dataset[:,1:]
+            if labelType == False:
+                self.input_data = self.dataset[:,1:]
+            else:
+                self.input_data = self.dataset[:,1:-1]
 
         self.n_input = self.input_data.shape[1]
         self.n_classes = 2
@@ -390,7 +404,7 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     df = pd.DataFrame(data=database_2, columns =  labels)
 
     if pairplot == True: # pairplot
-        g = sns.pairplot(df)
+        g = sns.pairplot(df, hue = 'Datatype')
         # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
         plt.savefig(save_file_path+"/Pairplot.png", dpi = 100)
@@ -409,10 +423,10 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
 
 
 def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErrors = False,\
-    equalize = False, error = False, standardization = 'common'):
+    equalize = False, error = False, standardization = 'common', labelType = False):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
-        equalize = equalize)
+        equalize = equalize, labelType = labelType)
 
     # Plot distribution of feasible/unfeasible
     if plotDistribution == True:
@@ -434,13 +448,8 @@ def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErr
     if plotErrors == True:
         dataset_np.plotDistributionOfErrors(save_file_path)
 
-        
-
-    
     
     # dataset_np.convertLabels()
-
-
 
     return dataset_np
 
@@ -476,13 +485,17 @@ def splitData_reg(dataset_np, equalize = False):
 
 if __name__ == "__main__":
 
-    train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
-    # train_file_path = "./databaseANN/trainingData_Feas_V2plusfake.txt"
-
-    # plotInitialDataPandas(pairplot= False, corrplot= False, inputsplotbar = False, inputsplotbarFeas = True)
-    # dataset_np = LoadNumpy(train_file_path, plotDistribution = True)
-    equalize = True
-    dataset_np = LoadNumpy(train_file_path, equalize = equalize)
-    dataset_np.statisticsError()
-    traindata, testdata = splitData_class(dataset_np, equalize = equalize)
+    base = "./databaseANN/Organized/cartesian/"
+    file_path = [base + 'Random.txt', base +'Random_opt.txt']
     
+    # Join files together 
+    file_path_together = base +'Together.txt'
+    # join_files(file_path, file_path_together)
+
+
+    # See inputs
+    save_file_path = base # save error plots
+    plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
+    # dataset_np = LoadNumpy(file_path_together, save_file_path, error= True,\
+    #         equalize = False, standardization =ANN['Database']['type_stand'],
+    #         plotDistribution=False, plotErrors=True, labelType = True)
