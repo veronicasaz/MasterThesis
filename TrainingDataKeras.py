@@ -225,9 +225,23 @@ class Dataset:
             ax.text(i, v+5, str(v), color='black', fontweight='bold')
         plt.show()
 
-    def plotDistributionOfErrors(self, save_file_path):
+    def plotDistributionOfErrors(self, save_file_path, std = True):
         # fig = plt.figure(figsize = (30,30))
         colors = ['black', 'red', 'green', 'blue']
+
+        std = True # use standard values
+        if std == True: 
+            x = self.input_data_std
+            y = self.error_std
+            stdlabel = "_std"
+            limits_p = (1e-7, 1.01e0)
+            limits_v = (1e-3, 1.01e0)
+        else:
+            x = self.input_data
+            y = self.error
+            stdlabel = ""
+            limits_p = (1e-6,1e1)
+            limits_v = (1e-2,1e2)
 
         # Error in position
         fig = plt.figure(figsize = (15,15))
@@ -235,25 +249,25 @@ class Dataset:
             ax = fig.add_subplot(self.n_input//2, 2, i+1)
 
             if self.labelType != False:
-                for j in reversed(range(self.labelType)): # how many files are there
+                for j in range(self.labelType): # how many files are there
                     indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
-                    ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 0],\
+                    ax.scatter(x[indexes,i] , y[indexes, 0],\
                          color = colors[j], marker = 'o', alpha = 0.5, label = j)
             else:
-                ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
+                ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5)
             
             # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
             
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in position")
             ax.set_yscale('log')
-            ax.set_ylim((1e-7, 1.01e0))
+            ax.set_ylim(limits_p)
 
             plt.legend()
 
         plt.tight_layout()
-        plt.savefig(save_file_path+"Inputs_ErrorPosition_std.png", dpi = 100)
+        plt.savefig(save_file_path+"Inputs_ErrorPosition" +stdlabel+".png", dpi = 100)
         plt.show()
 
         # Error in velocity
@@ -262,23 +276,23 @@ class Dataset:
             ax = fig.add_subplot(self.n_input//2, 2, i+1)
 
             if self.labelType != False:
-                for j in reversed(range(self.labelType)): # how many files are there
+                for j in range(self.labelType): # how many files are there
                     indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
-                    ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 1],\
+                    ax.scatter(x[indexes,i] , y[indexes, 1],\
                          color = colors[j], marker = 'o', alpha = 0.5, label = j)
             else:
-                ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
+                ax.plot(x[:,i] , y[:, 1], 'ko', markersize = 5)
             
             plt.legend()
 
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in velocity")
             plt.yscale("log")
-            ax.set_ylim((1e-3, 1.01e0))
+            ax.set_ylim(limits_v)
 
         plt.tight_layout()
-        plt.savefig(save_file_path+"Inputs_ErrorVelocity_std.png", dpi = 100)
+        plt.savefig(save_file_path+"Inputs_ErrorVelocity" +stdlabel+".png", dpi = 100)
         plt.show()
 
 
@@ -590,7 +604,7 @@ if __name__ == "__main__":
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
     dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
-            equalize = True, standardizationType = Scaling['type_stand'],\
+            equalize =  False, standardizationType = Scaling['type_stand'],\
                 scaling = Scaling['scaling'],
             plotDistribution=False, plotErrors=True, labelType = len(file_path))
 

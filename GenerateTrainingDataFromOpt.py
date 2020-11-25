@@ -149,19 +149,20 @@ if __name__ == "__main__":
     ######################################
     # TO MODIFY
     typeinputs = "cartesian" # cartesian or deltakeplerian
-    creationMethod = 'Lambert' # 'Exposin', 'Lambert', 'Random
+    creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
     evaluate = True # save file with evaluated data
-    optimize = True # save file with optimization data
+    optimize = False # save file with optimization data
     samples_rand = 10000 # samples with random mor hypercube initialization
-    samples_L = 1000 # samples for Lambert and Exposin
+    samples_L = 2000 # samples for Lambert and Exposin
     samples_opt = 500 # number of samples to be optimized
 
     appendToFile = False # append instead of creating a new file. To increase the number of values
 
 
     sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
+    
     ####################
     # FILE CREATION
     ####################
@@ -297,7 +298,9 @@ if __name__ == "__main__":
             print("-------------------------------")
             sample = sample_inputs[i_sample, :]
             fvalue = Fit.calculateFeasibility(sample, printValue = False)
-            Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+            # Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+            Fit.savetoFile('cartesian', feasibilityFileName) # saves the current values
+            Fit.savetoFile('deltakeplerian', "./databaseANN/Organized/deltakeplerian/" +creationMethod + '.txt') # saves the current values
             # Fit.printResult()
 
     ####################
@@ -311,7 +314,7 @@ if __name__ == "__main__":
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
     
     if optimize == True:
-        for i_sample in range(samples_opt):
+        for i_sample in range(min(samples_opt, len(sample_inputs)) ):
             print("-------------------------------")
             print("Sample %i"%i_sample)
             print("-------------------------------")

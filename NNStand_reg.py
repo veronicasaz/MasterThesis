@@ -30,9 +30,7 @@ ANN = ANN_reg.ANN_config
 Dataset = CONF.Dataset()
 Scaling = Dataset.Dataset_config['Scaling']
 
-
-if __name__ == "__main__":
-
+def compareStandard():
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
@@ -40,7 +38,7 @@ if __name__ == "__main__":
 
     save_file_path =  "./databaseANN/Organized/cartesian/"
     train_file_path = save_file_path + 'Together.txt'
-    save_study_path =  "./Results/StudyStandardization/Results.txt"
+    save_study_path =  "./Results/StudyStandardization/Results"
 
     values_type_stand = [0, 1, 2]
     values_scaling = [0, 1]
@@ -69,11 +67,23 @@ if __name__ == "__main__":
                 perceptron.get_traintestdata(traindata, testdata)
                 mae[i, j, k], std_mae[i, j, k] = perceptron.training()
 
+    # Save to file
+    np.save(save_study_path+'mae', mae)
+    np.save(save_study_path+'_std_mae', std_mae)
 
+    return save_study_path
+
+def plot_compareStandard(save_study_path):
+    # load file
+    mae = np.load(save_study_path+'mae' +'.npy')
+    mae = np.load(save_study_path+'_std_mae' +'.npy')
 
     labels = ['MinMax Scaler', 'Standard Scaler']
     color = ['black', 'blue', 'green']
+
+    fig = plt.figure(figsize = (15,15))
     for plot in range(len(values_scaling)):
+        ax = fig.add_subplot(1,2,plot+1)
         for k in range(repetitions):
             if k == 0:
                 plt.scatter(values_type_stand, mae[:, plot, k], marker = 'o', color = color[plot],  label = labels[values_scaling[plot]])
@@ -81,7 +91,72 @@ if __name__ == "__main__":
                 plt.scatter(values_type_stand, mae[:, plot, k], marker = 'o', color = color[plot])
 
     plt.legend()
-    plt.xticks([0,1], ['Common', 'Input-Output', 'Input-Output-Output'])
+    plt.xticks([0,1,2], ['Common', 'Input-Output', 'Input-Output-Output'])
     plt.tight_layout()
     plt.savefig(save_study_path, dpi = 100)
     plt.show()
+
+def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
+    mae = np.zeros([len(typeInputs), repetitions])
+    std_mae = np.zeros([len(typeInputs),  repetitions])
+
+    for i in range(len(typeInputs)):
+        save_file_path =  "./databaseANN/Organized/" + typeInputs[i] +"/"
+        train_file_path = save_file_path + 'Random.txt'
+
+        # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
+        for k in range(repetitions):
+            # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
+            dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
+                    equalize = False, \
+                    standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+                    plotDistribution=False, plotErrors=False, labelType = 3)
+            
+            traindata, testdata = TD.splitData_reg(dataset_np, samples = 500)
+
+            ###############################################
+            # CREATE AND TRAIN CLASS NETWORK
+            ###############################################
+            perceptron = AR.ANN_reg(dataset_np)
+            perceptron.get_traintestdata(traindata, testdata)
+            mae[i, k], std_mae[i, k] = perceptron.training()
+
+            print("####################################################")
+            print(mae, i, k, )
+        
+    with open(save_study_path+"MAE.txt", "w") as myfile:
+        np.savetxt(myfile, mae)
+    myfile.close()
+    with open(save_study_path+"STD_MAE.txt", "w") as myfile:
+        np.savetxt(myfile, std_mae)
+    myfile.close()
+
+    return save_study_path
+
+def plot_compareInputs(path, repetitions, typeInputs):
+    mae = np.loadtxt(path+"MAE.txt")
+    std_mae = np.loadtxt(path+"STD_MAE.txt")
+
+    color = ['black', 'blue', 'green']
+
+    for i in range(len(typeInputs)):
+        plt.plot( np.arange(0,repetitions, 1), mae[i, :], marker = 'o', color = color[i], label = typeInputs[i] )
+    
+    plt.xticks(np.arange(0, repetitions, 1))
+    plt.title("Mean Average Error")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path+"comparison.png", dpi = 100)
+    plt.show()
+
+if __name__ == "__main__":
+    # path = compareStandard()
+    # plot_compareStandard(path)
+
+    # COMPARE INPUTS
+    repetitions = 3 # repetitions of each setting
+    typeInputs = ['cartesian', 'deltakeplerian']
+    save_study_path =  "./Results/StudyInputs/"
+    # compareInputs(repetitions, typeInputs, save_study_path)
+    plot_compareInputs(save_study_path, repetitions, typeInputs)
+    
