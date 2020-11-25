@@ -149,15 +149,14 @@ if __name__ == "__main__":
     ######################################
     # TO MODIFY
     typeinputs = "cartesian" # cartesian or deltakeplerian
-    creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
+    creationMethod = 'Lambert' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
     evaluate = True # save file with evaluated data
-    optimize = False # save file with optimization data
+    optimize = True # save file with optimization data
     samples_rand = 10000 # samples with random mor hypercube initialization
-    samples_E = 1000 # samples for exposin
-    samples_L = 1000 # samples for Lambert 
-    samples_opt = 20 # number of samples to be optimized
+    samples_L = 1000 # samples for Lambert and Exposin
+    samples_opt = 500 # number of samples to be optimized
 
     appendToFile = False # append instead of creating a new file. To increase the number of values
 
@@ -173,18 +172,18 @@ if __name__ == "__main__":
     # DATABASE CREATION
     ####################    
     if creationMethod == 'Lambert' or creationMethod == 'Exposin': # leave the 6 first inputs empty to calculate
-        samples_initial = np.zeros((nsamples, len(SF.bnds)))
+        samples_initial = np.zeros((samples_L, len(SF.bnds)))
         for decv in range(6,len(SF.bnds)): # Add impulses that won't be used for Lambert
             samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
-                high = SF.bnds[decv][1], size = nsamples)
+                high = SF.bnds[decv][1], size = samples_L)
     else:
         if lhypercube == True:
             samples_initial = latinhypercube(len(SF.bnds), samples_rand)
         else:
-            samples_initial = np.zeros((nsamples, len(SF.bnds)))
+            samples_initial = np.zeros((samples_L, len(SF.bnds)))
             for decv in range(len(SF.bnds)): 
                 samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
-                    high = SF.bnds[decv][1], size = nsamples)
+                    high = SF.bnds[decv][1], size = samples_L)
         
 
     ####################
@@ -198,7 +197,7 @@ if __name__ == "__main__":
         marsephem = pk.planet.jpl_lp('mars')
 
         notvalid = list()
-        for i in range(nsamples):
+        for i in range(samples_L):
             t_0 = samples_initial[i, 6]
             t_t = samples_initial[i, 7]
 
@@ -225,7 +224,7 @@ if __name__ == "__main__":
         marsephem = pk.planet.jpl_lp('mars')
 
         notvalid = list()
-        for i in range(nsamples):
+        for i in range(samples_L):
             t_0 = samples_initial[i, 6]
             t_t = samples_initial[i, 7]
 

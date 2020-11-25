@@ -32,10 +32,14 @@ def join_files(file_path, filename):
     label = np.ones(len(dataset[:,0])) * 0
     dataset = np.column_stack((dataset, label))
 
+    print("Type %i, Number samples: %i"%(0, len(dataset[:,0])))
+
     for i, file_i in enumerate(file_path[1:]):
         dataset_i = np.loadtxt(file_i, skiprows = 1)
         label = np.ones(len(dataset_i[:,0]))* (i+1)
         dataset_i = np.column_stack((dataset_i, label))
+
+        print("Type %i, Number samples: %i"%(i+1, len(dataset_i[:,0])))
 
         dataset = np.vstack((dataset, dataset_i))
 
@@ -61,15 +65,53 @@ def join_files(file_path, filename):
     myfile.close()
 
 def save_standard(dataset, save_file_path):
-    file_path = save_file_path + 
+    """
+        0: feasibility label
+        1: norm ep
+        2: norm ev
+        3-end: inputs
+        load as:
+            labelType = False
+            errorType = 'norm'
+    """
+    filename = save_file_path + str(Scaling['type_stand']) + '_' + str(Scaling['scaling']) + '.txt' 
+
+    # Outputs:
+    dataset_2 = np.column_stack(( dataset.output , dataset.error_std ))
+    dataset_2 = np.column_stack(( dataset_2, dataset.input_data_std ))
+
+    # Heading
+    if dataset.errorType == 'vector': # eliminate cartesian names
+        labels2 = [dataset.labels[0]]
+        labels2.extend( ['Ep', 'Ev'] )
+        if dataset.labelType != False: # delete last label
+            labels2.extend( dataset.labels[7:-1] )
+        else: 
+            labels2.extend( dataset.labels[7:] )
+    else:
+        labels2 = dataset.labels
+
+    # Save to file
+    with open(filename, "w") as myfile:
+        for i in labels2:
+            if i != labels2[-1]:
+                myfile.write(i +" ")
+            else:
+                myfile.write(i+"\n")
+        np.savetxt(myfile, dataset_2)
+    myfile.close()
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
-        error = True, equalize = False, labelType = False):
+        error = 'vector', equalize = False, labelType = False):
         """
-        labelType == True: the last column of the database is an integer indicating from which file it comes 
+        error: False-database doesnt contain error, vector: cartesian  components, norm: only norm given
+        labelType: Number: the last column of the database is an integer indicating from which file it comes.  
+                    False: not included 
         """
         self.labelType = labelType
+        self.errorType = error
+        self.equalize = equalize
 
         # Load with numpy
         if type(dataset_preloaded) == bool:
@@ -99,25 +141,30 @@ class Dataset:
 
         
         self.output = self.dataset[:,0]
-        if error == True:
-            if labelType == False:
-                self.input_data = self.dataset[:,7:]
-            else:
-                self.input_data = self.dataset[:,7:-1]
+
+        if self.errorType == 'vector':
+            startinput = 7
             error_p = [np.linalg.norm(self.dataset[i, 1:4]) for i in range(self.nsamples)]
             error_v = [np.linalg.norm(self.dataset[i, 4:7]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
-
+        elif self.errorType == 'norm':
+            startinput = 3
+            error_p = self.dataset[:, 1]
+            error_v = self.dataset[:, 2]
+            self.error = np.column_stack((error_p, error_v)) # error in position and velocity
         else:
-            if labelType == False:
-                self.input_data = self.dataset[:,1:]
-            else:
-                self.input_data = self.dataset[:,1:-1]
+            startinput = 1
+
+        if labelType == False:
+            self.input_data = self.dataset[:,startinput:]
+        else:
+            self.input_data = self.dataset[:,startinput:-1]
+            
 
         self.n_input = self.input_data.shape[1]
         self.n_classes = 2
 
-        if equalize == True:
+        if self.equalize == True:
             self.equalize_fun(self.error[:,0])
 
     def equalize_fun(self, base_vector):
@@ -148,6 +195,8 @@ class Dataset:
         self.input_data = np.delete(self.input_data, indexes_delete, 0)
         self.output = np.delete(self.output, indexes_delete, 0)
         self.error = np.delete(self.error, indexes_delete, 0)
+        self.dataset = np.delete(self.dataset, indexes_delete, 0)
+        self.nsamples = len(self.output)
 
     def statisticsFeasible(self):
         self.count_feasible = np.count_nonzero(self.output)
@@ -190,7 +239,7 @@ class Dataset:
                     indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
                     ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 0],\
-                         color = colors[j], marker = 'o', alpha = 0.5)
+                         color = colors[j], marker = 'o', alpha = 0.5, label = j)
             else:
                 ax.plot(self.input_data_std[:,i] , self.error_std[:, 0], 'ko', markersize = 5)
             
@@ -199,6 +248,9 @@ class Dataset:
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in position")
             ax.set_yscale('log')
+            ax.set_ylim((1e-7, 1.01e0))
+
+            plt.legend()
 
         plt.tight_layout()
         plt.savefig(save_file_path+"Inputs_ErrorPosition_std.png", dpi = 100)
@@ -214,26 +266,29 @@ class Dataset:
                     indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
                     ax.scatter(self.input_data_std[indexes,i] , self.error_std[indexes, 1],\
-                         color = colors[j], marker = 'o', alpha = 0.5)
+                         color = colors[j], marker = 'o', alpha = 0.5, label = j)
             else:
                 ax.plot(self.input_data_std[:,i] , self.error_std[:, 1], 'ko', markersize = 5)
+            
+            plt.legend()
+
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
             ax.set_ylabel("Error in velocity")
             plt.yscale("log")
-            ax.set_ylim((1e-5, 1.01e0))
+            ax.set_ylim((1e-3, 1.01e0))
 
         plt.tight_layout()
         plt.savefig(save_file_path+"Inputs_ErrorVelocity_std.png", dpi = 100)
         plt.show()
 
 
-    def commonStandardization(self):
+    def commonStandardization(self, scaling):
         """
         standardize inputs and errors together
         """
-        if Scaling['scaling'] == 0:
+        if scaling == 0:
             self.scaler = MinMaxScaler()
-        elif Scaling['scaling'] == 1:
+        elif scaling == 1:
             self.scaler = StandardScaler()
 
         self.error[:,0] /= AL_BF.AU # Normalize with AU
@@ -245,6 +300,8 @@ class Dataset:
         database2 = self.scaler.transform(database)
         self.error_std = database2[:,0:2]
         self.input_data_std = database2[:,2:]
+
+        print('here')
 
 
     def commonInverseStandardization(self, y, x):
@@ -259,29 +316,28 @@ class Dataset:
 
         return E, I
 
-    def standardizationInputs(self):
-        if Scaling['scaling'] == 0:
+    def standardizationInputs(self, scaling):
+        if scaling == 0:
             self.scaler_I = MinMaxScaler()
-        elif Scaling['scaling'] == 1:
+        elif scaling == 1:
             self.scaler_I = StandardScaler()
         # Standarization of the inputs
         # scaler = StandardScaler()
         self.scaler_I.fit(self.input_data)
         self.input_data_std = self.scaler_I.transform(self.input_data)
 
-    def standardizationError(self, sep = False):
+    def standardizationError(self, scaling, sep = False):
         # Normalization of errors TODO: eliminate and inlcude in database already
         self.error[:,0] /= AL_BF.AU # Normalize with AU
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
         # Standarization of the error
-        if Scaling['scaling'] == 0:
+        if scaling == 0:
             self.scaler = MinMaxScaler()
             self.scalerEp = MinMaxScaler()
             self.scalerEv = MinMaxScaler()
 
-
-        elif Scaling['scaling'] == 1:
+        elif scaling == 1:
             self.scaler = StandardScaler()
             self.scalerEp = StandardScaler()
             self.scalerEv = StandardScaler()
@@ -450,7 +506,8 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
 
 
 def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErrors = False,\
-    equalize = False, error = False, standardization = 'common', labelType = False):
+    equalize = False, error = False, standardizationType =  0, scaling = 0,\
+    labelType = False):
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
         equalize = equalize, labelType = labelType)
@@ -462,15 +519,15 @@ def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErr
     # dataset_np.statisticsFeasible()
     # dataset_np.plotDistributionOfDataset()
 
-    if standardization == 0: # common
-        dataset_np.commonStandardization()
-    elif standardization == 1: #'input_output'
-        dataset_np.standardizationInputs()
-        if error == True:
-            dataset_np.standardizationError(sep=False)
-    elif standardization == 2: #'input_sepoutput'
-        dataset_np.standardizationInputs()
-        dataset_np.standardizationError(sep=True)
+    if standardizationType == 0: # common
+        dataset_np.commonStandardization(scaling)
+    elif standardizationType == 1: #'input_output'
+        dataset_np.standardizationInputs(scaling)
+        if error != False:
+            dataset_np.standardizationError(scaling, sep=False)
+    elif standardizationType == 2: #'input_sepoutput'
+        dataset_np.standardizationInputs(scaling)
+        dataset_np.standardizationError(scaling, sep=True)
             
     if plotErrors == True:
         dataset_np.plotDistributionOfErrors(save_file_path)
@@ -481,7 +538,7 @@ def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErr
     return dataset_np
 
 
-def splitData_class( dataset_np, equalize = False):
+def splitData_class( dataset_np):
     if equalize == True:
         train_x, train_y = dataset_np.input_data_std_e, dataset_np.output_e
     else:
@@ -495,11 +552,19 @@ def splitData_class( dataset_np, equalize = False):
 
     return [x_train, y_train], [x_test, y_test]
 
-def splitData_reg(dataset_np, equalize = False):
-    if equalize == True:
+def splitData_reg(dataset_np, samples = False):
+    """
+        equalize: decreases the number of inputs with larger repetition
+        samples: takes a certain number of samples instead of the complete file
+    """
+    if dataset_np.equalize == True:
         train_x, train_y = dataset_np.input_data_std_e, dataset_np.error_std_e
     else:
         train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
+
+    if samples != False:
+        train_x = train_x[0:samples,:]
+        train_y = train_y[0:samples,:]
 
     train_cnt = floor(train_x.shape[0] * ANN['Training']['train_size'])
     x_train = train_x[0:train_cnt]
@@ -512,8 +577,10 @@ def splitData_reg(dataset_np, equalize = False):
 
 if __name__ == "__main__":
 
+    # Choose which ones to choose:
     base = "./databaseANN/Organized/cartesian/"
-    file_path = [base + 'Random.txt', base +'Random_opt.txt']
+    file_path = [base + 'Random.txt', base +'Random_opt.txt', \
+                base +'Lambert.txt', base +'Lambert_opt.txt']
     
     # Join files together into 1
     file_path_together = base +'Together.txt'
@@ -521,8 +588,10 @@ if __name__ == "__main__":
 
 
     # See inputs
-    save_file_path = base # save error plots
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
-    dataset_np = LoadNumpy(file_path_together, save_file_path, error= True,\
-            equalize = False, standardization =ANN['Database']['type_stand'],
-            plotDistribution=False, plotErrors=True, labelType = 2)
+    dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
+            equalize = True, standardizationType = Scaling['type_stand'],\
+                scaling = Scaling['scaling'],
+            plotDistribution=False, plotErrors=True, labelType = len(file_path))
+
+    save_standard(dataset_np, base + 'Together_')

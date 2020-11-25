@@ -108,6 +108,8 @@ class ANN_reg:
 
         print('MAE: %.3f (%.3f)' % (np.mean(results), np.std(results)))
 
+        return np.mean(results), np.std(results)
+
 
     def plotTraining(self):
         # summarize history for loss
@@ -229,13 +231,20 @@ if __name__ == "__main__":
     ###############################################
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
 
-    save_file_path =  "./databaseANN/Organized/cartesian/"
-    train_file_path = save_file_path + 'Together.txt'
+    # Choose which ones to choose:
+    base = "./databaseANN/Organized/cartesian/"
+    file_path = [base + 'Random.txt', base +'Random_opt.txt', base +'Lambert.txt']
+    
+    # Join files together into 1
+    train_file_path = base +'Together.txt'
+    join_files(file_path, train_file_path)
+
 
     # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
-    dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= True,\
-            equalize = False, standardization =Scaling['type_stand'],
-            plotDistribution=False, plotErrors=False, labelType = 2)
+    dataset_np = TD.LoadNumpy(train_file_path, base, error= 'vector',\
+            equalize = False, standardizationType = Scaling['type_stand'],\
+            scaling = Scaling['scaling'], labelType = len(file_path),
+            plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 
