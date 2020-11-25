@@ -18,6 +18,9 @@ import LoadConfigFiles as CONF
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
+Dataset = CONF.Dataset()
+Scaling = Dataset.Dataset_config['Scaling']
+
 FIT_C = CONF.Fitness_config()
 FIT = FIT_C.Fit_config
 
@@ -56,6 +59,9 @@ def join_files(file_path, filename):
                 myfile.write(i+"\n")
         np.savetxt(myfile, dataset)
     myfile.close()
+
+def save_standard(dataset, save_file_path):
+    file_path = save_file_path + 
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
@@ -225,9 +231,9 @@ class Dataset:
         """
         standardize inputs and errors together
         """
-        if ANN['Database']['scaling'] == 0:
+        if Scaling['scaling'] == 0:
             self.scaler = MinMaxScaler()
-        elif ANN['Database']['scaling'] == 1:
+        elif Scaling['scaling'] == 1:
             self.scaler = StandardScaler()
 
         self.error[:,0] /= AL_BF.AU # Normalize with AU
@@ -254,9 +260,9 @@ class Dataset:
         return E, I
 
     def standardizationInputs(self):
-        if ANN['Database']['scaling'] == 0:
+        if Scaling['scaling'] == 0:
             self.scaler_I = MinMaxScaler()
-        elif ANN['Database']['scaling'] == 1:
+        elif Scaling['scaling'] == 1:
             self.scaler_I = StandardScaler()
         # Standarization of the inputs
         # scaler = StandardScaler()
@@ -269,13 +275,13 @@ class Dataset:
         self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
         # Standarization of the error
-        if ANN['Database']['scaling'] == 0:
+        if Scaling['scaling'] == 0:
             self.scaler = MinMaxScaler()
             self.scalerEp = MinMaxScaler()
             self.scalerEv = MinMaxScaler()
 
 
-        elif ANN['Database']['scaling'] == 1:
+        elif Scaling['scaling'] == 1:
             self.scaler = StandardScaler()
             self.scalerEp = StandardScaler()
             self.scalerEv = StandardScaler()
@@ -291,7 +297,7 @@ class Dataset:
             self.scalerEv.fit(self.error[:,1].reshape(-1, 1))
             self.error_std[:,1] = self.scalerEv.transform(self.error[:,1].reshape(-1, 1)).flatten()
     
-        # elif ANN['Database']['scaling'] == 2:
+        # elif Scaling['scaling'] == 2:
         #     self.scaler = Normalizer()
         #     transformer = Normalizer(0).fit
         

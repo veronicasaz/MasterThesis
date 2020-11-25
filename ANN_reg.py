@@ -26,6 +26,9 @@ import TrainingDataKeras as TD
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
+Dataset = CONF.Dataset()
+Scaling = Dataset.Dataset_config['Scaling']
+
 class ANN_reg:
     def __init__(self, dataset):
         self.dataset_np = dataset
@@ -149,13 +152,13 @@ class ANN_reg:
                     self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
                     self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
             else:
-                if ANN['Database']['type_stand'] == 0:
+                if Scaling['type_stand'] == 0:
                     predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
                     true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-                elif ANN['Database']['type_stand'] == 1:
+                elif Scaling['type_stand'] == 1:
                     predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                     true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
-                elif ANN['Database']['type_stand'] == 2:
+                elif Scaling['type_stand'] == 2:
                     predictions_unscaled = np.zeros(np.shape(pred_test))
                     true_value = np.zeros(np.shape(self.testdata[1]))
 
@@ -231,7 +234,7 @@ if __name__ == "__main__":
 
     # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= True,\
-            equalize = False, standardization =ANN['Database']['type_stand'],
+            equalize = False, standardization =Scaling['type_stand'],
             plotDistribution=False, plotErrors=False, labelType = 2)
     
     traindata, testdata = TD.splitData_reg(dataset_np)

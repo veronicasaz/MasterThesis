@@ -45,6 +45,11 @@ class Fitness_config:
 
         # self.FEAS = Fit_config['FEASIB']
 
+class Dataset:
+    def __init__(self):
+        with open("./confFiles/Dataset.yml") as file:
+            self.Dataset_config = yaml.load(file, Loader = yaml.FullLoader)
+
 class ANN:
     def __init__(self):
         with open("./confFiles/ANN.yml") as file:
