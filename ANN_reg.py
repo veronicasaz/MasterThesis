@@ -248,7 +248,7 @@ if __name__ == "__main__":
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 
-    # sys.exit(0)
+    sys.exit(0)
     ###############################################
     # CREATE AND TRAIN CLASS NETWORK
     ###############################################

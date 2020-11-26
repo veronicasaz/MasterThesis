@@ -148,17 +148,17 @@ if __name__ == "__main__":
     # CHOICE OF GENERATION OF THE DATABASE
     ######################################
     # TO MODIFY
-    typeinputs = "cartesian" # cartesian or deltakeplerian deltakeplerian_planet
+    typeinputs = "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
     creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
-    evaluate = True # save file with evaluated data
-    optimize = False # save file with optimization data
+    evaluate = False # save file with evaluated data
+    optimize = True # save file with optimization data
     samples_rand = 10000 # samples with random mor hypercube initialization
     samples_L = 2000 # samples for Lambert and Exposin
     samples_opt = 500 # number of samples to be optimized
 
-    appendToFile = False # append instead of creating a new file. To increase the number of values
+    appendToFile = True # append instead of creating a new file. To increase the number of values
 
 
     # sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
