@@ -323,8 +323,40 @@ class Fitness:
         if typeinputs == "deltakeplerian":
             t_1 = self.t0 + AL_BF.sec2days(self.t_t)
 
+            # Elements of the planets
+            # elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
+            # elem_f = self.marsephem.osculating_elements(pk.epoch(t_1, 'mjd2000'))
+            
+            # Elements of the spacecraft
+            earth_elem = AL_2BP.BodyOrbit(self.SV_0, "Cartesian", self.sun)
+            elem_0 = earth_elem.KeplerElem
+            mars_elem = AL_2BP.BodyOrbit(self.SV_f, "Cartesian", self.sun)
+            elem_f = mars_elem.KeplerElem
+
+            K_0 = np.array(elem_0)
+            K_f = np.array(elem_f)
+
+            # Mean anomaly to true anomaly
+            K_0[-1] = AL_2BP.Kepler(K_0[-1], K_0[1], 'Mean')[0]
+            K_f[-1] = AL_2BP.Kepler(K_f[-1], K_f[1], 'Mean')[0]
+
+            inputs[2:] = K_f - K_0
+            inputs[2] = abs(inputs[2]) # absolute value
+            inputs[3] = abs(inputs[3]) # absolute value
+            inputs[4] = np.cos(inputs[4])# cosine
+
+        elif typeinputs == "deltakeplerian_planet":
+            t_1 = self.t0 + AL_BF.sec2days(self.t_t)
+
+            # Elements of the planets
             elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
             elem_f = self.marsephem.osculating_elements(pk.epoch(t_1, 'mjd2000'))
+            
+            # Elements of the spacecraft
+            # earth_elem = AL_2BP.BodyOrbit(self.SV_0, "Cartesian", self.sun)
+            # elem_0 = earth_elem.KeplerElem
+            # mars_elem = AL_2BP.BodyOrbit(self.SV_f, "Cartesian", self.sun)
+            # elem_f = mars_elem.KeplerElem
 
             K_0 = np.array(elem_0)
             K_f = np.array(elem_f)

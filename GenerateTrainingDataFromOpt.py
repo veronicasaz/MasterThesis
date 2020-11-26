@@ -148,7 +148,7 @@ if __name__ == "__main__":
     # CHOICE OF GENERATION OF THE DATABASE
     ######################################
     # TO MODIFY
-    typeinputs = "cartesian" # cartesian or deltakeplerian
+    typeinputs = "cartesian" # cartesian or deltakeplerian deltakeplerian_planet
     creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     appendToFile = False # append instead of creating a new file. To increase the number of values
 
 
-    sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
+    # sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
     
     ####################
     # FILE CREATION
@@ -298,9 +298,12 @@ if __name__ == "__main__":
             print("-------------------------------")
             sample = sample_inputs[i_sample, :]
             fvalue = Fit.calculateFeasibility(sample, printValue = False)
-            # Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
-            Fit.savetoFile('cartesian', feasibilityFileName) # saves the current values
-            Fit.savetoFile('deltakeplerian', "./databaseANN/Organized/deltakeplerian/" +creationMethod + '.txt') # saves the current values
+            Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+            # If we want the different inputs for the same dec v dataset:
+            # WARNING: for the last two the data appends! eliminate data beforehand
+            # Fit.savetoFile('cartesian', feasibilityFileName) # saves the current values
+            # Fit.savetoFile('deltakeplerian', "./databaseANN/Organized/deltakeplerian/" +creationMethod + '.txt') # saves the current values
+            # Fit.savetoFile('deltakeplerian_planet', "./databaseANN/Organized/deltakeplerian_planet/" +creationMethod + '.txt')
             # Fit.printResult()
 
     ####################

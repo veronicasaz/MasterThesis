@@ -1,0 +1,1 @@
+For cartesian 10000 random samples with latin hypercube

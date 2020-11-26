@@ -30,7 +30,7 @@ ANN = ANN_reg.ANN_config
 Dataset = CONF.Dataset()
 Scaling = Dataset.Dataset_config['Scaling']
 
-def compareStandard():
+def compareStandard(save_study_path, values_type_stand, values_scaling, repetitions):
     ###############################################
     # LOAD TRAINING DATA
     ###############################################
@@ -38,11 +38,6 @@ def compareStandard():
 
     save_file_path =  "./databaseANN/Organized/cartesian/"
     train_file_path = save_file_path + 'Together.txt'
-    save_study_path =  "./Results/StudyStandardization/Results"
-
-    values_type_stand = [0, 1, 2]
-    values_scaling = [0, 1]
-    repetitions = 5 # repetitions of each setting
 
     mae = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
     std_mae = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
@@ -73,7 +68,7 @@ def compareStandard():
 
     return save_study_path
 
-def plot_compareStandard(save_study_path):
+def plot_compareStandard(save_study_path, values_type_stand, values_scaling, repetitions):
     # load file
     mae = np.load(save_study_path+'mae' +'.npy')
     mae = np.load(save_study_path+'_std_mae' +'.npy')
@@ -81,7 +76,7 @@ def plot_compareStandard(save_study_path):
     labels = ['MinMax Scaler', 'Standard Scaler']
     color = ['black', 'blue', 'green']
 
-    fig = plt.figure(figsize = (15,15))
+    fig = plt.figure(figsize = (13,7))
     for plot in range(len(values_scaling)):
         ax = fig.add_subplot(1,2,plot+1)
         for k in range(repetitions):
@@ -90,10 +85,28 @@ def plot_compareStandard(save_study_path):
             else:
                 plt.scatter(values_type_stand, mae[:, plot, k], marker = 'o', color = color[plot])
 
-    plt.legend()
-    plt.xticks([0,1,2], ['Common', 'Input-Output', 'Input-Output-Output'])
+        plt.ylabel("Loss (MSE)")
+        plt.legend(loc = 'upper left')
+        plt.xticks([0,1,2], ['Common', 'Input-Output', 'Input-Output-Output'])
+        plt.grid(alpha = 0.5)
     plt.tight_layout()
     plt.savefig(save_study_path, dpi = 100)
+    plt.show()
+
+    fig = plt.figure(figsize = (13,7))
+    for plot in range(len(values_scaling)):
+        ax = fig.add_subplot(1,2,plot+1)
+        mae_mean = [np.mean(mae[i, plot, :]) for i in range(len(values_type_stand))]
+        mae_std = [np.std(mae[i, plot, :]) for i in range(len(values_type_stand))]
+        for i in range(len(values_type_stand)):
+            plt.errorbar(values_type_stand[i], mae_mean[i], mae_std[i], marker = 'o', color = color[plot])
+        plt.title(labels[plot])
+        plt.ylabel("Loss (MSE)")
+        # plt.legend(loc = 'upper left')
+        plt.xticks([0,1,2], ['Common', 'Input-Output', 'Input-Output-Output'])
+        plt.grid(alpha = 0.5)
+    plt.tight_layout()
+    plt.savefig(save_study_path+"errorbar.png", dpi = 100)
     plt.show()
 
 def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
@@ -122,7 +135,7 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
             mae[i, k], std_mae[i, k] = perceptron.training()
 
             print("####################################################")
-            print(mae, i, k, )
+            print(mae, i, k )
         
     with open(save_study_path+"MAE.txt", "w") as myfile:
         np.savetxt(myfile, mae)
@@ -144,18 +157,26 @@ def plot_compareInputs(path, repetitions, typeInputs):
     
     plt.xticks(np.arange(0, repetitions, 1))
     plt.title("Mean Average Error")
+    plt.xlabel('Repetitions')
+    plt.ylabel("Loss (MSE)")
     plt.legend()
+    plt.grid(alpha = 0.5)
     plt.tight_layout()
     plt.savefig(path+"comparison.png", dpi = 100)
     plt.show()
 
 if __name__ == "__main__":
-    # path = compareStandard()
-    # plot_compareStandard(path)
+    # COMPARE STANDARDIZATION
+    values_type_stand = [0, 1, 2]
+    values_scaling = [0, 1]
+    repetitions = 5 # repetitions of each setting
+    save_study_path =  "./Results/StudyStandardization/Results"
+    # path = compareStandard(save_study_path, values_type_stand, values_scaling, repetitions)
+    # plot_compareStandard(save_study_path, values_type_stand, values_scaling, repetitions)
 
     # COMPARE INPUTS
     repetitions = 3 # repetitions of each setting
-    typeInputs = ['cartesian', 'deltakeplerian']
+    typeInputs = ['cartesian', 'deltakeplerian', 'deltakeplerian_planet']
     save_study_path =  "./Results/StudyInputs/"
     # compareInputs(repetitions, typeInputs, save_study_path)
     plot_compareInputs(save_study_path, repetitions, typeInputs)

@@ -501,7 +501,8 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     df = pd.DataFrame(data=database_2, columns =  labels)
 
     if pairplot == True: # pairplot
-        g = sns.pairplot(df, hue = 'Datatype')
+        # g = sns.pairplot(df, hue = 'Datatype') # TODO: change if not using file "Together"
+        g = sns.pairplot(df)
         # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
         plt.savefig(save_file_path+"/Pairplot.png", dpi = 100)
@@ -592,9 +593,10 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/Organized/cartesian/"
-    file_path = [base + 'Random.txt', base +'Random_opt.txt', \
-                base +'Lambert.txt', base +'Lambert_opt.txt']
+    base = "./databaseANN/Organized/deltakeplerian/"
+    # file_path = [base + 'Random.txt', base +'Random_opt.txt', \
+    #             base +'Lambert.txt', base +'Lambert_opt.txt']
+    file_path = [base + 'Random.txt', base +'Random_opt.txt']
     
     # Join files together into 1
     file_path_together = base +'Together.txt'
@@ -608,4 +610,4 @@ if __name__ == "__main__":
                 scaling = Scaling['scaling'],
             plotDistribution=False, plotErrors=True, labelType = len(file_path))
 
-    save_standard(dataset_np, base + 'Together_')
+    # save_standard(dataset_np, base + 'Together_')
