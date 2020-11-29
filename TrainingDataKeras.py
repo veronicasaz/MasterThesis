@@ -18,11 +18,13 @@ import LoadConfigFiles as CONF
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
-Dataset = CONF.Dataset()
-Scaling = Dataset.Dataset_config['Scaling']
+Dataset_conf = CONF.Dataset()
+Scaling = Dataset_conf.Dataset_config['Scaling']
 
 FIT_C = CONF.Fitness_config()
 FIT = FIT_C.Fit_config
+
+SF = CONF.SimsFlan_config() # Load Sims-Flanagan config variables  
 
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
@@ -100,6 +102,14 @@ def save_standard(dataset, save_file_path):
                 myfile.write(i+"\n")
         np.savetxt(myfile, dataset_2)
     myfile.close()
+
+
+# def equalizeToInputs(dataset, limits, divisions):
+#     def count(limit, division):
+
+#     dataset2 = np.zeros((len(limits), divisions**len(limits)))
+
+    
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
@@ -202,16 +212,28 @@ class Dataset:
         self.count_feasible = np.count_nonzero(self.output)
         print("Samples", self.nsamples, "Feasible", self.count_feasible)
     
-    def statisticsError(self):
-        plt.scatter(self.error[:,0], self.error[:,1])
+    def statisticsError(self, save_file_path):
+        plt.scatter(self.error[:,0], self.error[:,1], color = 'black')
         
         # Plot limit lines for feasibility
         x = [min(self.error[:,0]) , max(self.error[:,0]) ]
         y = [min(self.error[:,1]) , max(self.error[:,1]) ]
-        plt.plot(FIT['FEASIB']['feas_ep'] / AL_BF.AU*np.ones(len(y)), y)
-        plt.plot(x, FIT['FEASIB']['feas_ev'] / AL_BF.AU * AL_BF.year2sec(1) *np.ones(len(x)))
+        # plt.plot(FIT['FEASIB']['feas_ep'] / AL_BF.AU*np.ones(len(y)), y)
+        # plt.plot(x, FIT['FEASIB']['feas_ev'] / AL_BF.AU * AL_BF.year2sec(1) *np.ones(len(x)))
+
+        # Before standardizing
+        plt.plot(FIT['FEASIB']['feas_ep'] *np.ones(len(y)), y, color = 'orange')
+        plt.plot(x, FIT['FEASIB']['feas_ev']  *np.ones(len(x)), color = 'red')
+
         plt.xscale("log")
         plt.yscale("log")
+
+        plt.xlabel("Error in position (m)")
+        plt.ylabel("Error in velocity (m/s)")
+        plt.title("Distribution of errors")
+        
+        plt.tight_layout()
+        plt.savefig(save_file_path+"EpvsEv.png", dpi = 100)
         plt.show()
 
     def plotDistributionOfFeasible(self):
@@ -227,7 +249,7 @@ class Dataset:
 
     def plotDistributionOfErrors(self, save_file_path, std = True):
         # fig = plt.figure(figsize = (30,30))
-        colors = ['black', 'red', 'green', 'blue']
+        colors = ['black', 'red', 'green', 'blue', 'orange']
 
         std = True # use standard values
         if std == True: 
@@ -236,12 +258,35 @@ class Dataset:
             stdlabel = "_std"
             limits_p = (1e-7, 1.01e0)
             limits_v = (1e-3, 1.01e0)
+            
+            ylabel_p = "Standardized"
+            ylabel_v = "Standardized"
         else:
             x = self.input_data
             y = self.error
             stdlabel = ""
-            limits_p = (1e-6,1e1)
-            limits_v = (1e-2,1e2)
+
+            if self.dataUnits == "AU":
+                limits_p = (1e-6,1e1)
+                limits_v = (1e-2,1e2)
+
+                ylabel_p = " (AU)"
+                ylabel_v = " (AU/year)"
+
+            elif self.dataUnits == "SI":
+                limits_p = (1e4,1e12)
+                limits_v = (1.5e1, 1e5)
+
+                ylabel_p = " (m)"
+                ylabel_v = " (m/s)"
+            
+        if self.Log == True:
+            limits_p = (np.log10(limits_p[0]), np.log10(limits_p[1]))
+            limits_v = (np.log10(limits_v[0]), np.log10(limits_v[1]))
+
+            ylabel_p = "log" + ylabel_p
+            ylabel_v = "log" + ylabel_v
+           
 
         # Error in position
         fig = plt.figure(figsize = (15,15))
@@ -253,15 +298,17 @@ class Dataset:
                     indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
                     ax.scatter(x[indexes,i] , y[indexes, 0],\
-                         color = colors[j], marker = 'o', alpha = 0.5, label = j)
+                         color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
             else:
                 ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5)
             
             # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
             
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
-            ax.set_ylabel("Error in position")
-            ax.set_yscale('log')
+
+            ax.set_ylabel("Error in position" + ylabel_p)
+            if self.Log == False:
+                ax.set_yscale('log')
             ax.set_ylim(limits_p)
 
             plt.legend()
@@ -287,8 +334,9 @@ class Dataset:
             plt.legend()
 
             ax.set_xlabel(self.labels[i+7], labelpad = -2)
-            ax.set_ylabel("Error in velocity")
-            plt.yscale("log")
+            ax.set_ylabel("Error in velocity"+ ylabel_v)
+            if self.Log == False:
+                ax.set_yscale('log')
             ax.set_ylim(limits_v)
 
         plt.tight_layout()
@@ -296,7 +344,7 @@ class Dataset:
         plt.show()
 
 
-    def commonStandardization(self, scaling):
+    def commonStandardization(self, scaling, dataUnits, Log):
         """
         standardize inputs and errors together
         """
@@ -305,8 +353,15 @@ class Dataset:
         elif scaling == 1:
             self.scaler = StandardScaler()
 
-        self.error[:,0] /= AL_BF.AU # Normalize with AU
-        self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+        self.dataUnits = dataUnits
+        self.Log = Log
+        if dataUnits == 'AU':
+            self.error[:,0] /= AL_BF.AU # Normalize with AU
+            self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+        if Log == True: # Apply logarithm 
+
+            self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
+            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]            
 
         database = np.column_stack((self.error, self.input_data))
         self.scaler.fit(database)
@@ -325,9 +380,13 @@ class Dataset:
         x2 = self.scaler.inverse_transform(database)
         E = x2[:, 0:2]
         I = x2[:, 2:]
-        E[:,0] *= AL_BF.AU # Normalize with AU
-        E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
 
+        if self.dataUnits == "AU":
+            E[:,0] *= AL_BF.AU # Normalize with AU
+            E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+        if self.Log == True:
+            E[:,0] = [10**(E[i,0]) for i in range(len(E[:,0]))]
+            E[:,1] = [10**(E[i,1]) for i in range(len(E[:,1]))]
         return E, I
 
     def standardizationInputs(self, scaling):
@@ -340,11 +399,17 @@ class Dataset:
         self.scaler_I.fit(self.input_data)
         self.input_data_std = self.scaler_I.transform(self.input_data)
 
-    def standardizationError(self, scaling, sep = False):
+    def standardizationError(self, scaling, dataUnits, Log, sep = False):
         # Normalization of errors TODO: eliminate and inlcude in database already
-        self.error[:,0] /= AL_BF.AU # Normalize with AU
-        self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
-
+        self.dataUnits = dataUnits
+        self.Log = Log
+        if dataUnits == 'AU':
+            self.error[:,0] /= AL_BF.AU # Normalize with AU
+            self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+        if Log == True: # Apply logarithm 
+            self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
+            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]
+            
         # Standarization of the error
         if scaling == 0:
             self.scaler = MinMaxScaler()
@@ -381,14 +446,29 @@ class Dataset:
         """
         if typeR == 'E':
             x2 = self.scaler.inverse_transform(x)
-            x2[:,0] *= AL_BF.AU # Normalize with AU
-            x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+
+            if self.dataUnits == "AU":
+                x2[:,0] *= AL_BF.AU # Normalize with AU
+                x2[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+            if self.Log == True:
+                x2[:,0] = [10**(x2[i,0]) for i in range(len(x2[:,0]))]
+                x2[:,1] = [10**(x2[i,1]) for i in range(len(x2[:,1]))]
+
         elif typeR == 'Ep':
             x2 = self.scalerEp.inverse_transform(x.reshape(-1,1)).flatten()
-            x2 *= AL_BF.AU # Normalize with AU
+            if self.dataUnits == "AU":
+                x2 *= AL_BF.AU # Normalize with AU
+            if self.Log == True:
+                x2 = [10**(x2[i]) for i in range(len(x2))]
+
         elif typeR == 'Ev':
             x2 = self.scalerEv.inverse_transform(x.reshape(-1,1)).flatten()
-            x2 = x2 * AL_BF.AU / AL_BF.year2sec(1)
+
+            if self.dataUnits == "AU":
+                x2 = x2 * AL_BF.AU / AL_BF.year2sec(1)
+            if self.Log == True:
+                x2 = [10**(x2[i]) for i in range(len(x2))]
+
         elif typeR == 'I':
             x2 = self.scalerI.inverse_transform(x)
         
@@ -520,9 +600,13 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
         plt.show()   
 
 
-def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErrors = False,\
-    equalize = False, error = False, standardizationType =  0, scaling = 0,\
-    labelType = False):
+def LoadNumpy(train_file_path, save_file_path, \
+            plotDistribution = False, plotErrors = False,\
+            equalize = False, error = False, \
+            standardizationType =  0, scaling = 0,\
+            dataUnits = "AU", Log = False,\
+            labelType = False):
+
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
         equalize = equalize, labelType = labelType)
@@ -531,18 +615,23 @@ def LoadNumpy(train_file_path, save_file_path, plotDistribution = False, plotErr
     if plotDistribution == True:
         dataset_np.plotDistributionOfFeasible()
 
-    # dataset_np.statisticsFeasible()
-    # dataset_np.plotDistributionOfDataset()
-
+    # if plotErrors == True:
+    #     dataset_np.statisticsError(save_file_path)
+    
     if standardizationType == 0: # common
-        dataset_np.commonStandardization(scaling)
+        dataset_np.commonStandardization(scaling, dataUnits, Log)
     elif standardizationType == 1: #'input_output'
         dataset_np.standardizationInputs(scaling)
         if error != False:
-            dataset_np.standardizationError(scaling, sep=False)
+            dataset_np.standardizationError(scaling, dataUnits, Log, sep=False)
     elif standardizationType == 2: #'input_sepoutput'
         dataset_np.standardizationInputs(scaling)
-        dataset_np.standardizationError(scaling, sep=True)
+        dataset_np.standardizationError(scaling, dataUnits, Log, sep=True)
+    else:
+        setattr(dataset_np, "Log", Log)
+        setattr(dataset_np, "DataUnits", dataUnits)
+        
+    
             
     if plotErrors == True:
         dataset_np.plotDistributionOfErrors(save_file_path)
@@ -594,9 +683,10 @@ if __name__ == "__main__":
 
     # Choose which ones to choose:
     base = "./databaseANN/Organized/deltakeplerian/"
-    # file_path = [base + 'Random.txt', base +'Random_opt.txt', \
-    #             base +'Lambert.txt', base +'Lambert_opt.txt']
-    file_path = [base + 'Random.txt', base +'Random_opt.txt']
+    file_path = [base + 'Random.txt', base +'Random_opt_5.txt', \
+                base +'Random_opt_2.txt',\
+                base +'Lambert.txt', base +'Lambert_opt.txt']
+    # file_path = [base + 'Random.txt', base +'Random_opt.txt']
     
     # Join files together into 1
     file_path_together = base +'Together.txt'
@@ -606,8 +696,9 @@ if __name__ == "__main__":
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
     dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
-            equalize =  False, standardizationType = Scaling['type_stand'],\
-                scaling = Scaling['scaling'],
+            equalize =  False, \
+            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             plotDistribution=False, plotErrors=True, labelType = len(file_path))
 
     # save_standard(dataset_np, base + 'Together_')

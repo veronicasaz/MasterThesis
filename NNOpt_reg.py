@@ -20,6 +20,9 @@ import TrainingDataKeras as DTS
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
+Dataset = CONF.Dataset()
+Scaling = Dataset.Dataset_config['Scaling']
+
 class ANN_reg:
     def __init__(self, dataset):
         self.dataset_np = dataset
@@ -108,7 +111,7 @@ def optArch(perceptron, dv_HL, dv_NH):
             test_accuracy = perceptron.training(dv)
             test_accuracy_Matrix_arch[i, j] = test_accuracy
 
-    FileName1 = "./Results/TrainingPopulation/NNoptimization_reg_arch_test.txt"
+    FileName1 = "./Results/Study_RegParams/arch_test.txt"
 
     mat = np.matrix(test_accuracy_Matrix_arch)
 
@@ -142,15 +145,15 @@ def optTra(perceptron, dv_SP, dv_RP, dv_EP):
         test_accuracy_Matrix_train2[k, 0] = test_accuracy
         test_accuracy_Matrix_train2[k, 1] = tf
                 
-    FileName2 =  "./Results/TrainingPopulation/NNoptimization_reg_train_test.txt"
-    FileName3 =  "./Results/TrainingPopulation/NNoptimization_reg_train_test2.txt"
-    # mat = np.matrix(test_accuracy_Matrix_train) # cannot save 3d matrix
+    FileName2 =  "./Results/Study_RegParams/train_test.txt"
+    FileName3 =  "./Results/Study_RegParams/train_test2.txt"
+    mat = np.matrix(test_accuracy_Matrix_train) # cannot save 3d matrix
     mat2 = np.matrix(test_accuracy_Matrix_train2)
 
-    # with open(FileName2, "wb") as f:
-    #     for line in mat:  
-    #         np.savetxt(f, line, fmt='%.2f')  
-    # f.close()
+    with open(FileName2, "wb") as f:
+        for line in mat:  
+            np.savetxt(f, line, fmt='%.2f')  
+    f.close()
     with open(FileName3, "wb") as f:
         for line in mat2:  
             np.savetxt(f, line, fmt='%.2f')  
@@ -159,9 +162,9 @@ def optTra(perceptron, dv_SP, dv_RP, dv_EP):
 
 def loadData(): 
     
-    test_acc_arch = np.loadtxt("./Results/TrainingPopulation/OptRegression/NNoptimization_reg_arch_test.txt")
-    test_acc_train = np.loadtxt("./Results/TrainingPopulation/OptRegression/NNoptimization_reg_train_test.txt")
-    test_acc_train2 = np.loadtxt("./Results/TrainingPopulation/OptRegression/NNoptimization_reg_train_test2.txt")
+    test_acc_arch = np.loadtxt("./Results/Study_RegParams/arch_test.txt")
+    test_acc_train = np.loadtxt("./Results/Study_RegParams/train_test.txt")
+    test_acc_train2 = np.loadtxt("./Results/Study_RegParams/train_test2.txt")
 
     return  test_acc_arch, test_acc_train, test_acc_train2
 
@@ -204,16 +207,21 @@ def plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP):
 
     # plt.tight_layout()
 
-    plt.savefig("./Results/TrainingPopulation/OptRegression/RegNet_paramOpt.png", dpi = 100)
+    plt.savefig("./Results/Study_RegParams/RegNet_paramOpt.png", dpi = 100)
     plt.show()
 
 if __name__ == "__main__":
-    train_file_path = "./Results/TrainingPopulation/OptRegression/trainingData_Feas_big2.txt"
+    # Choose which ones to choose:
+    base = "./databaseANN/Organized/deltakeplerian/"
+ 
+    train_file_path = base +'Together.txt'
     save_file_path = ""
 
-    dataset_np = DTS.LoadNumpy(train_file_path, save_file_path, error= True,\
-            equalize = True, standardization =ANN['Database']['type_stand'],
+    dataset_np = DTS.LoadNumpy(train_file_path, save_file_path, error='vector',\
+            equalize = False, standardizationType = Scaling['type_stand'],\
+            scaling = Scaling['scaling'], labelType = 1,
             plotDistribution=False, plotErrors=False)
+
     # dataset_np = DTS.LoadNumpy(train_file_path)
     traindata, testdata = DTS.splitData_reg(dataset_np)
     perceptron = ANN_reg(dataset_np)
@@ -229,7 +237,7 @@ if __name__ == "__main__":
 
     # ACCURACY
     optArch(perceptron,  dv_HL, dv_NH)
-    # optTra(perceptron, dv_SP, dv_RP, dv_EP)
+    optTra(perceptron, dv_SP, dv_RP, dv_EP)
     
     plot(dv_HL, dv_NH, dv_SP, dv_RP, dv_EP)
 

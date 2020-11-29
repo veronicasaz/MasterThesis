@@ -16,9 +16,12 @@ import LoadConfigFiles as CONFIG
 
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables   
 
-def createFile(typeinputs, creationMethod, evaluate, optimize, appendToFile):
+opt_config = CONFIG.OPT_config()
+MBH = opt_config.MBH_generateDatabase
+
+def createFile(typeinputs, creationMethod, evaluate, optimize, iterations, appendToFile):
     fileName = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod + '.txt'
-    fileName_opt = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod +'_opt' + '.txt'
+    fileName_opt = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod +'_opt_' + str(iterations) + '.txt'
 
     if typeinputs == 'deltakeplerian':
         Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
@@ -152,9 +155,10 @@ if __name__ == "__main__":
     creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
-    evaluate = False # save file with evaluated data
+    evaluate = True # save file with evaluated data
     optimize = True # save file with optimization data
-    samples_rand = 10000 # samples with random mor hypercube initialization
+    iterations =  MBH['niter_total'] # iterations of the optimization algorithm  
+    samples_rand = 500 # samples with random mor hypercube initialization
     samples_L = 2000 # samples for Lambert and Exposin
     samples_opt = 500 # number of samples to be optimized
 
@@ -167,7 +171,7 @@ if __name__ == "__main__":
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt = \
-            createFile(typeinputs, creationMethod, evaluate, optimize, appendToFile)
+            createFile(typeinputs, creationMethod, evaluate, optimize, iterations, appendToFile)
     
     ####################
     # DATABASE CREATION
@@ -299,6 +303,7 @@ if __name__ == "__main__":
             sample = sample_inputs[i_sample, :]
             fvalue = Fit.calculateFeasibility(sample, printValue = False)
             Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+            
             # If we want the different inputs for the same dec v dataset:
             # WARNING: for the last two the data appends! eliminate data beforehand
             # Fit.savetoFile('cartesian', feasibilityFileName) # saves the current values
@@ -312,8 +317,6 @@ if __name__ == "__main__":
     # find feasible trajectories
     # Only the initial and the optimized trajectokry will be saved
     ####################
-    opt_config = CONFIG.OPT_config()
-    MBH = opt_config.MBH_generateDatabase
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
     
     if optimize == True:

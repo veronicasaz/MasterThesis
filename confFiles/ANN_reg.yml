@@ -1,5 +1,5 @@
 Training:
- train_size: 0.9 # % of the data for training, the rest is testing
+ train_size: 0.75 # % of the data for training, the rest is testing
  n_splits: 5 # 
  n_repeats: 5 # 
  epochs: 200
