@@ -161,7 +161,7 @@ class ANN_reg:
                     predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                     true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
                 elif Scaling['type_stand'] == 2:
-                    predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
+                    predictions_unscaled = np.zeros(np.shape(self.testdata[1]))
                     true_value = np.zeros(np.shape(self.testdata[1]))
 
                     #Ep
@@ -248,7 +248,7 @@ if __name__ == "__main__":
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             labelType = len(file_path),
-            plotDistribution=True, plotErrors=False)
+            plotDistribution=False, plotErrors=True)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 

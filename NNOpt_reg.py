@@ -98,8 +98,8 @@ class ANN_reg:
 def optArch(perceptron, dv_HL, dv_NH):
     # Fix training values to study architecture
     dv2 = 5
-    dv3 = 2
-    dv4 = 50
+    dv3 = 5
+    dv4 = 100
 
     test_accuracy_Matrix_arch = np.zeros((len(dv_HL), len(dv_NH)))
 
@@ -126,13 +126,13 @@ def optTra(perceptron, dv_SP, dv_RP, dv_EP):
     test_accuracy_Matrix_train2 = np.zeros((len(dv_EP), 2 ))
     dv0 = 5
     dv1 = 40
-    # dv4 = 100
-    # for i, dv2 in enumerate(dv_SP):
-    #     for j, dv3 in enumerate(dv_RP):
-    #         print("OPT train", dv2, dv3)
-    #         dv = [dv0, dv1, dv2, dv3, dv4]
-    #         test_accuracy = perceptron.training(dv)
-    #         test_accuracy_Matrix_train[i, j] = test_accuracy
+    dv4 = 100
+    for i, dv2 in enumerate(dv_SP):
+        for j, dv3 in enumerate(dv_RP):
+            print("OPT train", dv2, dv3)
+            dv = [dv0, dv1, dv2, dv3, dv4]
+            test_accuracy = perceptron.training(dv)
+            test_accuracy_Matrix_train[i, j] = test_accuracy
 
     dv2 = 5
     dv3 = 2

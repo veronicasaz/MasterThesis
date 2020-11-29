@@ -255,17 +255,26 @@ class Dataset:
         if std == True: 
             x = self.input_data_std
             y = self.error_std
-            stdlabel = "_std"
+            stdlabel = "_std_"+str(self.scaling)
 
-            if self.Log == True:
-                limits_p = (1.5e-3, 1.01e0)
-                limits_v = (1.5e-3, 1.01e0)
-            else:
-                limits_p = (1.5e-7, 1.01e0)
-                limits_v = (1.5e-7, 1.01e0)
-            
             ylabel_p = " Standardized"
             ylabel_v = " Standardized"
+                
+            if self.Log == True:
+                limits_p = (min(y[:,0]), max(y[:,0]))
+                limits_v =  (min(y[:,1]), max(y[:,1]))
+
+                ylabel_p = ylabel_p +"log"
+                ylabel_v = ylabel_v + "log"
+            else:
+                if self.scaling == 0:
+                    limits_p = (1.5e-7, 1.01e0)
+                    limits_v = (1.5e-7, 1.01e0)
+                elif self.scaling == 1:
+                    limits_p = (-1.01e0, 1.01e0)
+                    limits_v = (-1.01e0, 1.01e0)
+            
+            
         else:
             x = self.input_data
             y = self.error
@@ -289,8 +298,8 @@ class Dataset:
                 limits_p = (np.log10(limits_p[0]), np.log10(limits_p[1]))
                 limits_v = (np.log10(limits_v[0]), np.log10(limits_v[1]))
 
-                ylabel_p = "log" + ylabel_p
-                ylabel_v = "log" + ylabel_v
+                ylabel_p = " log" + ylabel_p
+                ylabel_v = " log" + ylabel_v
             
 
         # Error in position adn velocity
@@ -321,8 +330,12 @@ class Dataset:
                 ax.set_xlabel(self.labels[i+7], labelpad = -2)
 
                 ax.set_ylabel(ylabel_epev[plot])
-                if self.Log == False or std == True:
-                    ax.set_yscale('log')
+                if self.Log == False:
+                    if std == True and self.scaling ==0:
+                        ax.set_yscale('log')
+                    elif std == True and self.scaling == 1:
+                        ax.set_yscale('symlog') # To display negative values
+                
                 ax.set_ylim(limits_epev[plot])
 
                 plt.legend()
@@ -446,7 +459,7 @@ class Dataset:
                 
             if self.dataUnits == "AU":
                 x2[:,0] *= AL_BF.AU # Normalize with AU
-                x2[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+                x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
             
 
         elif typeR == 'Ep':
