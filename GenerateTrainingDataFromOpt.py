@@ -155,7 +155,7 @@ if __name__ == "__main__":
     creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
     lhypercube = True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized
-    evaluate = True # save file with evaluated data
+    evaluate = False # save file with evaluated data
     optimize = True # save file with optimization data
     iterations =  MBH['niter_total'] # iterations of the optimization algorithm  
     samples_rand = 500 # samples with random mor hypercube initialization

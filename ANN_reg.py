@@ -26,8 +26,8 @@ import TrainingDataKeras as TD
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
-Dataset = CONF.Dataset()
-Scaling = Dataset.Dataset_config['Scaling']
+Dataset_conf = CONF.Dataset()
+Scaling = Dataset_conf.Dataset_config['Scaling']
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -161,7 +161,7 @@ class ANN_reg:
                     predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                     true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
                 elif Scaling['type_stand'] == 2:
-                    predictions_unscaled = np.zeros(np.shape(pred_test))
+                    predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                     true_value = np.zeros(np.shape(self.testdata[1]))
 
                     #Ep
@@ -244,8 +244,10 @@ if __name__ == "__main__":
 
     # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
     dataset_np = TD.LoadNumpy(train_file_path, base, error= 'vector',\
-            equalize = False, standardizationType = Scaling['type_stand'],\
-            scaling = Scaling['scaling'], labelType = len(file_path),
+            equalize = False, \
+            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            labelType = len(file_path),
             plotDistribution=True, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
@@ -256,8 +258,8 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN_reg(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
 
 
     

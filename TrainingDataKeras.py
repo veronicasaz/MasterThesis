@@ -256,11 +256,16 @@ class Dataset:
             x = self.input_data_std
             y = self.error_std
             stdlabel = "_std"
-            limits_p = (1e-7, 1.01e0)
-            limits_v = (1e-3, 1.01e0)
+
+            if self.Log == True:
+                limits_p = (1.5e-3, 1.01e0)
+                limits_v = (1.5e-3, 1.01e0)
+            else:
+                limits_p = (1.5e-7, 1.01e0)
+                limits_v = (1.5e-7, 1.01e0)
             
-            ylabel_p = "Standardized"
-            ylabel_v = "Standardized"
+            ylabel_p = " Standardized"
+            ylabel_v = " Standardized"
         else:
             x = self.input_data
             y = self.error
@@ -280,81 +285,66 @@ class Dataset:
                 ylabel_p = " (m)"
                 ylabel_v = " (m/s)"
             
-        if self.Log == True:
-            limits_p = (np.log10(limits_p[0]), np.log10(limits_p[1]))
-            limits_v = (np.log10(limits_v[0]), np.log10(limits_v[1]))
+            if self.Log == True:
+                limits_p = (np.log10(limits_p[0]), np.log10(limits_p[1]))
+                limits_v = (np.log10(limits_v[0]), np.log10(limits_v[1]))
 
-            ylabel_p = "log" + ylabel_p
-            ylabel_v = "log" + ylabel_v
-           
-
-        # Error in position
-        fig = plt.figure(figsize = (15,15))
-        for i in range(self.n_input):
-            ax = fig.add_subplot(self.n_input//2, 2, i+1)
-
-            if self.labelType != False:
-                for j in range(self.labelType): # how many files are there
-                    indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
-
-                    ax.scatter(x[indexes,i] , y[indexes, 0],\
-                         color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
-            else:
-                ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5)
+                ylabel_p = "log" + ylabel_p
+                ylabel_v = "log" + ylabel_v
             
-            # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
-            
-            ax.set_xlabel(self.labels[i+7], labelpad = -2)
 
-            ax.set_ylabel("Error in position" + ylabel_p)
-            if self.Log == False:
-                ax.set_yscale('log')
-            ax.set_ylim(limits_p)
+        # Error in position adn velocity
+        save_file_path_epev = [save_file_path+"Inputs_ErrorPosition" +stdlabel+".png",\
+                            save_file_path+"Inputs_ErrorVelocity" +stdlabel+".png"]
 
-            plt.legend()
+        ylabel_epev = ["Error in position" + ylabel_p,\
+                        "Error in velocity" + ylabel_v]
 
-        plt.tight_layout()
-        plt.savefig(save_file_path+"Inputs_ErrorPosition" +stdlabel+".png", dpi = 100)
-        plt.show()
+        limits_epev = [limits_p, limits_v]
 
-        # Error in velocity
-        fig = plt.figure(figsize = (15,15))
-        for i in range(self.n_input):
-            ax = fig.add_subplot(self.n_input//2, 2, i+1)
+        for plot in range(2): # one for ep, one for ev
+            fig = plt.figure(figsize = (15,15))
+            for i in range(self.n_input):
+                ax = fig.add_subplot(self.n_input//2, 2, i+1)
 
-            if self.labelType != False:
-                for j in range(self.labelType): # how many files are there
-                    indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
+                if self.labelType != False:
+                    for j in range(self.labelType): # how many files are there
+                        indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
 
-                    ax.scatter(x[indexes,i] , y[indexes, 1],\
-                         color = colors[j], marker = 'o', alpha = 0.5, label = j)
-            else:
-                ax.plot(x[:,i] , y[:, 1], 'ko', markersize = 5)
-            
-            plt.legend()
+                        ax.scatter(x[indexes,i] , y[indexes, 0],\
+                            color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
+                else:
+                    ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5)
+                
+                # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
+                
+                ax.set_xlabel(self.labels[i+7], labelpad = -2)
 
-            ax.set_xlabel(self.labels[i+7], labelpad = -2)
-            ax.set_ylabel("Error in velocity"+ ylabel_v)
-            if self.Log == False:
-                ax.set_yscale('log')
-            ax.set_ylim(limits_v)
+                ax.set_ylabel(ylabel_epev[plot])
+                if self.Log == False or std == True:
+                    ax.set_yscale('log')
+                ax.set_ylim(limits_epev[plot])
 
-        plt.tight_layout()
-        plt.savefig(save_file_path+"Inputs_ErrorVelocity" +stdlabel+".png", dpi = 100)
-        plt.show()
+                plt.legend()
+
+            plt.tight_layout()
+            plt.savefig(save_file_path_epev[plot], dpi = 100)
+            plt.show()
 
 
     def commonStandardization(self, scaling, dataUnits, Log):
         """
         standardize inputs and errors together
         """
+        self.scaling = scaling
+        self.dataUnits = dataUnits
+        self.Log = Log
         if scaling == 0:
             self.scaler = MinMaxScaler()
         elif scaling == 1:
             self.scaler = StandardScaler()
 
-        self.dataUnits = dataUnits
-        self.Log = Log
+        
         if dataUnits == 'AU':
             self.error[:,0] /= AL_BF.AU # Normalize with AU
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
@@ -381,15 +371,17 @@ class Dataset:
         E = x2[:, 0:2]
         I = x2[:, 2:]
 
+        if self.Log == True:
+            E[:,0] = np.array([10**(E[i,0]) for i in range(len(E[:,0]))])
+            E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
         if self.dataUnits == "AU":
             E[:,0] *= AL_BF.AU # Normalize with AU
             E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
-        if self.Log == True:
-            E[:,0] = [10**(E[i,0]) for i in range(len(E[:,0]))]
-            E[:,1] = [10**(E[i,1]) for i in range(len(E[:,1]))]
+        
         return E, I
 
     def standardizationInputs(self, scaling):
+        self.scaling = scaling
         if scaling == 0:
             self.scaler_I = MinMaxScaler()
         elif scaling == 1:
@@ -401,6 +393,7 @@ class Dataset:
 
     def standardizationError(self, scaling, dataUnits, Log, sep = False):
         # Normalization of errors TODO: eliminate and inlcude in database already
+        self.scaling = scaling
         self.dataUnits = dataUnits
         self.Log = Log
         if dataUnits == 'AU':
@@ -447,27 +440,31 @@ class Dataset:
         if typeR == 'E':
             x2 = self.scaler.inverse_transform(x)
 
-            if self.dataUnits == "AU":
-                x2[:,0] *= AL_BF.AU # Normalize with AU
-                x2[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
             if self.Log == True:
                 x2[:,0] = [10**(x2[i,0]) for i in range(len(x2[:,0]))]
                 x2[:,1] = [10**(x2[i,1]) for i in range(len(x2[:,1]))]
+                
+            if self.dataUnits == "AU":
+                x2[:,0] *= AL_BF.AU # Normalize with AU
+                x2[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+            
 
         elif typeR == 'Ep':
             x2 = self.scalerEp.inverse_transform(x.reshape(-1,1)).flatten()
+            if self.Log == True:
+                x2 = np.array([10**(x2[i]) for i in range(len(x2))])
             if self.dataUnits == "AU":
                 x2 *= AL_BF.AU # Normalize with AU
-            if self.Log == True:
-                x2 = [10**(x2[i]) for i in range(len(x2))]
+            
 
         elif typeR == 'Ev':
             x2 = self.scalerEv.inverse_transform(x.reshape(-1,1)).flatten()
 
+            if self.Log == True:
+                x2 = np.array([10**(x2[i]) for i in range(len(x2))])
             if self.dataUnits == "AU":
                 x2 = x2 * AL_BF.AU / AL_BF.year2sec(1)
-            if self.Log == True:
-                x2 = [10**(x2[i]) for i in range(len(x2))]
+            
 
         elif typeR == 'I':
             x2 = self.scalerI.inverse_transform(x)

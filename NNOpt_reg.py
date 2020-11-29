@@ -20,8 +20,8 @@ import TrainingDataKeras as DTS
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
-Dataset = CONF.Dataset()
-Scaling = Dataset.Dataset_config['Scaling']
+Dataset_conf = CONF.Dataset()
+Scaling = Dataset_conf.Dataset_config['Scaling']
 
 class ANN_reg:
     def __init__(self, dataset):
@@ -218,8 +218,9 @@ if __name__ == "__main__":
     save_file_path = ""
 
     dataset_np = DTS.LoadNumpy(train_file_path, save_file_path, error='vector',\
-            equalize = False, standardizationType = Scaling['type_stand'],\
-            scaling = Scaling['scaling'], labelType = 1,
+            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            labelType = 1,
             plotDistribution=False, plotErrors=False)
 
     # dataset_np = DTS.LoadNumpy(train_file_path)
