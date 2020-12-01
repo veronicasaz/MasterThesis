@@ -109,18 +109,25 @@ class Fitness:
         else:
             fc0 = m_fuel / self.Spacecraft.m_dry
 
-            fc1 = np.log10(fc1)
-            fc2 = np.log10(fc2)
+          
 
             # Standarize between 0 and 1:
-            array = ['range_mass', 'range_pos', 'range_vel']
-            array2 = [fc0, fc1, fc2]
-            # print(array2) 
-            res = np.zeros(len(array))
-            for i in range(len(array)):
-                res[i] = ( array2[i] - CONF['FEASIB'][array[i]][0]) /\
-                        (CONF['FEASIB'][array[i]][1] - CONF['FEASIB'][array[i]][0]) *\
-                          (1 - 0)
+            std = True
+            if std == True:
+                fc1 = np.log10(fc1)
+                fc2 = np.log10(fc2)
+                array = ['range_mass', 'range_pos', 'range_vel']
+                array2 = [fc0, fc1, fc2]
+                # print(array2) 
+            #     res = np.zeros(len(array))
+            #     for i in range(len(array)):
+            #         res[i] = ( array2[i] - CONF['FEASIB'][array[i]][0]) /\
+            #                 (CONF['FEASIB'][array[i]][1] - CONF['FEASIB'][array[i]][0]) *\
+            #                 (1 - 0)
+
+            # else: 
+                res = [fc0, fc1, fc2]
+                # print(res)
 
             # print(res)
             value = res[0]* CONF['FEASIB']['factor_mass'] +\
@@ -129,9 +136,8 @@ class Fitness:
         
         # Penalization functions
         # print("obje", f0, fc1, fc2)
-        f = fc0 + fc1 + fc2
         # print("mass",m_fuel, "Error", Error)
-        return f
+        return value
 
 
     def calculateFitness(self, DecV, optMode = True, thrust = 'free', 

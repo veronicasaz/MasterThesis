@@ -1,6 +1,6 @@
 Creation:
  typeinputs: "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
- creationMethod: 'Random_MBH' # 'Exposin', 'Lambert', 'Random, Random_MBH
+ creationMethod: 'Random' # 'Exposin', 'Lambert', 'Random, Random_MBH
  lhypercube: True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized 
  evaluate: True #evaluate and save initial samples

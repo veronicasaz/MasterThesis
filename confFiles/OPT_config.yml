@@ -7,7 +7,7 @@ MBH:
  tolGlobal: 0.00001
 
 MBH_generateDatabase: #For only small steps
- niter_total: 5
+ niter_total: 3
  niter_success: 20 #Number of iterations before a big jump
  niter_local: 100 #Number of iterations for the local opt. TODO: it is ignored
  jumpMagnitude: 0.01 #Magnitude of the small jump 
