@@ -33,11 +33,11 @@ class ANN_reg:
     def __init__(self, dataset):
         self.dataset_np = dataset
 
-        self.n_classes = self.dataset_np.n_classes # Labels
+        self.n_classes = int(len(self.dataset_np.output_reg[0,:])) # Outputs
         self.n_examples = self.dataset_np.nsamples # samples
         self.n_input = self.dataset_np.n_input #inputs
 
-        self.checkpoint_path = "./trainedCNet_Reg/training_1/cp.ckpt"
+        self.checkpoint_path = "./trainedCNet_Reg/training_1/"
 
     def create_model(self):
         # Create architecture
@@ -64,7 +64,8 @@ class ANN_reg:
         model.add(keras.layers.Dense(self.n_classes) ) # output layer
        
         # Compile
-        model.compile(loss='mse', optimizer ='adam')
+        self.loss = 'mse'
+        model.compile(loss=self.loss, optimizer ='adam')
 
         return model
             
@@ -74,7 +75,25 @@ class ANN_reg:
 
     def training(self):
         # Create a callback that saves the model's weights
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+        #                                                 save_weights_only=True,
+        #                                                 verbose=0)
+        self.model = self.create_model()
+
+        self.history = self.model.fit(self.traindata[0], self.traindata[1], 
+                    validation_split= ANN['Training']['validation_size'],
+                    epochs = ANN['Training']['epochs'] )
+
+        self.model.save_weights(self.checkpoint_path+"cp.ckpt")
+
+        
+        print('MSE: %.3f (%.3f)' %(self.history.history['loss'][-1], self.history.history['val_loss'][-1]))
+
+        return self.history.history['loss'][-1], self.history.history['val_loss'][-1]
+
+    def trainingKFoldCross(self):
+        # Create a callback that saves the model's weights
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path+"cp.ckpt",
                                                         save_weights_only=True,
                                                         verbose=0)
 
@@ -112,20 +131,35 @@ class ANN_reg:
 
 
     def plotTraining(self):
+        colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
+        plt.plot(self.history.history['loss'])
+        plt.plot(self.history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel(self.loss)
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper right')
+        plt.grid(alpha = 0.5)
+        plt.tight_layout()
+        plt.savefig(self.checkpoint_path+"trainingloss.png", dpi = 100)
+        plt.show()
+
+    def plotTrainingKFold(self):
         # summarize history for loss
         colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
         for i in range(len(self.history)):
             plt.plot(self.history[i].history['loss'], colors[i%len(colors)])
         # plt.plot(self.history.history['val_loss'])
-        plt.title('model loss')
-        plt.ylabel('loss')
+        plt.title('Model loss')
+        plt.ylabel('Loss')
         plt.xlabel('epoch')
+        plt.tight_layout()
+        plt.savefig(self.checkpoint_path+"trainingloss_kfold.png", dpi = 100)
         # plt.legend(['train', 'validation'], loc='upper left')
         plt.show()
 
     def load_model_fromFile(self):
         model_fromFile = self.create_model()
-        model_fromFile.load_weights(self.checkpoint_path).expect_partial()
+        model_fromFile.load_weights(self.checkpoint_path+"cp.ckpt").expect_partial()
         self.model = model_fromFile
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
@@ -145,14 +179,16 @@ class ANN_reg:
 
             if rescale == False: # No inverse standarization possible
 
-                self.Error_pred = np.zeros((len(pred_test),2))
+                self.Output_pred = np.zeros((len(pred_test),3))
                 for i in range(len(pred_test)):
                     print('i', i)
-                    print("%e, %e"%(pred_test[i,0], pred_test[i,1]) )
-                    print("%e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1] ))
+                    print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
+                    print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
                     print("------------------------")
-                    self.Error_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
-                    self.Error_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
+                    self.Output_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
+                    self.Output_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
+                    self.Output_pred[i,2] = abs( pred_test[i,2] - self.testdata[1][i,2] )
+
             else:
                 if Scaling['type_stand'] == 0:
                     predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
@@ -164,22 +200,26 @@ class ANN_reg:
                     predictions_unscaled = np.zeros(np.shape(self.testdata[1]))
                     true_value = np.zeros(np.shape(self.testdata[1]))
 
+                    #Mf
+                    predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Mf') #Obtain predictions in actual 
+                    true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Mf') #Obtain predictions in actual
                     #Ep
-                    predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Ep') #Obtain predictions in actual 
-                    true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Ep') #Obtain predictions in actual
+                    predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ep') #Obtain predictions in actual 
+                    true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ep') #Obtain predictions in actual
                     #Ev
-                    predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ev') #Obtain predictions in actual 
-                    true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ev') #Obtain predictions in actual
+                    predictions_unscaled[:,2] = self.dataset_np.inverseStandardization(pred_test[:,2], typeR='Ev') #Obtain predictions in actual 
+                    true_value[:,2] = self.dataset_np.inverseStandardization(self.testdata[1][:,2], typeR='Ev') #Obtain predictions in actual
 
 
-                self.Error_pred_unscale = np.zeros((len(pred_test),2)) 
+                self.Output_pred_unscale = np.zeros((len(pred_test),3)) 
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
-                    print("Predictions, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1]) )
-                    print("True value, %e, %e"%(true_value[i,0], true_value[i,1] ))
+                    print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
+                    print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
                     print("------------------------")
-                    self.Error_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
-                    self.Error_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
+                    self.Output_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
+                    self.Output_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
+                    self.Output_pred_unscale[i,2] = abs( predictions_unscaled[i,2] - true_value[i,2 ])
         else:
             pred_test0 = self.model.predict(testfile)
             if rescale == True: # inverse standarization 
@@ -188,21 +228,39 @@ class ANN_reg:
                 pred_test = pred_test0
         return pred_test
 
-    def plotPredictions(self, dataset):
+    def plotPredictions(self, std):
 
-        if type(dataset) == bool: # No inverse standarization possible
+        if std == False: # No inverse standarization possible or not needed
             fig, ax = plt.subplots() 
-            plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,0], 'r-x', label = 'Error in position')
-            plt.plot(np.arange(0, len(self.Error_pred)), self.Error_pred[:,1], 'g-x', label = 'Error in velocity')
+            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,0], 'r-x', label = 'Difference in mass of fuel')
+            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,1], 'g-x', label = 'Difference in position error')
+            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,2], 'b-x', label = 'Difference in velocity error')
 
+            plt.xlabel("Samples to predict")
+            plt.grid(alpha = 0.5)
+            plt.legend()
+            
         else:
-            f, (ax1, ax2) = plt.subplots(1, 2)
-            ax1.plot(np.arange(0, len(self.Error_pred_unscale)), self.Error_pred_unscale[:,0], 'r-x', label = 'Error in position')
-            ax2.plot(np.arange(0, len(self.Error_pred_unscale)), self.Error_pred_unscale[:,1], 'g-x', label = 'Error in velocity')
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+            fig.subplots_adjust(wspace=0.1, hspace=0.05)
+            ax1.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,0], 'r-x', label = 'Difference in mass of fuel')
+            ax2.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,1], 'g-x', label = 'Difference in position error')
+            ax3.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,2], 'b-x', label = 'Difference in velocity error')
+            
+            if Scaling['scaling'] == 0:
+                ax2.set_yscale('log')
+                ax3.set_yscale('log')
+            elif Scaling['scaling'] == 1:
+                ax2.set_yscale('symlog')
+                ax3.set_yscale('symlog')
 
-        # plt.grid(False)
-        plt.legend()
+            for ax in [ax1, ax2, ax3]:
+                ax.grid(alpha = 0.5)
+                ax.legend()
+                ax.set_xlabel("Samples to predict")
+
         # plt.tight_layout()
+        plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  ".png", dpi = 100)
         plt.show()
 
     def singlePrediction(self, input_case):
@@ -232,13 +290,10 @@ if __name__ == "__main__":
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
 
     # Choose which ones to choose:
-    base = "./databaseANN/Organized/deltakeplerian/"
-    file_path = [base + 'Random.txt', base +'Random_opt_1.txt', \
-                base +'Random_opt_2.txt',\
-                base +'Lambert.txt', base +'Lambert_opt.txt']
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
     
     # Join files together into 1
-    train_file_path = base +'Together.txt'
+    train_file_path = base +'Random.txt'
     # TD.join_files(file_path, train_file_path)
 
 
@@ -247,8 +302,8 @@ if __name__ == "__main__":
             equalize = False, \
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            labelType = len(file_path),
-            plotDistribution=False, plotErrors=True)
+            labelType = False,
+            plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
 
@@ -258,15 +313,17 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN_reg(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron.training()
+    perceptron.plotTraining()
 
 
     
     print("EVALUATE")
     predictions = perceptron.predict(fromFile=True, rescale = False)
+    perceptron.plotPredictions(std = False)
     print("Rescaled:")
     predictions = perceptron.predict(fromFile=True, rescale = True)
+    perceptron.plotPredictions(std = True)
 
     # predictions_unscaled = dataset_np.inverseStandardizationError(predictions) #Obtain predictions in actual 
     # true_value = dataset_np.inverseStandardizationError(testdata[1]) #Obtain predictions in actual 

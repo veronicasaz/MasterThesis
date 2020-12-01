@@ -95,19 +95,47 @@ class Fitness:
 
         return v0_cart, vf_cart
 
-    def objFunction(self, m_fuel, Error):
-        f0 = m_fuel 
-        fc1 = (np.linalg.norm(Error[0:3]) - 1e6)/1e6
-        # fc2 = (np.linalg.norm(Error[3:])- 1e2)/1e2
-        fc2 = np.linalg.norm(Error[3:])
+    def objFunction(self, Error, m_fuel = False):
+        
+        fc1 = np.linalg.norm(Error[0:3] / AL_BF.AU) # Normalize with AU
+        fc2 = np.linalg.norm(Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
+
+        # print('------------------------')
+        # print(m_fuel, Error)
+        # print(fc1, fc2)
+        if type(m_fuel) == bool:
+            value = fc1 * CONF['FEASIB']['factor_pos'] + \
+                    fc2 * CONF['FEASIB']['factor_vel']
+        else:
+            fc0 = m_fuel / self.Spacecraft.m_dry
+
+            fc1 = np.log10(fc1)
+            fc2 = np.log10(fc2)
+
+            # Standarize between 0 and 1:
+            array = ['range_mass', 'range_pos', 'range_vel']
+            array2 = [fc0, fc1, fc2]
+            # print(array2) 
+            res = np.zeros(len(array))
+            for i in range(len(array)):
+                res[i] = ( array2[i] - CONF['FEASIB'][array[i]][0]) /\
+                        (CONF['FEASIB'][array[i]][1] - CONF['FEASIB'][array[i]][0]) *\
+                          (1 - 0)
+
+            # print(res)
+            value = res[0]* CONF['FEASIB']['factor_mass'] +\
+                    res[1]* CONF['FEASIB']['factor_pos'] + \
+                    res[2]* CONF['FEASIB']['factor_vel']
         
         # Penalization functions
         # print("obje", f0, fc1, fc2)
-        f = f0 + fc1 + fc2
+        f = fc0 + fc1 + fc2
         # print("mass",m_fuel, "Error", Error)
         return f
 
-    def calculateFitness(self, DecV, optMode = True, plot = False, thrust = 'free' ):
+
+    def calculateFitness(self, DecV, optMode = True, thrust = 'free', 
+        printValue = False, plot = False, massInFunct = True):
         """
         calculateFitness: obtain the value of the fitness function
         INPUTS:
@@ -116,60 +144,9 @@ class Fitness:
                 DeltaV_list: list of size = Number of impulses 
                             with the 3D impulse between 0 and 1 
                             (will be multiplied by the max DeltaV)
-        """        
-                ########################################################################
-        # DecV
-        ########################################################################
-        self.DecV = DecV
-        v0_cart, vf_cart = self.adaptDecisionVector(DecV, optMode=optMode)
-
-        ########################################################################
-        # Propagation
-        ########################################################################
-        # Times and ephemeris
-        # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
-        t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
-
-        r_p0, v_p0 = self.earthephem.eph(self.t0)
-        r_p1, v_p1 = self.marsephem.eph(t_1.JD_0)
-        
-        # Change from relative to heliocentric velocity
-        self.v0 = v0_cart + v_p0 
-        self.vf = vf_cart + v_p1 
-
-        # Create state vector for initial and final point
-        SV_0 = np.append(r_p0, self.v0)
-        SV_1 = np.append(r_p1, -self.vf) # - to propagate backwards
-
-        # Sims-Flanagan
-        SV_list_forw = self.__SimsFlanagan(SV_0, saveState=True)
-        SV_list_back = self.__SimsFlanagan(SV_1, backwards = True, saveState=True)
-
-        # convert back propagation so that the signs of velocity match
-        SV_list_back_corrected = np.copy(SV_list_back)
-        SV_list_back_corrected[:,3:] *= -1 # change sign of velocity
-
-        ########################################################################
-        # Compare State in middle point
-        ########################################################################
-        # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
-        self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
-
-        if plot == True:
-            # print(np.flipud(SV_list_back))
-            self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
-
-        ########################################################################
-        # Return fitness 
-        ########################################################################
-        self.f = self.objFunction(self.m_fuel, self.Error)
-        return self.f
-
-    def calculateFeasibility(self, DecV, optMode = True, thrust = 'free', 
-        printValue = False, plot = False):
-        """
             thrust = free: direction determined by two angles in heliocentric frame.
                     tangential: thrust applied in the direction of motion
+            massInFunct: if true, objective function with mass. Otherwise just errors
         """
         
         ########################################################################
@@ -212,18 +189,19 @@ class Fitness:
         # print("Error middle point", SV_list_back[-1, :],SV_list_forw[-1, :])
         self.Error = SV_list_back_corrected[-1, :] - SV_list_forw[-1, :]
 
-        fc1 = np.linalg.norm(self.Error[0:3] / AL_BF.AU) # Normalize with AU
-        fc2 = np.linalg.norm(self.Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
+        if massInFunct == True:
+            self.f = self.objFunction(self.Error, m_fuel = self.m_fuel)
+        else:
+            self.f = self.objFunction(self.Error)
 
-        value = fc1 * CONF['FEASIB']['factor_pos'] + fc2 * CONF['FEASIB']['factor_vel']
         if printValue == True:
-            print("Value: ", value)
+            print("Value: ", self.f)
 
         if plot == True:
             # print(np.flipud(SV_list_back))
             self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
-        return value # *1000 so that in 
+        return self.f # *1000 so that in 
                                                             # tol they are in same order of mag
 
 
@@ -427,6 +405,7 @@ class Fitness:
 
         # Feasibility
         feasible = self.studyFeasibility()
+        feasible = np.append(feasible, self.m_fuel)
 
         # Write to file
         vectorFeasibility = np.append(feasible, self.Error)

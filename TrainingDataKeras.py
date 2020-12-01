@@ -13,6 +13,7 @@ import seaborn as sns
 from math import floor, ceil
 
 import AstroLibraries.AstroLib_Basic as AL_BF 
+from AstroLibraries import AstroLib_2BP as AL_2BP
 import LoadConfigFiles as CONF
 
 ANN_reg = CONF.ANN_reg()
@@ -38,6 +39,7 @@ def join_files(file_path, filename):
 
     for i, file_i in enumerate(file_path[1:]):
         dataset_i = np.loadtxt(file_i, skiprows = 1)
+        print(dataset_i)
         label = np.ones(len(dataset_i[:,0]))* (i+1)
         dataset_i = np.column_stack((dataset_i, label))
 
@@ -148,20 +150,21 @@ class Dataset:
             self.dataset = dataset
 
         self.nsamples = len(self.dataset[:,0])
-
-        
-        self.output = self.dataset[:,0]
+        self.output_class = self.dataset[:,0]
+        self.output_reg = self.dataset[:,1]
 
         if self.errorType == 'vector':
-            startinput = 7
-            error_p = [np.linalg.norm(self.dataset[i, 1:4]) for i in range(self.nsamples)]
-            error_v = [np.linalg.norm(self.dataset[i, 4:7]) for i in range(self.nsamples)]
+            startinput = 8
+            error_p = [np.linalg.norm(self.dataset[i, 2:5]) for i in range(self.nsamples)]
+            error_v = [np.linalg.norm(self.dataset[i, 5:8]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
+            self.output_reg = np.column_stack((self.output_reg, self.error))
         elif self.errorType == 'norm':
             startinput = 3
-            error_p = self.dataset[:, 1]
-            error_v = self.dataset[:, 2]
+            error_p = self.dataset[:, 2]
+            error_v = self.dataset[:, 3]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
+            self.output_reg = np.column_stack((self.output_reg, self.error))
         else:
             startinput = 1
 
@@ -203,17 +206,18 @@ class Dataset:
                 indexes_delete.extend( a )
 
         self.input_data = np.delete(self.input_data, indexes_delete, 0)
-        self.output = np.delete(self.output, indexes_delete, 0)
+        self.output_class = np.delete(self.output_class, indexes_delete, 0)
+        self.output_reg = np.delete(self.output_reg, indexes_delete, 0)
         self.error = np.delete(self.error, indexes_delete, 0)
         self.dataset = np.delete(self.dataset, indexes_delete, 0)
-        self.nsamples = len(self.output)
+        self.nsamples = len(self.output_class)
 
     def statisticsFeasible(self):
-        self.count_feasible = np.count_nonzero(self.output)
+        self.count_feasible = np.count_nonzero(self.output_class)
         print("Samples", self.nsamples, "Feasible", self.count_feasible)
     
     def statisticsError(self, save_file_path):
-        plt.scatter(self.error[:,0], self.error[:,1], color = 'black')
+        colors = ['black', 'red', 'green', 'blue', 'orange']
         
         # Plot limit lines for feasibility
         x = [min(self.error[:,0]) , max(self.error[:,0]) ]
@@ -224,6 +228,12 @@ class Dataset:
         # Before standardizing
         plt.plot(FIT['FEASIB']['feas_ep'] *np.ones(len(y)), y, color = 'orange')
         plt.plot(x, FIT['FEASIB']['feas_ev']  *np.ones(len(x)), color = 'red')
+
+        if self.labelType != False:
+            for j in range(self.labelType): # how many files are there
+                indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
+
+                plt.scatter(self.error[indexes,0], self.error[indexes,1], color = colors[j])
 
         plt.xscale("log")
         plt.yscale("log")
@@ -237,8 +247,8 @@ class Dataset:
         plt.show()
 
     def plotDistributionOfFeasible(self):
-        count_unfeasible = np.count_nonzero(self.output==0)
-        count_feasible = len(self.output) - count_unfeasible
+        count_unfeasible = np.count_nonzero(self.output_class==0)
+        count_feasible = len(self.output_class) - count_unfeasible
 
         fig, ax = plt.subplots() 
         plt.bar([0,1], [count_unfeasible, count_feasible])
@@ -251,7 +261,7 @@ class Dataset:
         # fig = plt.figure(figsize = (30,30))
         colors = ['black', 'red', 'green', 'blue', 'orange']
 
-        std = True # use standard values
+        std = False # use standard values
         if std == True: 
             x = self.input_data_std
             y = self.error_std
@@ -264,8 +274,8 @@ class Dataset:
                 limits_p = (min(y[:,0]), max(y[:,0]))
                 limits_v =  (min(y[:,1]), max(y[:,1]))
 
-                ylabel_p = ylabel_p +"log"
-                ylabel_v = ylabel_v + "log"
+                ylabel_p = ylabel_p +" log"
+                ylabel_v = ylabel_v + " log"
             else:
                 if self.scaling == 0:
                     limits_p = (1.5e-7, 1.01e0)
@@ -323,13 +333,12 @@ class Dataset:
                         ax.scatter(x[indexes,i] , y[indexes, 0],\
                             color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
                 else:
-                    ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5)
+                    ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5, label = "Optimized")
                 
                 # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
                 
                 ax.set_xlabel(self.labels[i+7], labelpad = -2)
 
-                ax.set_ylabel(ylabel_epev[plot])
                 if self.Log == False:
                     if std == True and self.scaling ==0:
                         ax.set_yscale('log')
@@ -339,6 +348,8 @@ class Dataset:
                 ax.set_ylim(limits_epev[plot])
 
                 plt.legend()
+
+            plt.suptitle(ylabel_epev[plot], y=1.01)
 
             plt.tight_layout()
             plt.savefig(save_file_path_epev[plot], dpi = 100)
@@ -361,19 +372,23 @@ class Dataset:
         if dataUnits == 'AU':
             self.error[:,0] /= AL_BF.AU # Normalize with AU
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+            self.Spacecraft = AL_2BP.Spacecraft( )
+            self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
+
         if Log == True: # Apply logarithm 
 
             self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
             self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]            
 
-        database = np.column_stack((self.error, self.input_data))
+        self.output_reg[:,1:] = self.error
+
+        database = np.column_stack((self.output_reg, self.input_data))
         self.scaler.fit(database)
 
         database2 = self.scaler.transform(database)
-        self.error_std = database2[:,0:2]
-        self.input_data_std = database2[:,2:]
-
-        print('here')
+        self.error_std = database2[:,1:3]
+        self.output_reg_std = database2[:, 0:3]
+        self.input_data_std = database2[:,3:]
 
 
     def commonInverseStandardization(self, y, x):
@@ -381,15 +396,16 @@ class Dataset:
         print(np.shape(x), np.shape(y))
         
         x2 = self.scaler.inverse_transform(database)
-        E = x2[:, 0:2]
-        I = x2[:, 2:]
+        E = x2[:, 0:3]
+        I = x2[:, 3:]
 
         if self.Log == True:
-            E[:,0] = np.array([10**(E[i,0]) for i in range(len(E[:,0]))])
             E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
+            E[:,2] = np.array([10**(E[i,2]) for i in range(len(E[:,2]))])
         if self.dataUnits == "AU":
-            E[:,0] *= AL_BF.AU # Normalize with AU
-            E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
+            E[:,0] *= self.Spacecraft.m_dry
+            E[:,1] *= AL_BF.AU # Normalize with AU
+            E[:,2] = E[:,2] * AL_BF.AU / AL_BF.year2sec(1)
         
         return E, I
 
@@ -412,32 +428,43 @@ class Dataset:
         if dataUnits == 'AU':
             self.error[:,0] /= AL_BF.AU # Normalize with AU
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+
+            self.Spacecraft = AL_2BP.Spacecraft( )
+            self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
+
         if Log == True: # Apply logarithm 
             self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
             self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]
             
+        self.output_reg[:,1:] = self.error
+
         # Standarization of the error
         if scaling == 0:
             self.scaler = MinMaxScaler()
+            self.scalerMf = MinMaxScaler()
             self.scalerEp = MinMaxScaler()
             self.scalerEv = MinMaxScaler()
 
         elif scaling == 1:
             self.scaler = StandardScaler()
+            self.scalerMf = StandardScaler()
             self.scalerEp = StandardScaler()
             self.scalerEv = StandardScaler()
         
         if sep == False:
-            self.scaler.fit(self.error)
-            self.error_std = self.scaler.transform(self.error)
+            self.scaler.fit(self.output_reg)
+            self.output_reg_std = self.scaler.transform(self.output_reg)
         else:
-            self.error_std = np.zeros(np.shape(self.error))
+            self.output_reg_std = np.zeros(np.shape(self.output_reg))
 
-            self.scalerEp.fit(self.error[:,0].reshape(-1, 1) )
-            self.error_std[:,0] = self.scalerEp.transform(self.error[:,0].reshape(-1, 1)).flatten()
-            self.scalerEv.fit(self.error[:,1].reshape(-1, 1))
-            self.error_std[:,1] = self.scalerEv.transform(self.error[:,1].reshape(-1, 1)).flatten()
-    
+            scaler = [self.scalerMf, self.scalerEp, self.scalerEv]
+            for i in range(len(self.output_reg[0,:])):
+                scaler[i].fit(self.output_reg[:,i].reshape(-1, 1))
+                self.output_reg_std[:,i] = scaler[i].transform(self.output_reg[:,i].reshape(-1, 1)).flatten()
+
+        self.error_std = self.output_reg_std[:,1:]
+        # print(np.shape(self.error))
+
         # elif Scaling['scaling'] == 2:
         #     self.scaler = Normalizer()
         #     transformer = Normalizer(0).fit
@@ -454,13 +481,18 @@ class Dataset:
             x2 = self.scaler.inverse_transform(x)
 
             if self.Log == True:
-                x2[:,0] = [10**(x2[i,0]) for i in range(len(x2[:,0]))]
                 x2[:,1] = [10**(x2[i,1]) for i in range(len(x2[:,1]))]
+                x2[:,2] = [10**(x2[i,2]) for i in range(len(x2[:,2]))]
                 
             if self.dataUnits == "AU":
-                x2[:,0] *= AL_BF.AU # Normalize with AU
-                x2[:,1] = x2[:,1] * AL_BF.AU / AL_BF.year2sec(1)
-            
+                x2[:,0] *= self.Spacecraft.m_dry
+                x2[:,1] *= AL_BF.AU # Normalize with AU
+                x2[:,2] = x2[:,2] * AL_BF.AU / AL_BF.year2sec(1)
+
+        elif typeR == 'Mf':
+            x2 = self.scalerMf.inverse_transform(x.reshape(-1,1)).flatten()
+            if self.dataUnits == "AU":
+                x2[:,0] *= self.Spacecraft.m_dry
 
         elif typeR == 'Ep':
             x2 = self.scalerEp.inverse_transform(x.reshape(-1,1)).flatten()
@@ -468,7 +500,6 @@ class Dataset:
                 x2 = np.array([10**(x2[i]) for i in range(len(x2))])
             if self.dataUnits == "AU":
                 x2 *= AL_BF.AU # Normalize with AU
-            
 
         elif typeR == 'Ev':
             x2 = self.scalerEv.inverse_transform(x.reshape(-1,1)).flatten()
@@ -477,7 +508,6 @@ class Dataset:
                 x2 = np.array([10**(x2[i]) for i in range(len(x2))])
             if self.dataUnits == "AU":
                 x2 = x2 * AL_BF.AU / AL_BF.year2sec(1)
-            
 
         elif typeR == 'I':
             x2 = self.scalerI.inverse_transform(x)
@@ -486,43 +516,43 @@ class Dataset:
         
 
     def convertLabels(self): # Labels are [Unfeasible feasible]
-        self.output_2d = np.zeros((len(self.output), 2))
-        for i in range(len(self.output)):
-            if self.output[i] == 0: # Non feasible
-                self.output_2d[i,:] = np.array([1,0])
+        self.output_class_2d = np.zeros((len(self.output_class), 2))
+        for i in range(len(self.output_class)):
+            if self.output_class[i] == 0: # Non feasible
+                self.output_class_2d[i,:] = np.array([1,0])
             else:
-                self.output_2d[i,:] = np.array([0,1])
+                self.output_class_2d[i,:] = np.array([0,1])
 
-    def equalizeclasses(self, en, error = False):
-        indexes = np.where(self.output == 1)[0]
-        indexes_un = np.arange(0, self.nsamples,1)
-        indexes_un = np.delete(indexes_un, indexes)
-        np.random.shuffle(indexes_un)
+    # def equalizeclasses(self, en, error = False): # Warning: TODO: not working now
+    #     indexes = np.where(self.output_class == 1)[0]
+    #     indexes_un = np.arange(0, self.nsamples,1)
+    #     indexes_un = np.delete(indexes_un, indexes)
+    #     np.random.shuffle(indexes_un)
 
-        self.input_data_std_e = np.zeros((2*len(indexes) + en, len(self.input_data[0,:])))
-        self.output_e = np.zeros(2*len(indexes) + en)
+    #     self.input_data_std_e = np.zeros((2*len(indexes) + en, len(self.input_data[0,:])))
+    #     _class_e = np.zeros(2*len(indexes) + en)
         
-        if error == True:
-            self.error_std_e = np.zeros((2*len(indexes) + en, len(self.error[0,:])))
-        for i in range(len(indexes)):
-            self.input_data_std_e[2*i,:] = self.input_data_std[indexes[i],:]
-            self.output_e[2*i] = self.output[indexes[i]]
+    #     if error == True:
+    #         self.error_std_e = np.zeros((2*len(indexes) + en, len(self.error[0,:])))
+    #     for i in range(len(indexes)):
+    #         self.input_data_std_e[2*i,:] = self.input_data_std[indexes[i],:]
+    #         self.output_class_e[2*i] = self.output_class[indexes[i]]
             
-            if error == True:
-                self.error_std_e[2*i,:] = self.error_std[indexes[i],:]
-                self.error_std_e[2*i+1,:] = self.error_std[indexes_un[i],:]
+    #         if error == True:
+    #             self.error_std_e[2*i,:] = self.error_std[indexes[i],:]
+    #             self.error_std_e[2*i+1,:] = self.error_std[indexes_un[i],:]
             
-            self.input_data_std_e[2*i+1,:] = self.input_data_std[indexes_un[i],:]
-            self.output_e[2*i+1] = self.output[indexes_un[i]]
+    #         self.input_data_std_e[2*i+1,:] = self.input_data_std[indexes_un[i],:]
+    #         self.output_class_e[2*i+1] = self.output_class[indexes_un[i]]
             
 
-        # fill with unfeasible data
-        self.input_data_std_e[2*len(indexes)+2:,:] = self.input_data_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
-        self.output_e[2*len(indexes)+2:] = self.output[indexes_un[len(indexes)+2:len(indexes)+en]]
-        if error == True:
-            self.error_std_e[2*len(indexes)+2:,:] = self.error_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
+        # # fill with unfeasible data
+        # self.input_data_std_e[2*len(indexes)+2:,:] = self.input_data_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
+        # self.output_class_e[2*len(indexes)+2:] = self.output_class[indexes_un[len(indexes)+2:len(indexes)+en]]
+        # if error == True:
+        #     self.error_std_e[2*len(indexes)+2:,:] = self.error_std[indexes_un[len(indexes)+2:len(indexes)+en],:]
 
-        self.n_examples = 2*len(indexes)
+        # self.n_examples = 2*len(indexes)
 
 def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
                             inputsplotbar = False, inputsplotbarFeas = False):
@@ -579,14 +609,15 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     labels_feas = feasible_txt.columns.values
 
     database = np.loadtxt(train_file_path, skiprows = 1)
-    Ep = [np.linalg.norm(database[i,1:4]) for i in range(len(database[:,0]))]
-    Ev = [np.linalg.norm(database[i,4:7]) for i in range(len(database[:,0]))]
+    Ep = [np.linalg.norm(database[i,2:5]) for i in range(len(database[:,0]))]
+    Ev = [np.linalg.norm(database[i,5:8]) for i in range(len(database[:,0]))]
+    
+    Err = np.column_stack((Ep, Ev))
+    database_2 = np.column_stack((database[i,1], Err))
+    database_2 = np.column_stack((database_2, database[:,8:]))
 
-    database_2 = np.column_stack((Ep, Ev))
-    database_2 = np.column_stack((database_2, database[:,7:]))
-
-    labels =['Ep', 'Ev']
-    labels.extend(labels_feas[7:])
+    labels =['Mf','Ep', 'Ev']
+    labels.extend(labels_feas[8:])
 
     df = pd.DataFrame(data=database_2, columns =  labels)
 
@@ -625,8 +656,8 @@ def LoadNumpy(train_file_path, save_file_path, \
     if plotDistribution == True:
         dataset_np.plotDistributionOfFeasible()
 
-    # if plotErrors == True:
-    #     dataset_np.statisticsError(save_file_path)
+    if plotErrors == True:
+        dataset_np.statisticsError(save_file_path)
     
     if standardizationType == 0: # common
         dataset_np.commonStandardization(scaling, dataUnits, Log)
@@ -645,7 +676,6 @@ def LoadNumpy(train_file_path, save_file_path, \
             
     if plotErrors == True:
         dataset_np.plotDistributionOfErrors(save_file_path)
-
     
     # dataset_np.convertLabels()
 
@@ -654,9 +684,9 @@ def LoadNumpy(train_file_path, save_file_path, \
 
 def splitData_class( dataset_np):
     if equalize == True:
-        train_x, train_y = dataset_np.input_data_std_e, dataset_np.output_e
+        train_x, train_y = dataset_np.input_data_std_e, dataset_np.output_class_e
     else:
-        train_x, train_y = dataset_np.input_data_std, dataset_np.output
+        train_x, train_y = dataset_np.input_data_std, dataset_np.output_class
 
     train_cnt = floor(train_x.shape[0] * ANN['Training']['train_size'])
     x_train = train_x[0:train_cnt]
@@ -672,9 +702,9 @@ def splitData_reg(dataset_np, samples = False):
         samples: takes a certain number of samples instead of the complete file
     """
     if dataset_np.equalize == True:
-        train_x, train_y = dataset_np.input_data_std_e, dataset_np.error_std_e
+        train_x, train_y = dataset_np.input_data_std_e, dataset_np.output_reg_std_e
     else:
-        train_x, train_y = dataset_np.input_data_std, dataset_np.error_std
+        train_x, train_y = dataset_np.input_data_std, dataset_np.output_reg_std
 
     if samples != False:
         train_x = train_x[0:samples,:]
@@ -692,13 +722,13 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/Organized/deltakeplerian/"
-    file_path = [base + 'Random.txt', base +'Random_opt_5.txt', \
-                base +'Random_opt_2.txt',\
-                base +'Lambert.txt', base +'Lambert_opt.txt']
-    # file_path = [base + 'Random.txt', base +'Random_opt.txt']
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
+    # file_path = [base + 'Random.txt']
+    file_path = [base + 'Random_eval.txt', base +'Random.txt',\
+                base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
     
-    # Join files together into 1
+    # file_path_together = base + 'Random.txt'
+    # # Join files together into 1
     file_path_together = base +'Together.txt'
     join_files(file_path, file_path_together)
 

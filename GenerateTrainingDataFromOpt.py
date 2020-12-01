@@ -2,6 +2,7 @@ import numpy as np
 import pykep as pk
 import time
 from pyDOE import *
+import scipy.optimize as spy
 
 from FitnessFunction_normalized import Fitness
 from AstroLibraries import AstroLib_Trajectories as AL_TR
@@ -19,20 +20,23 @@ SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables
 opt_config = CONFIG.OPT_config()
 MBH = opt_config.MBH_generateDatabase
 
-def createFile(typeinputs, creationMethod, evaluate, optimize, iterations, appendToFile):
-    fileName = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod + '.txt'
-    fileName_opt = "./databaseANN/Organized/" + typeinputs + "/" +creationMethod +'_opt_' + str(iterations) + '.txt'
+Dataset_c = CONFIG.Dataset()
+Dataset_conf = Dataset_c.Dataset_config
+
+def createFile(typeinputs, creationMethod, appendToFile, evaluate):
+    fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod + '_eval.txt'
+    fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod +'.txt'
 
     if typeinputs == 'deltakeplerian':
-        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
+        Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
             "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
             "Delta_omega", "Delta_theta"]
     elif typeinputs == "cartesian":
-        Heading = [ "Label", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
+        Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "Delta_x", \
             "Delta_y", "Delta_z", "Delta_vx",\
             "Delta_vy", "Delta_vz"]
 
-    if evaluate == True and appendToFile == False:
+    if appendToFile == False:
         with open(fileName, "w") as myfile:
             for i in Heading:
                 if i != Heading[-1]:
@@ -42,7 +46,7 @@ def createFile(typeinputs, creationMethod, evaluate, optimize, iterations, appen
             myfile.write("\n")
         myfile.close()
 
-    if optimize == True and appendToFile == False:
+    if appendToFile == False:
         with open(fileName_opt, "w") as myfile:
             for i in Heading:
                 if i != Heading[-1]:
@@ -145,24 +149,20 @@ if __name__ == "__main__":
     
     Fit = Fitness(Nimp = SF.Nimp) # Load fitness class
     def f(DecV):
-        return Fit.calculateFeasibility(DecV)
+        return Fit.calculateFitness(DecV)
 
     ######################################
     # CHOICE OF GENERATION OF THE DATABASE
     ######################################
     # TO MODIFY
-    typeinputs = "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
-    creationMethod = 'Random' # 'Exposin', 'Lambert', 'Random
-    lhypercube = True # Use latin hypercube for initial distribution of samples. 
-                        #  only if creation method is Random or optimized
-    evaluate = False # save file with evaluated data
-    optimize = True # save file with optimization data
-    iterations =  MBH['niter_total'] # iterations of the optimization algorithm  
-    samples_rand = 500 # samples with random mor hypercube initialization
-    samples_L = 2000 # samples for Lambert and Exposin
-    samples_opt = 500 # number of samples to be optimized
-
-    appendToFile = True # append instead of creating a new file. To increase the number of values
+    typeinputs = Dataset_conf['Creation']['typeinputs'] # cartesian or deltakeplerian deltakeplerian_planet
+    creationMethod = Dataset_conf['Creation']['creationMethod'] # 'Exposin', 'Lambert', 'Random
+    lhypercube = Dataset_conf['Creation']['lhypercube'] # Use latin hypercube for initial distribution of samples. 
+                        #  only if creation method is Random or optimized 
+    evaluate = Dataset_conf['Creation']['evaluate']
+    samples_rand = Dataset_conf['Creation']['samples_rand'] # samples with random mor hypercube initialization
+    samples_L = Dataset_conf['Creation']['samples_L'] # samples for Lambert and Exposin
+    appendToFile = Dataset_conf['Creation']['appendToFile'] # append instead of creating a new file. To increase the number of values
 
 
     # sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt = \
-            createFile(typeinputs, creationMethod, evaluate, optimize, iterations, appendToFile)
+            createFile(typeinputs, creationMethod, appendToFile, evaluate)
     
     ####################
     # DATABASE CREATION
@@ -291,25 +291,19 @@ if __name__ == "__main__":
         sample_inputs[i,4] = AL_BF.convertRange(sample_inputs[i,4], 'rad', 0, 2*np.pi)
         sample_inputs[i,5] = AL_BF.convertRange(sample_inputs[i,5], 'rad', 0, 2*np.pi)
 
-
+    
     ####################
-    # EVALUATION OF EACH SAMPLE
-    ####################
+    # EVALUATE
     if evaluate == True:
         for i_sample in range(len(sample_inputs)):
             print("-------------------------------")
             print("Sample %i"%i_sample)
             print("-------------------------------")
             sample = sample_inputs[i_sample, :]
-            fvalue = Fit.calculateFeasibility(sample, printValue = False)
+            fvalue = Fit.calculateFitness(sample, printValue = False)
             Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
             
-            # If we want the different inputs for the same dec v dataset:
-            # WARNING: for the last two the data appends! eliminate data beforehand
-            # Fit.savetoFile('cartesian', feasibilityFileName) # saves the current values
-            # Fit.savetoFile('deltakeplerian', "./databaseANN/Organized/deltakeplerian/" +creationMethod + '.txt') # saves the current values
-            # Fit.savetoFile('deltakeplerian_planet', "./databaseANN/Organized/deltakeplerian_planet/" +creationMethod + '.txt')
-            # Fit.printResult()
+
 
     ####################
     # OPTIMIZE
@@ -318,27 +312,40 @@ if __name__ == "__main__":
     # Only the initial and the optimized trajectokry will be saved
     ####################
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
-    
-    if optimize == True:
-        for i_sample in range(min(samples_opt, len(sample_inputs)) ):
-            print("-------------------------------")
-            print("Sample %i"%i_sample)
-            print("-------------------------------")
-            sample = sample_inputs[i_sample, :]
-            fvalue = Fit.calculateFeasibility(sample, printValue = True)
-            # Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
-            # Not needed as saved before        
-            Fit.printResult()
-            
-            # optimize starting from sample
-            xmin, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
-                    niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
-                    niter_success = MBH['niter_success'], bnds = SF.bnds, \
-                    jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
-                    tolGlobal = MBH['tolGlobal'])
-            
-            fvalue = f(xmin)
-            print(xmin)
+
+    for i_sample in range(len(sample_inputs) ):
+        print("-------------------------------")
+        print("Sample %i"%i_sample)
+        print("-------------------------------")
+        sample = sample_inputs[i_sample, :]
+        fvalue = Fit.calculateFitness(sample)
+        # Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
+        # Not needed as saved before        
+        Fit.printResult()
+        
+        # optimize starting from sample
+        if creationMethod == 'Random_MBH':
+            solutionLocal, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
+                niter = MBH['niter_total'], niter_local = MBH['niter_local'], \
+                niter_success = MBH['niter_success'], bnds = SF.bnds, \
+                jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
+                tolGlobal = MBH['tolGlobal'])
+            fvalue = f(solutionLocal)
             Fit.savetoFile(typeinputs, feasibilityFileName_opt)
             Fit.printResult()
+            
+        else:
+            solutionLocal = spy.minimize(f, sample, method = 'SLSQP', \
+                tol = MBH['tolLocal'], bounds = SF.bnds, options = {'maxiter': MBH['niter_local']} )
+
         
+            fvalue = f(solutionLocal.x)
+            feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds)
+            if feasible == True: 
+                Fit.savetoFile(typeinputs, feasibilityFileName_opt)
+                Fit.printResult()
+            else:
+                print("Out of bounds")
+        print(fvalue)
+        
+    
