@@ -297,7 +297,7 @@ def EvolAlgorithm_cons(f, bounds, *args, **kwargs):
         #Check convergence        
         if  minVal >= lastMin: 
             noImprove += 1
-#         elif abs(lastMin-minVal)/lastMin > tol:
+    #  elif abs(lastMin-minVal)/lastMin > tol:
 #             noImprove += 1
         else:
 #             print('here')
@@ -340,7 +340,6 @@ def randomJump(f,x,bounds,*args, **kwargs):
     return Sol[0,:]
 
 
-# In[2]:
 
 
 def coordinateSearch(f,x,bounds,h,*args, **kwargs):
@@ -405,7 +404,7 @@ def coordinateSearch(f,x,bounds,h,*args, **kwargs):
         counter += 1
         print("Iteration", counter)
         step *= percentage
-#         step = abs(Prev_Min-Min)/Prev_Min * step
+    # step = abs(Prev_Min-Min)/Prev_Min * step
         
         Prev_Min = Min        
         
@@ -416,8 +415,6 @@ def coordinateSearch(f,x,bounds,h,*args, **kwargs):
     print('Min',Min)
     return x0, Min
 
-
-# In[ ]:
 
 
 def coordinateSearch_plot(f,x,bounds,h,*args, **kwargs):
@@ -490,8 +487,6 @@ def coordinateSearch_plot(f,x,bounds,h,*args, **kwargs):
     print('Min',Min)
     return x0, Min, Best
 
-
-# In[13]:
 
 
 def lineSearch(alpha,args):
@@ -704,6 +699,98 @@ def MonotonicBasinHopping(f, x, take_step, *args, **kwargs):
         print("iter", n_itercounter)
         print("Current min vs best one", currentMin, bestMin)
         print_fun(f, x, accepted)
+
+    # Print solution 
+    # print_sol(Best, bestMin, n_itercounter, niter_success)
+    return Best, bestMin
+        
+
+
+def seqEval(f, x):
+    """
+    Evaluate each row of x with f and return vector with result
+    """
+    sol = np.zeros(len(x[:,0]))
+    for i in range(len(x[:,0])):
+        sol[i] = f(x[i,:])
+    return sol
+
+def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
+    """
+    Step for jump is small, as minimum cluster together.
+    Jump from current min until n_no improve reaches the lim, then the jump is random again.
+    """
+
+    f_opt = kwargs.get('f_opt', None) # function to optimze locally
+    nind = kwargs.get('nind', 100)
+    niter = kwargs.get('niter', 100)
+    niter_success = kwargs.get('niter_success', 50)
+    bnds = kwargs.get('bnds', None)
+    jumpMagnitude_default =  kwargs.get('jumpMagnitude', 0.1) # Small jumps to search around the minimum
+    tolGlobal = kwargs.get('tolGobal', 1e-5)
+    
+    n_itercounter = 1
+    n_noimprove = np.zeros((nind))
+
+    Best = x
+    bestMin =  seqEval(f, x)
+    previousMin = seqEval(f, x)
+    jumpMagnitude = np.ones((nind)) * jumpMagnitude_default
+    accepted = np.zeros((nind))
+
+    while n_itercounter < niter:
+        n_itercounter += 1
+        
+        # Change decision vector to find one within the bounds
+        x_test = np.zeros(np.shape(x))
+        for ind in range(nind):
+            feasible = False
+            while feasible == False and bnds != None:
+                x_test[ind] = take_step.call(x[ind], jumpMagnitude)
+                feasible = check_feasibility(x_test[ind], bnds)
+
+        # Local optimization 
+        currentMin = f_opt(x_test)
+
+        for ind in range(nind):
+            feasible = check_feasibility(currentMin[ind], bnds) 
+
+            # Check te current point from which to jump: after doing a long jump or
+            # when the solution is improved        
+            if jumpMagnitude[ind] == 1 or currentMin[ind] < previousMin[ind]:
+                x = x_test[ind]
+                
+            # Check improvement      
+            if currentMin[ind] < bestMin[ind] and feasible == True: # Improvement            
+                Best[ind] = x
+                bestMin = currentMin
+                accepted[ind] = True
+
+                # If the improvement is not large, assume it is not improvement
+                if (previousMin[ind] - currentMin[ind] ) < tolGlobal: 
+                    n_noimprove[ind] += 1
+                else:
+                    n_noimprove[ind] = 0
+                jumpMagnitude[ind] = jumpMagnitude_default
+
+            elif n_noimprove[ind] == niter_success: # Not much improvement
+                accepted[ind] = False
+                jumpMagnitude[ind] = 1
+                n_noimprove[ind] = 0 # Restart count so that it performs jumps around a point
+            else:
+                accepted[ind] = False
+                jumpMagnitude[ind] = jumpMagnitude_default
+                n_noimprove[ind] += 1        
+
+            previousMin[ind] = currentMin[ind]
+
+        # Save results every 5 iter
+        if n_itercounter % 20 == 0:
+            AL_BF.writeData(Best, 'w', 'SolutionMBH_batch.txt')
+        
+        print("iter", n_itercounter)
+        print("Current min vs best one", currentMin, bestMin)
+        print_fun(min(f), np.count_nonzero(accepted, 1))
 
     # Print solution 
     # print_sol(Best, bestMin, n_itercounter, niter_success)

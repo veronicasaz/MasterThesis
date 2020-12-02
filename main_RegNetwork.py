@@ -6,6 +6,7 @@ import TrainingDataKeras as TD
 
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_OPT as AL_OPT
+import GenerateTrainingDataFromOpt as GTD
 
 import LoadConfigFiles as CONFIG
 
@@ -22,12 +23,19 @@ FIT = FIT_C.Fit_config
 Fitness = Fitness(Nimp = SF.Nimp)
 
 # Database for inverse standardization
-train_file_path = "./databaseANN/ErrorIncluded/trainingData_Feas_big.txt"
+train_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/random.txt"
 dataset_np = TD.LoadNumpy(train_file_path)
 
 # ANN
-ANN = ANN_reg(dataset_np)
-ANN.load_model_fromFile()
+dataset_np = TD.LoadNumpy(train_file_path, base, error= 'vector',\
+            equalize = False, \
+            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            labelType = False,
+            plotDistribution=False, plotErrors=False)
+    
+traindata, testdata = TD.splitData_reg(dataset_np)
+
 
 # optimization
 opt_config = CONFIG.OPT_config()
@@ -38,11 +46,6 @@ MBH = opt.config.MBH
 # Calculate fitness
 ########################
 def f(DecV):
-    # Mass
-    mass = np.zeros((EA['ind']))
-    for i in range(EA['ind']):
-        mass[i] = Fitness.calculateMass(DecV[i,:])
-
     # Error
     t0_reg = time.time()
     # Transform inputs
@@ -59,15 +62,16 @@ def f(DecV):
     print('Time network eval', tf_reg)
 
     # Fitness Function
-    fc1 = feas[:,0] / AL_BF.AU # Normalize with AU
-    fc2 = feas[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+    value = np.zeros((ind,1))
+    for i in range(ind):
+        value[i] = Fitness.objFunction(feas[:,1:], feas[:,0])
+    return value 
 
-    print(feas[0:5,:])
-    print(fc1[0:5], fc2[0:5], mass[0:5])
-
-    value = fc1 * FIT['FEASIB']['factor_pos'] + \
-            fc2 * FIT['FEASIB']['factor_vel'] + \
-            mass * FIT['FEASIB']['factor_mass']
+def f_notANN(DecV):
+    ind = len(DecV[:,0])
+    value = np.zeros((ind,1))
+    for i in range(ind):
+        value[i] = Fitness.calculateFitness(DecV)
     return value 
 
 def EA(): # Evolutionary Algorithm
@@ -114,6 +118,34 @@ def MBH_self():
     print("Min4", fmin_4, 'time', t)
     AL_BF.writeData(fmin_4, 'w', 'SolutionMBH_self.txt')
     Fitness.calculateFitness(fmin_4, plot = True)
+    Fitness.printResult()
+
+def MBH_batch():
+    mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
+
+    DecV = np.zeros(len(SF.bnds))
+    DecV = GTD.latinhypercube(len(SF.bnds), MBH['nind']) #initialize with latin hypercube
+
+
+    start_time = time.time()
+    fmin_4, Best = AL_OPT.MonotonicBasinHopping_batch(f_notANN, DecV, mytakestep,\
+                f_opt = f, 
+                nind = MBH['nind'], 
+                niter = MBH['niter_total'], 
+                niter_sucess = MBH['niter_success'], 
+                bnds = SF.bnds, \
+                jumpMagnitude = MBH['jumpMagnitude'], ,\
+                tolGlobal = MBH['tolGlobal'], )
+    
+    t = (time.time() - start_time) 
+    print("Min4", min(Best), 'time', t)
+    best_input = fmin_4[np.where(Best == min(Best))[0] ]
+    AL_BF.writeData(best_input, 'w', 'SolutionMBH_batch.txt')
+
+    # Locally optimize best to obtain actual inputs of that one
+    solutionLocal = spy.minimize(f, best_input, method = 'SLSQP', \
+                tol = 0.01, bounds = SF.bnds)
+    Fitness.calculateFitness(solutionLocal.x, plot = True)
     Fitness.printResult()
 
 def evaluateFeasibility():
@@ -171,8 +203,9 @@ def propagateOne():
     Fitness.calculateFitness(DecV_I, plot = True)
 
 if __name__ == "__main__":
-    EA()
+    # EA()
     # MBH_self()
+    MBH_batch()
     # propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations
 
