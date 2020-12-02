@@ -470,6 +470,10 @@ class Dataset:
         #     self.scaler = Normalizer()
         #     transformer = Normalizer(0).fit
         
+    def standardize_withoutFitting(self, x, typeR):
+        if typeR == 'I':
+            x2 = self.scaler_I.transform(x)
+        return x2
 
     def inverseStandardization(self, x, typeR='E'):
         """
@@ -480,10 +484,9 @@ class Dataset:
         """
         if typeR == 'E':
             x2 = self.scaler.inverse_transform(x)
-
-            if self.Log == True:
-                x2[:,1] = [10**(x2[i,1]) for i in range(len(x2[:,1]))]
-                x2[:,2] = [10**(x2[i,2]) for i in range(len(x2[:,2]))]
+            if self.Log == True: 
+                x2[:,1] = [10.0**(x2[i,1]) for i in range(len(x2[:,1]))]
+                x2[:,2] = [10.0**(x2[i,2]) for i in range(len(x2[:,2]))]
                 
             if self.dataUnits == "AU":
                 x2[:,1] *= AL_BF.AU # Normalize with AU

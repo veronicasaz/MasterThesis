@@ -746,7 +746,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
         for ind in range(nind):
             feasible = False
             while feasible == False and bnds != None:
-                x_test[ind] = take_step.call(x[ind], jumpMagnitude)
+                x_test[ind] = take_step.call(x[ind], jumpMagnitude[ind])
                 feasible = check_feasibility(x_test[ind], bnds)
 
         # Local optimization 
@@ -758,11 +758,11 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
             # Check te current point from which to jump: after doing a long jump or
             # when the solution is improved        
             if jumpMagnitude[ind] == 1 or currentMin[ind] < previousMin[ind]:
-                x = x_test[ind]
+                x[ind] = x_test[ind]
                 
             # Check improvement      
             if currentMin[ind] < bestMin[ind] and feasible == True: # Improvement            
-                Best[ind] = x
+                Best[ind] = x[ind]
                 bestMin = currentMin
                 accepted[ind] = True
 
@@ -790,7 +790,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
         
         print("iter", n_itercounter)
         print("Current min vs best one", currentMin, bestMin)
-        print_fun(min(f), np.count_nonzero(accepted, 1))
+        print_fun(min(currentMin), min(bestMin), np.count_nonzero(accepted == True))
 
     # Print solution 
     # print_sol(Best, bestMin, n_itercounter, niter_success)

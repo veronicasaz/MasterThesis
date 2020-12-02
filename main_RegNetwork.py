@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.optimize as spy
 
 from FitnessFunction_normalized import Fitness
 from ANN_reg import ANN_reg
@@ -7,6 +8,7 @@ import TrainingDataKeras as TD
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_OPT as AL_OPT
 import GenerateTrainingDataFromOpt as GTD
+import ANN_reg as AR
 
 import LoadConfigFiles as CONFIG
 
@@ -15,32 +17,37 @@ import time
 ########################
 # Initial settings
 ########################
-# Sims Flanagan
 SF = CONFIG.SimsFlan_config() # Load Sims-Flanagan config variables 
 FIT_C = CONFIG.Fitness_config()
 FIT = FIT_C.Fit_config
 
 Fitness = Fitness(Nimp = SF.Nimp)
 
-# Database for inverse standardization
-train_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/random.txt"
-dataset_np = TD.LoadNumpy(train_file_path)
+Dataset_conf = CONFIG.Dataset()
+Scaling = Dataset_conf.Dataset_config['Scaling']
 
-# ANN
-dataset_np = TD.LoadNumpy(train_file_path, base, error= 'vector',\
-            equalize = False, \
+opt_config = CONFIG.OPT_config()
+EA = opt_config.EA
+MBH = opt_config.MBH
+MBH_batch = opt_config.MBH_batch
+
+
+# Database for inverse standardization
+train_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/Random.txt"
+save_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+
+dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            labelType = False,
-            plotDistribution=False, plotErrors=False)
+            plotDistribution=False, plotErrors=False) # It is necessary to fit the data for the rescaling
     
 traindata, testdata = TD.splitData_reg(dataset_np)
+ANN = AR.ANN_reg(dataset_np)
+ANN.get_traintestdata(traindata, testdata)
 
 
 # optimization
-opt_config = CONFIG.OPT_config()
-EA = opt_config.EA
-MBH = opt.config.MBH
+
 
 ########################
 # Calculate fitness
@@ -52,11 +59,13 @@ def f(DecV):
     ind = len(DecV[:,0])
     input_Vector = np.zeros((ind,8))
     for i in range(ind):
-        input_Vector[i,:] = Fitness.DecV2inputV(newDecV = DecV[i,:])
+        input_Vector[i,:] = Fitness.DecV2inputV( 'deltakeplerian', newDecV = DecV[i,:])
     
+    # Standardize input vector
+    input_Vector_std = dataset_np.standardize_withoutFitting(input_Vector, 'I')
     # Feasibility 
     feas = ANN.predict(fromFile = True, 
-                        testfile = input_Vector,
+                        testfile = input_Vector_std,
                         rescale = True)
     tf_reg = (time.time() - t0_reg) 
     print('Time network eval', tf_reg)
@@ -64,14 +73,22 @@ def f(DecV):
     # Fitness Function
     value = np.zeros((ind,1))
     for i in range(ind):
-        value[i] = Fitness.objFunction(feas[:,1:], feas[:,0])
+        value[i] = Fitness.objFunction(feas[i,1:], feas[i,0])
     return value 
 
 def f_notANN(DecV):
-    ind = len(DecV[:,0])
-    value = np.zeros((ind,1))
-    for i in range(ind):
-        value[i] = Fitness.calculateFitness(DecV)
+    """
+    pass 1 dec v, not an array
+    """
+
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    value = Fitness.calculateFitness(DecV)
+
+    # ind = len(DecV[:,0])
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    #     value[i] = Fitness.calculateFitness(DecV[i])
     return value 
 
 def EA(): # Evolutionary Algorithm
@@ -120,22 +137,22 @@ def MBH_self():
     Fitness.calculateFitness(fmin_4, plot = True)
     Fitness.printResult()
 
-def MBH_batch():
+def MBH_batch_f():
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
-    DecV = GTD.latinhypercube(len(SF.bnds), MBH['nind']) #initialize with latin hypercube
+    DecV = GTD.latinhypercube(len(SF.bnds), MBH_batch['nind']) #initialize with latin hypercube
 
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping_batch(f_notANN, DecV, mytakestep,\
                 f_opt = f, 
-                nind = MBH['nind'], 
-                niter = MBH['niter_total'], 
-                niter_sucess = MBH['niter_success'], 
+                nind = MBH_batch['nind'], 
+                niter = MBH_batch['niter_total'], 
+                niter_sucess = MBH_batch['niter_success'], \
                 bnds = SF.bnds, \
-                jumpMagnitude = MBH['jumpMagnitude'], ,\
-                tolGlobal = MBH['tolGlobal'], )
+                jumpMagnitude = MBH_batch['jumpMagnitude'],\
+                tolGlobal = MBH_batch['tolGlobal'], )
     
     t = (time.time() - start_time) 
     print("Min4", min(Best), 'time', t)
@@ -143,7 +160,7 @@ def MBH_batch():
     AL_BF.writeData(best_input, 'w', 'SolutionMBH_batch.txt')
 
     # Locally optimize best to obtain actual inputs of that one
-    solutionLocal = spy.minimize(f, best_input, method = 'SLSQP', \
+    solutionLocal = spy.minimize(f_notANN, best_input, method = 'SLSQP', \
                 tol = 0.01, bounds = SF.bnds)
     Fitness.calculateFitness(solutionLocal.x, plot = True)
     Fitness.printResult()
@@ -205,7 +222,7 @@ def propagateOne():
 if __name__ == "__main__":
     # EA()
     # MBH_self()
-    MBH_batch()
+    MBH_batch_f()
     # propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations
 

@@ -176,41 +176,44 @@ class ANN_reg:
 
         if type(testfile) == bool:
             pred_test = self.model.predict(self.testdata[0])
+        else:
+            pred_test = self.model.predict(testfile)
 
-            if rescale == False: # No inverse standarization possible
+        if rescale == False and type(testfile) == bool: # No inverse standarization possible
 
-                self.Output_pred = np.zeros((len(pred_test),3))
-                for i in range(len(pred_test)):
-                    print('i', i)
-                    print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
-                    print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
-                    print("------------------------")
-                    self.Output_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
-                    self.Output_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
-                    self.Output_pred[i,2] = abs( pred_test[i,2] - self.testdata[1][i,2] )
+            self.Output_pred = np.zeros((len(pred_test),3))
+            for i in range(len(pred_test)):
+                print('i', i)
+                print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
+                print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
+                print("------------------------")
+                self.Output_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
+                self.Output_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
+                self.Output_pred[i,2] = abs( pred_test[i,2] - self.testdata[1][i,2] )
 
-            else:
-                if Scaling['type_stand'] == 0:
-                    predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
-                    true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-                elif Scaling['type_stand'] == 1:
-                    predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
-                    true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
-                elif Scaling['type_stand'] == 2:
-                    predictions_unscaled = np.zeros(np.shape(self.testdata[1]))
-                    true_value = np.zeros(np.shape(self.testdata[1]))
+        else:
+            if Scaling['type_stand'] == 0:
+                predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
+                true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
+            elif Scaling['type_stand'] == 1:
+                predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
+                true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
+            elif Scaling['type_stand'] == 2:
+                predictions_unscaled = np.zeros(np.shape(self.testdata[1]))
+                true_value = np.zeros(np.shape(self.testdata[1]))
 
-                    #Mf
-                    predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Mf') #Obtain predictions in actual 
-                    true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Mf') #Obtain predictions in actual
-                    #Ep
-                    predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ep') #Obtain predictions in actual 
-                    true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ep') #Obtain predictions in actual
-                    #Ev
-                    predictions_unscaled[:,2] = self.dataset_np.inverseStandardization(pred_test[:,2], typeR='Ev') #Obtain predictions in actual 
-                    true_value[:,2] = self.dataset_np.inverseStandardization(self.testdata[1][:,2], typeR='Ev') #Obtain predictions in actual
+                #Mf
+                predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Mf') #Obtain predictions in actual 
+                true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Mf') #Obtain predictions in actual
+                #Ep
+                predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ep') #Obtain predictions in actual 
+                true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ep') #Obtain predictions in actual
+                #Ev
+                predictions_unscaled[:,2] = self.dataset_np.inverseStandardization(pred_test[:,2], typeR='Ev') #Obtain predictions in actual 
+                true_value[:,2] = self.dataset_np.inverseStandardization(self.testdata[1][:,2], typeR='Ev') #Obtain predictions in actual
 
 
+            if type(testfile) == bool:
                 self.Output_pred_unscale = np.zeros((len(pred_test),3)) 
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
@@ -220,12 +223,7 @@ class ANN_reg:
                     self.Output_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
                     self.Output_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
                     self.Output_pred_unscale[i,2] = abs( predictions_unscaled[i,2] - true_value[i,2 ])
-        else:
-            pred_test0 = self.model.predict(testfile)
-            if rescale == True: # inverse standarization 
-                pred_test = self.dataset_np.inverseStandardizationError(pred_test0) #Obtain predictions in actual
-            else:
-                pred_test = pred_test0
+    
         return pred_test
 
     def plotPredictions(self, std):

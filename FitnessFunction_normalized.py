@@ -114,6 +114,10 @@ class Fitness:
             # Standarize between 0 and 1:
             std = True
             if std == True:
+                if fc1 == 0: # Avoid overflows
+                    fc1 = 0.00000001
+                if fc2 == 0:
+                    fc2 = 0.00000001
                 fc1 = np.log10(fc1)
                 fc2 = np.log10(fc2)
                 # array = ['range_mass', 'range_pos', 'range_vel']
