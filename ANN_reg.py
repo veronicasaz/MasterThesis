@@ -290,7 +290,7 @@ if __name__ == "__main__":
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
     
     # Join files together into 1
     train_file_path = base +'Random.txt'
@@ -315,7 +315,6 @@ if __name__ == "__main__":
     perceptron.get_traintestdata(traindata, testdata)
     perceptron.training()
     perceptron.plotTraining()
-
 
     
     print("EVALUATE")

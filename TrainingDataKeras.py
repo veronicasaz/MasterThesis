@@ -292,7 +292,7 @@ class Dataset:
 
             if self.dataUnits == "AU":
                 limits_p = (1e-6,1e1)
-                limits_v = (1e-2,1e2)
+                limits_v = (1e-2,1e1)
 
                 ylabel_p = " (AU)"
                 ylabel_v = " (AU/year)"
@@ -372,8 +372,9 @@ class Dataset:
         if dataUnits == 'AU':
             self.error[:,0] /= AL_BF.AU # Normalize with AU
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
-            self.Spacecraft = AL_2BP.Spacecraft( )
-            self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
+        
+        self.Spacecraft = AL_2BP.Spacecraft( )
+        self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
 
         if Log == True: # Apply logarithm 
 
@@ -403,10 +404,10 @@ class Dataset:
             E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
             E[:,2] = np.array([10**(E[i,2]) for i in range(len(E[:,2]))])
         if self.dataUnits == "AU":
-            E[:,0] *= self.Spacecraft.m_dry
             E[:,1] *= AL_BF.AU # Normalize with AU
             E[:,2] = E[:,2] * AL_BF.AU / AL_BF.year2sec(1)
         
+        E[:,0] *= self.Spacecraft.m_dry
         return E, I
 
     def standardizationInputs(self, scaling):
@@ -429,8 +430,8 @@ class Dataset:
             self.error[:,0] /= AL_BF.AU # Normalize with AU
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
 
-            self.Spacecraft = AL_2BP.Spacecraft( )
-            self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
+        self.Spacecraft = AL_2BP.Spacecraft( )
+        self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
 
         if Log == True: # Apply logarithm 
             self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
@@ -485,14 +486,14 @@ class Dataset:
                 x2[:,2] = [10**(x2[i,2]) for i in range(len(x2[:,2]))]
                 
             if self.dataUnits == "AU":
-                x2[:,0] *= self.Spacecraft.m_dry
                 x2[:,1] *= AL_BF.AU # Normalize with AU
                 x2[:,2] = x2[:,2] * AL_BF.AU / AL_BF.year2sec(1)
 
+            x2[:,0] *= self.Spacecraft.m_dry
+
         elif typeR == 'Mf':
             x2 = self.scalerMf.inverse_transform(x.reshape(-1,1)).flatten()
-            if self.dataUnits == "AU":
-                x2[:,0] *= self.Spacecraft.m_dry
+            x2[:,0] *= self.Spacecraft.m_dry
 
         elif typeR == 'Ep':
             x2 = self.scalerEp.inverse_transform(x.reshape(-1,1)).flatten()
@@ -613,7 +614,7 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     Ev = [np.linalg.norm(database[i,5:8]) for i in range(len(database[:,0]))]
     
     Err = np.column_stack((Ep, Ev))
-    database_2 = np.column_stack((database[i,1], Err))
+    database_2 = np.column_stack((database[:,1], Err))
     database_2 = np.column_stack((database_2, database[:,8:]))
 
     labels =['Mf','Ep', 'Ev']
@@ -722,10 +723,10 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
     # file_path = [base + 'Random.txt']
-    file_path = [base + 'Random_eval.txt', base +'Random.txt',\
-                base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+    file_path = [base +'Random_eval.txt', base +'Random.txt']
+                # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
     
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
@@ -733,12 +734,13 @@ if __name__ == "__main__":
     join_files(file_path, file_path_together)
 
 
+
     # See inputs
-    # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= False)
+    # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)
     dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
             equalize =  False, \
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            plotDistribution=False, plotErrors=True, labelType = len(file_path))
+            plotDistribution=False, plotErrors=True, labelType = 2)
 
     # save_standard(dataset_np, base + 'Together_')

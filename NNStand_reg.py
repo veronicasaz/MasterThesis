@@ -27,8 +27,8 @@ import ANN_reg as AR
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
 
-Dataset = CONF.Dataset()
-Scaling = Dataset.Dataset_config['Scaling']
+Dataset_conf = CONF.Dataset()
+Scaling = Dataset_conf.Dataset_config['Scaling']
 
 def compareStandard(save_study_path, values_type_stand, values_scaling, repetitions):
     ###############################################
@@ -36,11 +36,11 @@ def compareStandard(save_study_path, values_type_stand, values_scaling, repetiti
     ###############################################
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
 
-    save_file_path =  "./databaseANN/Organized/cartesian/"
-    train_file_path = save_file_path + 'Together.txt'
+    save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/"
+    train_file_path = save_file_path + 'Random.txt'
 
-    mae = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
-    std_mae = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
+    loss = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
+    val_loss = np.zeros([len(values_type_stand), len(values_scaling), repetitions])
 
     # Evaluate the loss of each data scaling type
     for i in range(len(values_type_stand)):
@@ -50,28 +50,30 @@ def compareStandard(save_study_path, values_type_stand, values_scaling, repetiti
                 # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
                 dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
                         equalize = False, \
-                        standardizationType =values_type_stand[i], scaling = values_scaling[j] ,
-                        plotDistribution=False, plotErrors=False, labelType = 3)
+                        standardizationType =values_type_stand[i], scaling = values_scaling[j],\
+                        dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+                        plotDistribution=False, plotErrors=False, labelType = False)
                 
-                traindata, testdata = TD.splitData_reg(dataset_np, samples = 500)
+                traindata, testdata = TD.splitData_reg(dataset_np)
 
+                print(i,j,k)
                 ###############################################
                 # CREATE AND TRAIN CLASS NETWORK
                 ###############################################
                 perceptron = AR.ANN_reg(dataset_np)
                 perceptron.get_traintestdata(traindata, testdata)
-                mae[i, j, k], std_mae[i, j, k] = perceptron.training()
+                loss[i, j, k], val_loss[i, j, k] = perceptron.training()
 
     # Save to file
-    np.save(save_study_path+'mae', mae)
-    np.save(save_study_path+'_std_mae', std_mae)
+    np.save(save_study_path+'loss', loss)
+    np.save(save_study_path+'_val_loss', val_loss)
 
     return save_study_path
 
 def plot_compareStandard(save_study_path, values_type_stand, values_scaling, repetitions):
     # load file
-    mae = np.load(save_study_path+'mae' +'.npy')
-    mae = np.load(save_study_path+'_std_mae' +'.npy')
+    loss = np.load(save_study_path+'loss' +'.npy')
+    loss = np.load(save_study_path+'_val_loss' +'.npy')
 
     labels = ['MinMax Scaler', 'Standard Scaler']
     color = ['black', 'blue', 'green']
@@ -81,9 +83,9 @@ def plot_compareStandard(save_study_path, values_type_stand, values_scaling, rep
         ax = fig.add_subplot(1,2,plot+1)
         for k in range(repetitions):
             if k == 0:
-                plt.scatter(values_type_stand, mae[:, plot, k], marker = 'o', color = color[plot],  label = labels[values_scaling[plot]])
+                plt.scatter(values_type_stand, loss[:, plot, k], marker = 'o', color = color[plot],  label = labels[values_scaling[plot]])
             else:
-                plt.scatter(values_type_stand, mae[:, plot, k], marker = 'o', color = color[plot])
+                plt.scatter(values_type_stand, loss[:, plot, k], marker = 'o', color = color[plot])
 
         plt.ylabel("Loss (MSE)")
         plt.legend(loc = 'upper left')
@@ -96,10 +98,10 @@ def plot_compareStandard(save_study_path, values_type_stand, values_scaling, rep
     fig = plt.figure(figsize = (13,7))
     for plot in range(len(values_scaling)):
         ax = fig.add_subplot(1,2,plot+1)
-        mae_mean = [np.mean(mae[i, plot, :]) for i in range(len(values_type_stand))]
-        mae_std = [np.std(mae[i, plot, :]) for i in range(len(values_type_stand))]
+        loss_mean = [np.mean(loss[i, plot, :]) for i in range(len(values_type_stand))]
+        loss_std = [np.std(loss[i, plot, :]) for i in range(len(values_type_stand))]
         for i in range(len(values_type_stand)):
-            plt.errorbar(values_type_stand[i], mae_mean[i], mae_std[i], marker = 'o', color = color[plot])
+            plt.errorbar(values_type_stand[i], loss_mean[i], loss_std[i], marker = 'o', color = color[plot])
         plt.title(labels[plot])
         plt.ylabel("Loss (MSE)")
         # plt.legend(loc = 'upper left')
@@ -110,11 +112,11 @@ def plot_compareStandard(save_study_path, values_type_stand, values_scaling, rep
     plt.show()
 
 def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
-    mae = np.zeros([len(typeInputs), repetitions])
-    std_mae = np.zeros([len(typeInputs),  repetitions])
+    loss = np.zeros([len(typeInputs), repetitions])
+    val_loss = np.zeros([len(typeInputs),  repetitions])
 
     for i in range(len(typeInputs)):
-        save_file_path =  "./databaseANN/Organized/" + typeInputs[i] +"/"
+        save_file_path =  "./databaseANN/DatabaseOptimized/"  + typeInputs[i] +"/"
         train_file_path = save_file_path + 'Random.txt'
 
         # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
@@ -123,6 +125,7 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
             dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
                     equalize = False, \
                     standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+                    dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
                     plotDistribution=False, plotErrors=False, labelType = 3)
             
             traindata, testdata = TD.splitData_reg(dataset_np, samples = 500)
@@ -132,31 +135,31 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
             ###############################################
             perceptron = AR.ANN_reg(dataset_np)
             perceptron.get_traintestdata(traindata, testdata)
-            mae[i, k], std_mae[i, k] = perceptron.training()
+            loss[i, k], val_loss[i, k] = perceptron.training()
 
             print("####################################################")
-            print(mae, i, k )
+            print(loss, i, k )
         
-    with open(save_study_path+"MAE.txt", "w") as myfile:
-        np.savetxt(myfile, mae)
+    with open(save_study_path+"loss.txt", "w") as myfile:
+        np.savetxt(myfile, loss)
     myfile.close()
-    with open(save_study_path+"STD_MAE.txt", "w") as myfile:
-        np.savetxt(myfile, std_mae)
+    with open(save_study_path+"val_loss.txt", "w") as myfile:
+        np.savetxt(myfile, val_loss)
     myfile.close()
 
     return save_study_path
 
 def plot_compareInputs(path, repetitions, typeInputs):
-    mae = np.loadtxt(path+"MAE.txt")
-    std_mae = np.loadtxt(path+"STD_MAE.txt")
+    loss = np.loadtxt(path+"loss.txt")
+    val_loss = np.loadtxt(path+"val_loss.txt")
 
     color = ['black', 'blue', 'green']
 
     for i in range(len(typeInputs)):
-        plt.plot( np.arange(0,repetitions, 1), mae[i, :], marker = 'o', color = color[i], label = typeInputs[i] )
+        plt.plot( np.arange(0,repetitions, 1), loss[i, :], marker = 'o', color = color[i], label = typeInputs[i] )
     
     plt.xticks(np.arange(0, repetitions, 1))
-    plt.title("Mean Average Error")
+    plt.title("Mean Squared Error for different types of inputs")
     plt.xlabel('Repetitions')
     plt.ylabel("Loss (MSE)")
     plt.legend()
@@ -164,6 +167,71 @@ def plot_compareInputs(path, repetitions, typeInputs):
     plt.tight_layout()
     plt.savefig(path+"comparison.png", dpi = 100)
     plt.show()
+
+def compareNumSamples(save_study_path, typeSamples, repetitions):
+    loss = np.zeros([len(typeSamples), repetitions])
+    val_loss = np.zeros([len(typeSamples),  repetitions])
+
+    
+    save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/" 
+    train_file_path = save_file_path + 'Random.txt'
+
+    # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
+
+    # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
+    dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
+            equalize = False, \
+            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            plotDistribution=False, plotErrors=False, labelType = False)
+    
+    traindata, testdata = TD.splitData_reg(dataset_np)
+    
+    traindata2 = [0,0]
+
+    for i in range(len(typeSamples)):   
+        for k in range(repetitions):
+            traindata2[0] = traindata[0][0:typeSamples[i], :] # select only the ones to study
+            traindata2[1] = traindata[1][0:typeSamples[i], :] # select only the ones to study
+            ###############################################
+            # CREATE AND TRAIN CLASS NETWORK
+            ###############################################
+            perceptron = AR.ANN_reg(dataset_np)
+            perceptron.get_traintestdata(traindata2, testdata)
+            loss[i, k], val_loss[i, k] = perceptron.training()
+
+            print("####################################################")
+            print(loss, i, k )
+        
+    with open(save_study_path+"loss.txt", "w") as myfile:
+        np.savetxt(myfile, loss)
+    myfile.close()
+    with open(save_study_path+"val_loss.txt", "w") as myfile:
+        np.savetxt(myfile, val_loss)
+    myfile.close()
+
+    return save_study_path
+
+def plot_compareNumSamples(path, typeSamples, repetitions):
+    loss = np.loadtxt(path+"loss.txt")
+    val_loss = np.loadtxt(path+"val_loss.txt")
+
+    color = ['black', 'blue', 'green', 'orange', 'yellow']
+
+    for i in range(len(typeSamples)):
+        plt.plot( np.arange(0,repetitions, 1), loss[i, :], marker = 'o', color = color[i], label = typeSamples[i] )
+    
+    plt.xticks(np.arange(0, repetitions, 1))
+    plt.title("Mean Squared Error for different number of samples")
+    plt.xlabel('Repetitions')
+    plt.ylabel("Loss (MSE)")
+    plt.legend()
+    plt.grid(alpha = 0.5)
+    plt.tight_layout()
+    plt.savefig(path+"comparison.png", dpi = 100)
+    plt.show()
+
+
 
 if __name__ == "__main__":
     # COMPARE STANDARDIZATION
@@ -179,5 +247,11 @@ if __name__ == "__main__":
     typeInputs = ['cartesian', 'deltakeplerian', 'deltakeplerian_planet']
     save_study_path =  "./Results/StudyInputs/"
     # compareInputs(repetitions, typeInputs, save_study_path)
-    plot_compareInputs(save_study_path, repetitions, typeInputs)
+    # plot_compareInputs(save_study_path, repetitions, typeInputs)
     
+    # COMPARE NUMBER SAMPLES: LEARNING CURVE
+    repetitions = 5
+    typeSamples = [100, 200, 300, 500]
+    save_study_path =  "./Results/StudyNSamples/"
+    # compareNumSamples(save_study_path, typeSamples, repetitions)
+    plot_compareNumSamples(save_study_path, typeSamples, repetitions)

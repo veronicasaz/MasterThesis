@@ -99,6 +99,8 @@ class Fitness:
         
         fc1 = np.linalg.norm(Error[0:3] / AL_BF.AU) # Normalize with AU
         fc2 = np.linalg.norm(Error[3:] / AL_BF.AU * AL_BF.year2sec(1))
+        # fc1 = np.linalg.norm(Error[0:3])
+        # fc2 = np.linalg.norm(Error[3:])
 
         # print('------------------------')
         # print(m_fuel, Error)
@@ -109,15 +111,13 @@ class Fitness:
         else:
             fc0 = m_fuel / self.Spacecraft.m_dry
 
-          
-
             # Standarize between 0 and 1:
             std = True
             if std == True:
                 fc1 = np.log10(fc1)
                 fc2 = np.log10(fc2)
-                array = ['range_mass', 'range_pos', 'range_vel']
-                array2 = [fc0, fc1, fc2]
+                # array = ['range_mass', 'range_pos', 'range_vel']
+                # array2 = [fc0, fc1, fc2]
                 # print(array2) 
             #     res = np.zeros(len(array))
             #     for i in range(len(array)):
