@@ -15,6 +15,7 @@ from math import floor, ceil
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_2BP as AL_2BP
 import LoadConfigFiles as CONF
+import FitnessFunction_normalized as FIT_f
 
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
@@ -26,6 +27,8 @@ FIT_C = CONF.Fitness_config()
 FIT = FIT_C.Fit_config
 
 SF = CONF.SimsFlan_config() # Load Sims-Flanagan config variables  
+
+fitness = FIT_f.Fitness()
 
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
@@ -115,15 +118,19 @@ def save_standard(dataset, save_file_path):
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \
-        error = 'vector', equalize = False, labelType = False):
+        error = 'vector', equalize = False, labelType = False, outputs='objFfunc'):
         """
         error: False-database doesnt contain error, vector: cartesian  components, norm: only norm given
         labelType: Number: the last column of the database is an integer indicating from which file it comes.  
                     False: not included 
+        outputs: objfunc gives one output with the result of the objective function.
+                 epevmf: gives three outputs, mass of fuel, error in position, error in velocity. 
+                 epev: gives two outputs, the error in position and the error in velocity
         """
         self.labelType = labelType
         self.errorType = error
         self.equalize = equalize
+        self.outputs_type = outputs
 
         # Load with numpy
         if type(dataset_preloaded) == bool:
@@ -151,22 +158,34 @@ class Dataset:
 
         self.nsamples = len(self.dataset[:,0])
         self.output_class = self.dataset[:,0]
-        self.output_reg = self.dataset[:,1]
 
         if self.errorType == 'vector':
             startinput = 8
             error_p = [np.linalg.norm(self.dataset[i, 2:5]) for i in range(self.nsamples)]
             error_v = [np.linalg.norm(self.dataset[i, 5:8]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
-            self.output_reg = np.column_stack((self.output_reg, self.error))
+            
         elif self.errorType == 'norm':
             startinput = 3
             error_p = self.dataset[:, 2]
             error_v = self.dataset[:, 3]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
-            self.output_reg = np.column_stack((self.output_reg, self.error))
         else:
             startinput = 1
+
+        
+        if self.outputs_type == 'objfunc':
+            self.output_reg = np.zeros( (self.nsamples, 1))
+            for i in range(self.nsamples):
+                self.output_reg[i] = fitness.objFunction(self.error[i,:], m_fuel = self.dataset[i,1])
+            self.n_outputs = 1
+
+        elif self.outputs_type == 'epevfm':
+            self.output_reg = np.column_stack((self.dataset[:,1], self.error))
+            self.n_outputs = 3
+        elif self.outputs_type == 'epev':
+            self.output_reg = np.column_stack((self.error))
+            self.n_outputs = 2
 
         if labelType == False:
             self.input_data = self.dataset[:,startinput:]
@@ -374,40 +393,54 @@ class Dataset:
             self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
         
         self.Spacecraft = AL_2BP.Spacecraft( )
-        self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
 
         if Log == True: # Apply logarithm 
-
             self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
-            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]            
+            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]  
 
-        self.output_reg[:,1:] = self.error
+        if self.outputs_type == 'epevmf':
+            self.output_reg[:,0] = self.output_reg[:,0] / self.Spacecraft.m_dry
+            self.output_reg[:,1:] = self.error
+
 
         database = np.column_stack((self.output_reg, self.input_data))
         self.scaler.fit(database)
 
         database2 = self.scaler.transform(database)
-        self.error_std = database2[:,1:3]
-        self.output_reg_std = database2[:, 0:3]
-        self.input_data_std = database2[:,3:]
+        if self.outputs_type == 'epevmf':
+            self.error_std = database2[:,1:3]
+            self.output_reg_std = database2[:, 0:3]
+            self.input_data_std = database2[:,3:]
+        elif self.outputs_type == 'objfunc':
+            self.error_std = np.zeros(np.shape(self.error)) # does not apply
+            self.output_reg_std = database2[:, 0]
+            self.input_data_std = database2[:,1:]
+
 
 
     def commonInverseStandardization(self, y, x):
         database = np.column_stack((y,x))
-        print(np.shape(x), np.shape(y))
         
         x2 = self.scaler.inverse_transform(database)
         E = x2[:, 0:3]
         I = x2[:, 3:]
 
-        if self.Log == True:
-            E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
-            E[:,2] = np.array([10**(E[i,2]) for i in range(len(E[:,2]))])
-        if self.dataUnits == "AU":
-            E[:,1] *= AL_BF.AU # Normalize with AU
-            E[:,2] = E[:,2] * AL_BF.AU / AL_BF.year2sec(1)
-        
-        E[:,0] *= self.Spacecraft.m_dry
+        if self.outputs_type == 'epevmf':
+            if self.Log == True:
+                E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
+                E[:,2] = np.array([10**(E[i,2]) for i in range(len(E[:,2]))])
+            if self.dataUnits == "AU":
+                E[:,1] *= AL_BF.AU # Normalize with AU
+                E[:,2] = E[:,2] * AL_BF.AU / AL_BF.year2sec(1)
+            
+            E[:,0] *= self.Spacecraft.m_dry
+        elif self.outputs_type == 'epev':
+            if self.Log == True:
+                E[:,0] = np.array([10**(E[i,0]) for i in range(len(E[:,0]))])
+                E[:,1] = np.array([10**(E[i,1]) for i in range(len(E[:,1]))])
+            if self.dataUnits == "AU":
+                E[:,0] *= AL_BF.AU # Normalize with AU
+                E[:,1] = E[:,1] * AL_BF.AU / AL_BF.year2sec(1)
         return E, I
 
     def standardizationInputs(self, scaling):
@@ -649,12 +682,12 @@ def LoadNumpy(train_file_path, save_file_path, \
             plotDistribution = False, plotErrors = False,\
             equalize = False, error = False, \
             standardizationType =  0, scaling = 0,\
-            dataUnits = "AU", Log = False,\
+            dataUnits = "AU", Log = False, Outputs = 'objfunc',
             labelType = False):
 
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, shuffle = True, error = error, 
-        equalize = equalize, labelType = labelType)
+        equalize = equalize, labelType = labelType, outputs = Outputs)
 
     # Plot distribution of feasible/unfeasible
     if plotDistribution == True:
@@ -744,6 +777,7 @@ if __name__ == "__main__":
             equalize =  False, \
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            Outputs= Dataset_conf.Dataset_config['Outputs'],
             plotDistribution=False, plotErrors=True, labelType = 2)
 
     # save_standard(dataset_np, base + 'Together_')

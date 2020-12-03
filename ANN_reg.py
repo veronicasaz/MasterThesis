@@ -29,6 +29,9 @@ ANN = ANN_reg.ANN_config
 Dataset_conf = CONF.Dataset()
 Scaling = Dataset_conf.Dataset_config['Scaling']
 
+FIT_C = CONF.Fitness_config()
+FIT = FIT_C.Fit_config
+
 class ANN_reg:
     def __init__(self, dataset):
         self.dataset_np = dataset
@@ -37,7 +40,7 @@ class ANN_reg:
         self.n_examples = self.dataset_np.nsamples # samples
         self.n_input = self.dataset_np.n_input #inputs
 
-        self.checkpoint_path = "./trainedCNet_Reg/training_1/"
+        self.checkpoint_path = "./trainedCNet_Reg/training_1/"+Dataset_conf.Dataset_config['Outputs']+'/'
 
     def create_model(self):
         # Create architecture
@@ -182,15 +185,18 @@ class ANN_reg:
 
         if rescale == False and type(testfile) == bool: # No inverse standarization possible
 
-            self.Output_pred = np.zeros((len(pred_test),3))
-            for i in range(len(pred_test)):
-                print('i', i)
-                print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
-                print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
-                print("------------------------")
-                self.Output_pred[i,0] = abs( pred_test[i,0] - self.testdata[1][i,0] )
-                self.Output_pred[i,1] = abs( pred_test[i,1] - self.testdata[1][i,1] )
-                self.Output_pred[i,2] = abs( pred_test[i,2] - self.testdata[1][i,2] )
+            self.Output_pred = np.zeros((len(pred_test),self.n_classes))
+            if self.n_classes > 1:
+                for i in range(len(pred_test)):
+                    print('i', i)
+                    # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
+                    # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
+                    print("------------------------")
+                    for output_i in range(self.n_classes):
+                        self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
+            else:
+                for i in range(len(pred_test)):
+                    self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
 
         else:
             if Scaling['type_stand'] == 0:
@@ -199,61 +205,63 @@ class ANN_reg:
             elif Scaling['type_stand'] == 1:
                 predictions_unscaled = self.dataset_np.inverseStandardization(pred_test, typeR='E') #Obtain predictions in actual 
                 true_value = self.dataset_np.inverseStandardization(self.testdata[1], typeR='E') #Obtain predictions in actual
-            elif Scaling['type_stand'] == 2:
+            elif Scaling['type_stand'] == 2: # TODO: fix for different types of outputs
                 predictions_unscaled = np.zeros(np.shape(self.testdata[1]))
                 true_value = np.zeros(np.shape(self.testdata[1]))
 
-                #Mf
-                predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,0], typeR='Mf') #Obtain predictions in actual 
-                true_value[:,0] = self.dataset_np.inverseStandardization(self.testdata[1][:,0], typeR='Mf') #Obtain predictions in actual
-                #Ep
-                predictions_unscaled[:,1] = self.dataset_np.inverseStandardization(pred_test[:,1], typeR='Ep') #Obtain predictions in actual 
-                true_value[:,1] = self.dataset_np.inverseStandardization(self.testdata[1][:,1], typeR='Ep') #Obtain predictions in actual
-                #Ev
-                predictions_unscaled[:,2] = self.dataset_np.inverseStandardization(pred_test[:,2], typeR='Ev') #Obtain predictions in actual 
-                true_value[:,2] = self.dataset_np.inverseStandardization(self.testdata[1][:,2], typeR='Ev') #Obtain predictions in actual
-
-
+                if FIT['Outputs'] == 'objfunc':
+                    arrayType =['Mf','Ep', 'Ev']
+                for output_i in range(self.n_classes):
+                    predictions_unscaled[:,0] = self.dataset_np.inverseStandardization(pred_test[:,output_i], typeR=arrayType[output_i]) #Obtain predictions in actual 
+                    true_value[:,output_i] = self.dataset_np.inverseStandardization(self.testdata[1][:,output_i], typeR=arrayType[output_i]) #Obtain predictions in actual
+           
             if type(testfile) == bool:
-                self.Output_pred_unscale = np.zeros((len(pred_test),3)) 
+                self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
-                    print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
-                    print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
+                    # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
+                    # print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
                     print("------------------------")
-                    self.Output_pred_unscale[i,0] = abs( predictions_unscaled[i,0] - true_value[i,0 ])
-                    self.Output_pred_unscale[i,1] = abs( predictions_unscaled[i,1] - true_value[i,1 ])
-                    self.Output_pred_unscale[i,2] = abs( predictions_unscaled[i,2] - true_value[i,2 ])
+                    for output_i in range(self.n_classes):
+                        self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
+
     
         return pred_test
 
     def plotPredictions(self, std):
 
+        labels = ['Difference in mass of fuel', 'Difference in position error', 'Difference in velocity error']
+        symbols = ['r-x', 'g-x', 'b-x']
         if std == False: # No inverse standarization possible or not needed
             fig, ax = plt.subplots() 
-            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,0], 'r-x', label = 'Difference in mass of fuel')
-            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,1], 'g-x', label = 'Difference in position error')
-            plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,2], 'b-x', label = 'Difference in velocity error')
+            
+            for i in range(self.n_classes):
+                plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,i], symbols[i], label = labels[i])
 
             plt.xlabel("Samples to predict")
             plt.grid(alpha = 0.5)
             plt.legend()
             
         else:
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+            if self.n_classes == 3:
+                fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+                ax_i = [ax1, ax2, ax3]
+            elif self.n_classes == 1:
+                fig, (ax1) = plt.subplots(1, 1)
+                ax_i = [ax1]
             fig.subplots_adjust(wspace=0.1, hspace=0.05)
-            ax1.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,0], 'r-x', label = 'Difference in mass of fuel')
-            ax2.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,1], 'g-x', label = 'Difference in position error')
-            ax3.plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,2], 'b-x', label = 'Difference in velocity error')
-            
-            if Scaling['scaling'] == 0:
-                ax2.set_yscale('log')
-                ax3.set_yscale('log')
-            elif Scaling['scaling'] == 1:
-                ax2.set_yscale('symlog')
-                ax3.set_yscale('symlog')
+            for i in range(self.n_classes):
+                ax_i[i].plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,i], symbols[i], label = labels[i])
 
-            for ax in [ax1, ax2, ax3]:
+            if self.n_classes == 3:
+                if Scaling['scaling'] == 0:
+                    ax2.set_yscale('log')
+                    ax3.set_yscale('log')
+                elif Scaling['scaling'] == 1:
+                    ax2.set_yscale('symlog')
+                    ax3.set_yscale('symlog')
+
+            for ax in ax_i:
                 ax.grid(alpha = 0.5)
                 ax.legend()
                 ax.set_xlabel("Samples to predict")
@@ -290,7 +298,7 @@ if __name__ == "__main__":
 
     # Choose which ones to choose:
     # base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
-    base = "./databaseANN/Organized/deltakeplerian/"
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
     
     # Join files together into 1
     train_file_path = base +'Random.txt'
@@ -304,6 +312,7 @@ if __name__ == "__main__":
             standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             labelType = False,
+            Outputs= Dataset_conf.Dataset_config['Outputs'],
             plotDistribution=False, plotErrors=False)
     
     traindata, testdata = TD.splitData_reg(dataset_np)
@@ -314,8 +323,8 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN_reg(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
 
     
     print("EVALUATE")
