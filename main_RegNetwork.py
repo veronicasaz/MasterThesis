@@ -118,18 +118,16 @@ def MBH_self():
     for i in range(len(SF.bnds)):
         DecV[i] = ( SF.bnds[i][0] + SF.bnds[i][1] ) /2
 
-    cons = {'type': 'eq', 'fun': f_class}
 
     start_time = time.time()
-    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f, DecV, mytakestep,\
+    fmin_4, Best = AL_OPT.MonotonicBasinHopping(f_notANN, DecV, mytakestep,\
                 niter = MBH['niter_total'], 
                 niter_local = MBH['niter_local'], \
                 niter_sucess = MBH['niter_success'], 
                 bnds = SF.bnds, \
                 jumpMagnitude = MBH['jumpMagnitude'], 
                 tolLocal = MBH['tolLocal'],\
-                tolGlobal = MBH['tolGlobal'], 
-                cons = cons)
+                tolGlobal = MBH['tolGlobal'])
     
     t = (time.time() - start_time) 
     print("Min4", fmin_4, 'time', t)

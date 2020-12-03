@@ -173,23 +173,24 @@ def compareNumSamples(save_study_path, typeSamples, repetitions):
     val_loss = np.zeros([len(typeSamples),  repetitions])
 
     
-    save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/" 
-    train_file_path = save_file_path + 'Random.txt'
-
-    # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
-
-    # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
-    dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
-            equalize = False, \
-            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            plotDistribution=False, plotErrors=False, labelType = False)
-    
-    traindata, testdata = TD.splitData_reg(dataset_np)
-    
-    traindata2 = [0,0]
 
     for i in range(len(typeSamples)):   
+        if typeSamples[i] == 500:
+            save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/" 
+        elif typeSamples[i] == 5000:
+            save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+        
+        train_file_path = save_file_path + 'Random.txt'
+
+        # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
+        dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
+                equalize = False, \
+                standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+                dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+                plotDistribution=False, plotErrors=False, labelType = False)
+        
+        traindata, testdata = TD.splitData_reg(dataset_np)
+        traindata2 = [0,0]
         for k in range(repetitions):
             traindata2[0] = traindata[0][0:typeSamples[i], :] # select only the ones to study
             traindata2[1] = traindata[1][0:typeSamples[i], :] # select only the ones to study
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     
     # COMPARE NUMBER SAMPLES: LEARNING CURVE
     repetitions = 5
-    typeSamples = [100, 200, 300, 500]
-    save_study_path =  "./Results/StudyNSamples/"
-    # compareNumSamples(save_study_path, typeSamples, repetitions)
+    typeSamples = [500, 5000]
+    save_study_path =  "./Results/StudyNSamples/DifferentFiles/"
+    compareNumSamples(save_study_path, typeSamples, repetitions)
     plot_compareNumSamples(save_study_path, typeSamples, repetitions)

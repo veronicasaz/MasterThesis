@@ -65,7 +65,8 @@ class ANN_reg:
        
         # Compile
         self.loss = 'mse'
-        model.compile(loss=self.loss, optimizer ='adam')
+        opt = keras.optimizers.Adam(learning_rate=ANN['Training']['learning_rate'])
+        model.compile(loss=self.loss, optimizer =opt)
 
         return model
             
@@ -288,10 +289,12 @@ if __name__ == "__main__":
     # train_file_path = "./databaseANN/DeltaCartesian_ErrorIncluded/trainingData_Feas_Lambert_big.txt"
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+    # base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
+    base = "./databaseANN/Organized/deltakeplerian/"
     
     # Join files together into 1
     train_file_path = base +'Random.txt'
+    # train_file_path = base +'Together.txt'
     # TD.join_files(file_path, train_file_path)
 
 

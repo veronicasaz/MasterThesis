@@ -27,7 +27,7 @@ def createFile(typeinputs, creationMethod, appendToFile, evaluate):
     fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod + '_eval.txt'
     fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod +'.txt'
 
-    if typeinputs == 'deltakeplerian':
+    if typeinputs == 'deltakeplerian' or 'deltakeplerian_planet':
         Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
             "|Delta_e|", "cos(Delta_i)", "Delta_Omega",\
             "Delta_omega", "Delta_theta"]
