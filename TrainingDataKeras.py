@@ -115,6 +115,21 @@ def save_standard(dataset, save_file_path):
 #     dataset2 = np.zeros((len(limits), divisions**len(limits)))
 
     
+def output_adapt(self, output_err, output_mass, add):
+    if self.outputs_add == 'vector':
+        cuterror = (output_err[1] - output_err[0]) /2 + output_err[0]
+        error_p = [np.linalg.norm(self.dataset[i, output_err[0]:cuterror]) for i in range(self.nsamples)]
+        error_v = [np.linalg.norm(self.dataset[i, cuterror:output_err[1]]) for i in range(self.nsamples)]
+        self.error = np.column_stack((error_p, error_v)) # error in position and velocity
+
+    elif self.outputs_add == 'norm':
+        error_p = self.dataset[:, output_err[0]]
+        error_v = self.dataset[:, output_err[1]]
+        self.error = np.column_stack((error_p, error_v)) # error in position and velocity
+    
+    startinput = outputs_err[1]
+    
+    return startinput
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, shuffle = True, \

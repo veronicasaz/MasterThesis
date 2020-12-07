@@ -24,8 +24,9 @@ Dataset_c = CONFIG.Dataset()
 Dataset_conf = Dataset_c.Dataset_config
 
 def createFile(typeinputs, creationMethod, appendToFile, evaluate):
-    fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod + '_eval.txt'
-    fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" +creationMethod +'.txt'
+    fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod + '_eval.txt'
+    fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'.txt'
+    matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
 
     if typeinputs == 'deltakeplerian' or 'deltakeplerian_planet':
         Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
@@ -56,7 +57,7 @@ def createFile(typeinputs, creationMethod, appendToFile, evaluate):
             myfile.write("\n")
         myfile.close()
 
-    return fileName, fileName_opt
+    return fileName, fileName_opt, matrix_file
 
 def to_helioc(r, vx, vy):
     v_body = np.array([vx, vy, 0])
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     ####################
     # FILE CREATION
     ####################
-    feasibilityFileName, feasibilityFileName_opt = \
+    feasibilityFileName, feasibilityFileName_opt, matrix_file = \
             createFile(typeinputs, creationMethod, appendToFile, evaluate)
     
     ####################
@@ -190,6 +191,7 @@ if __name__ == "__main__":
                 samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
                     high = SF.bnds[decv][1], size = samples_L)
         
+        np.save(matrix_file + "initial_hypercube", samples_initial)
 
     ####################
     # CHOICE OF RANDOM POPULATION WITH LAMBERT

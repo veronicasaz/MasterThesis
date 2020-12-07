@@ -248,11 +248,11 @@ if __name__ == "__main__":
     typeInputs = ['cartesian', 'deltakeplerian', 'deltakeplerian_planet']
     save_study_path =  "./Results/StudyInputs/"
     # compareInputs(repetitions, typeInputs, save_study_path)
-    # plot_compareInputs(save_study_path, repetitions, typeInputs)
+    # plot_compareInputse_study_path, repetitions, typeInputs)
     
     # COMPARE NUMBER SAMPLES: LEARNING CURVE
     repetitions = 5
     typeSamples = [500, 5000]
     save_study_path =  "./Results/StudyNSamples/DifferentFiles/"
-    compareNumSamples(save_study_path, typeSamples, repetitions)
-    plot_compareNumSamples(save_study_path, typeSamples, repetitions)
+    # compareNumSamples(save_study_path, typeSamples, repetitions)
+    # plot_compareNumSamples(save_study_path, typeSamples, repetitions)

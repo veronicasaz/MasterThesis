@@ -9,10 +9,17 @@ Creation:
  appendToFile: False # append instead of creating a new file. To increase the number of values
  
 DataUnits: "AU" # SI : m and km/s, AU: AU and AU/year. For the outputs
-Log: True # Apply logarithm to the outputs
+Log: False # Apply logarithm to the outputs
 Scaling:
- type_stand: 1 # 0- common standardization, 1-input-output separated, 2-input-output-output separated
- scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
+ #type_stand: 0 # 0- common standardization, 1-input-output separated, 2-input-output-output separated	# It is the same!!!
+ scaling: 0 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
  # type_stand: 2 # 0- common standardization, 1-input-output separated, 2-input-output-output separated
  # scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
  
+Outputs: 'ep' #objfunc gives one output with the result of the objective function.
+                 #epevmf: gives three outputs, mass of fuel, error in position, error in velocity. 
+                 #epev: gives two outputs, the error in position and the error in velocity
+                 #ep
+                 #ev
+                 #mf
+

@@ -196,6 +196,7 @@ class ANN_reg:
                         self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
             else:
                 for i in range(len(pred_test)):
+                    print(pred_test[i], self.testdata[1][i])
                     self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
 
         else:
@@ -224,7 +225,7 @@ class ANN_reg:
                     print("------------------------")
                     for output_i in range(self.n_classes):
                         self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
-
+                        print(predictions_unscaled[i,output_i], true_value[i,output_i ])
     
         return pred_test
 
@@ -298,7 +299,7 @@ if __name__ == "__main__":
 
     # Choose which ones to choose:
     # base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
     
     # Join files together into 1
     train_file_path = base +'Random.txt'
@@ -323,8 +324,8 @@ if __name__ == "__main__":
     ###############################################
     perceptron = ANN_reg(dataset_np)
     perceptron.get_traintestdata(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron.training()
+    perceptron.plotTraining()
 
     
     print("EVALUATE")
