@@ -341,7 +341,7 @@ def Network(dataset_np, save_path):
     perceptron.plotPredictions(std = True)
 
 def Fitness_network():
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/500_AU/factorep_increation_10/"
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
 
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
@@ -360,8 +360,8 @@ def Fitness_network():
             output_type = Dataset_conf.Dataset_config['Outputs'],
             plotDistribution=True, plotErrors=True,
             plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
-                # data_augmentation=False)
+            # data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+                data_augmentation=False)
     
     # Network(dataset_np, base)
 
@@ -386,5 +386,5 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    # Fitness_network()
-    Opt_network()
+    Fitness_network()
+    # Opt_network()

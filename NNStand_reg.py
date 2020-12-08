@@ -116,8 +116,8 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
     val_loss = np.zeros([len(typeInputs),  repetitions])
 
     for i in range(len(typeInputs)):
-        save_file_path =  "./databaseANN/DatabaseOptimized/"  + typeInputs[i] +"/"
-        train_file_path = save_file_path + 'Random.txt'
+        save_file_path =  "./databaseANN/DatabaseFitness/"  + typeInputs[i] +"/"
+        train_file_path = save_file_path + 'Together.txt'
 
         # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
         for k in range(repetitions):
@@ -127,13 +127,19 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
                     standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
                     dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
                     plotDistribution=False, plotErrors=False, labelType = 3)
+
+            dataset_np = TD.LoadNumpy(train_file_path, save_file_path = save_file_path, 
+                scaling = Scaling['scaling'], 
+                dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+                outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+                output_type = Dataset_conf.Dataset_config['Outputs'])
             
-            traindata, testdata = TD.splitData_reg(dataset_np, samples = 500)
+            traindata, testdata = TD.splitData_reg(dataset_np)
 
             ###############################################
             # CREATE AND TRAIN CLASS NETWORK
             ###############################################
-            perceptron = AR.ANN_reg(dataset_np)
+            perceptron = AR.ANN_reg(dataset_np, , save_path = save_file_path)
             perceptron.get_traintestdata(traindata, testdata)
             loss[i, k], val_loss[i, k] = perceptron.training()
 
@@ -244,7 +250,7 @@ if __name__ == "__main__":
     # plot_compareStandard(save_study_path, values_type_stand, values_scaling, repetitions)
 
     # COMPARE INPUTS
-    repetitions = 3 # repetitions of each setting
+    repetitions = 5 # repetitions of each setting
     typeInputs = ['cartesian', 'deltakeplerian', 'deltakeplerian_planet']
     save_study_path =  "./Results/StudyInputs/"
     # compareInputs(repetitions, typeInputs, save_study_path)
