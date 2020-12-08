@@ -33,14 +33,17 @@ FIT_C = CONF.Fitness_config()
 FIT = FIT_C.Fit_config
 
 class ANN_reg:
-    def __init__(self, dataset):
+    def __init__(self, dataset, save_path = False):
         self.dataset_np = dataset
 
         self.n_classes = int(dataset.n_outputs) # Outputs
         self.n_examples = self.dataset_np.nsamples # samples
         self.n_input = self.dataset_np.n_input #inputs
 
-        self.checkpoint_path = "./trainedCNet_Reg/training_1/"+Dataset_conf.Dataset_config['Outputs']+'/'
+        if save_path == False:
+            self.checkpoint_path = "./trainedCNet_Reg/training/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
+        else:
+            self.checkpoint_path = save_path +"./trainedCNet_Reg/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
 
     def create_model(self):
         # Create architecture
@@ -136,8 +139,17 @@ class ANN_reg:
 
     def plotTraining(self):
         colors = ['r-.','g-.','k-.','b-.','r-.','g-.','k-.','b-.','r-','g-','k-','b-','r--','g--','k.-','b.-']
+        
+        f = plt.figure()
+        ax = f.add_subplot(111)
         plt.plot(self.history.history['loss'])
         plt.plot(self.history.history['val_loss'])
+
+        text = "Train loss = %e\n Validation loss = %e"%(self.history.history['loss'][-1], self.history.history['val_loss'][-1]) 
+        plt.text(0.5, 0.5, text, horizontalalignment='center',
+                verticalalignment='center',
+                transform = ax.transAxes)
+
         plt.title('Model loss')
         plt.ylabel(self.loss)
         plt.xlabel('epoch')
@@ -306,20 +318,20 @@ class ANN_reg:
         print("WEIGHTS", weights_h)
         print("WEIGHTS", weights_output)
 
-def Network(dataset_np):
+def Network(dataset_np, save_path):
     """
     Call the network to train and evaluate
     """
     traindata, testdata = TD.splitData_reg(dataset_np)
-    print("--------------")
-    print(traindata[0][0:10,:])
 
-    perceptron = ANN_reg(dataset_np)
+    perceptron = ANN_reg(dataset_np, save_path = save_path)
     perceptron.get_traintestdata(traindata, testdata)
-    # perceptron.training()
-    # perceptron.plotTraining()
-    perceptron.trainingKFoldCross()
-    perceptron.plotTrainingKFold()
+    
+    perceptron.training()
+    perceptron.plotTraining()
+    
+    # perceptron.trainingKFoldCross()
+    # perceptron.plotTrainingKFold()
     
     print("EVALUATE")
     predictions = perceptron.predict(fromFile=True, rescale = False)
@@ -329,49 +341,50 @@ def Network(dataset_np):
     perceptron.plotPredictions(std = True)
 
 def Fitness_network():
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/500_AU/factorep_increation_10/"
 
-    file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
-        base+ 'Lambert_opt.txt']
+    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
+    #     base+ 'Lambert_opt.txt']
+    file_path = [base+ 'Random_MBH_eval.txt', base+ 'Random_MBH.txt']
+
+
     # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
-    train_file_path = base +'Together.txt'
-    TD.join_files(file_path, train_file_path)
+    
+    train_file_path = file_path
     # train_file_path = base +'Random.txt'
 
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [1, 7], 'outputs_mf': False, 'add': 'vector'},
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = len(file_path),
-            plotDistribution=False, plotErrors=False)
+            plotDistribution=True, plotErrors=True,
+            plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+                # data_augmentation=False)
     
-    Network(dataset_np)
+    # Network(dataset_np, base)
 
 def Opt_network():
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+    base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
 
-    duplicateData = True
-    if duplicateData == False:
-        train_file_path = base +'Random.txt'
-        labelType = False
-    else:
-        file_path = [base+ 'Random.txt', base+ 'Random.txt']
-        train_file_path = base +'Together.txt'
-        TD.join_files(file_path, train_file_path)
-        labelType = len(file_path)
+    train_file_path = base +'Random.txt'
+
+
 
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': [1], 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = labelType,
-            plotDistribution=False, plotErrors=False)
+            plotDistribution=True, plotErrors=True,
+            plotOutputDistr = True, plotEpvsEv = True,
+            # data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+                data_augmentation=False)
     
-    Network(dataset_np)
+    # Network(dataset_np)
 
 
 if __name__ == "__main__":
-    Fitness_network()
-    # Opt_network()
+    # Fitness_network()
+    Opt_network()

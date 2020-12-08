@@ -112,7 +112,7 @@ class Fitness:
             fc0 = m_fuel / self.Spacecraft.m_dry
 
             # Standarize between 0 and 1:
-            std = True
+            std = False
             if std == True:
                 if fc1 == 0: # Avoid overflows
                     fc1 = 0.00000001
@@ -130,7 +130,7 @@ class Fitness:
             #                 (1 - 0)
 
             # else: 
-                res = [fc0, fc1, fc2]
+            res = [fc0, fc1, fc2]
                 # print(res)
 
             # print(res)

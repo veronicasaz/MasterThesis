@@ -23,10 +23,15 @@ MBH = opt_config.MBH_generateDatabase
 Dataset_c = CONFIG.Dataset()
 Dataset_conf = Dataset_c.Dataset_config
 
-def createFile(typeinputs, creationMethod, appendToFile, evaluate):
-    fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod + '_eval.txt'
-    fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'.txt'
-    matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
+def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate):
+    if typeoutputs == "opt":
+        fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod + '_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'.txt'
+        matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
+    elif typeoutputs == "fit":
+        fileName = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod + '_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod +'.txt'
+        matrix_file = "./databaseANN/DatabaseFitness/" + typeinputs + "/" 
 
     if typeinputs == 'deltakeplerian' or 'deltakeplerian_planet':
         Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
@@ -156,6 +161,7 @@ if __name__ == "__main__":
     # CHOICE OF GENERATION OF THE DATABASE
     ######################################
     # TO MODIFY
+    typeoutputs = Dataset_conf['Creation']['typeoutputs']
     typeinputs = Dataset_conf['Creation']['typeinputs'] # cartesian or deltakeplerian deltakeplerian_planet
     creationMethod = Dataset_conf['Creation']['creationMethod'] # 'Exposin', 'Lambert', 'Random
     lhypercube = Dataset_conf['Creation']['lhypercube'] # Use latin hypercube for initial distribution of samples. 
@@ -172,7 +178,7 @@ if __name__ == "__main__":
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt, matrix_file = \
-            createFile(typeinputs, creationMethod, appendToFile, evaluate)
+            createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate)
     
     ####################
     # DATABASE CREATION

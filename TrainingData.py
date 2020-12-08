@@ -90,7 +90,7 @@ def save_standard(dataset, save_file_path):
     if dataset.errorType == 'vector': # eliminate cartesian names
         labels2 = [dataset.labels[0]]
         labels2.extend( ['Ep', 'Ev'] )
-        if dataset.labelType != False: # delete last label
+        if dataset.labelType != 0: # delete last label
             labels2.extend( dataset.labels[7:-1] )
         else: 
             labels2.extend( dataset.labels[7:] )
@@ -111,13 +111,13 @@ def save_standard(dataset, save_file_path):
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, \
-        inputs = {'labelType': False},\
+        inputs = {'labelType': 0},\
         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': 1, 'add': 'vector'}, \
         actions = {'shuffle': True }
         ):
         """
         labelType: Number: the last column of the database is an integer indicating from which file it comes.  
-                    False: not included 
+                    0: not included 
         outputs: objfunc gives one output with the result of the objective function.
                  epevmf: gives three outputs, mass of fuel, error in position, error in velocity. 
                  epev: gives two outputs, the error in position and the error in velocity
@@ -156,6 +156,8 @@ class Dataset:
         self.dataset = dataset
 
         self.nsamples = len(self.dataset[:,0])
+        if self.inputs_conf['labelType'] != 0:
+            self.labelType = self.dataset[:,-1]
 
         self.output_adapt(self.outputs['outputs_err']) # Adapt error 
     
@@ -191,32 +193,35 @@ class Dataset:
                 
         if self.typeOutput == 'objfunc':
             self.n_outputs = 1
+            self.output_label = [self.typeOutput]
             self.output_reg = np.zeros( (self.nsamples, self.n_outputs))
             for i in range(self.nsamples):
                 self.output_reg[i] = fitness.objFunction(self.error[i,:], m_fuel = self.dataset[i,self.outputs['outputs_mf']])
 
-
         elif self.typeOutput == 'epevmf':
             self.n_outputs = 3
+            self.output_label = ['ep', 'ev', 'mf']
             self.output_reg = np.zeros( (self.nsamples, self.n_outputs))
             self.output_reg = np.column_stack((self.dataset[:,self.outputs['outputs_mf']], self.error))
 
         elif self.typeOutput == 'epev':
             self.n_outputs = 2
+            self.output_label = ['ep', 'ev']
             self.output_reg = self.error.copy()
 
         elif self.typeOutput == 'ep':
             self.n_outputs = 1
+            self.output_label = ['ep']
             self.output_reg = self.error[:,0].copy()
-
-            print(self.output_reg)
         
         elif self.typeOutput == 'ev':
             self.n_outputs = 1
+            self.output_label = ['ev']
             self.output_reg = self.error[:,1].copy()
         
         elif self.typeOutput == 'mf':
             self.n_outputs = 1
+            self.output_label = ['mf']
             self.output_reg = self.dataset[:,self.outputs['outputs_mf']].copy()
 
         else:
@@ -224,7 +229,7 @@ class Dataset:
 
         startinput = self.outputs['outputs_err'][1]
 
-        if self.inputs_conf['labelType'] == False:
+        if self.inputs_conf['labelType'] == 0:
             self.input_data = self.dataset[:,startinput:]
         else:
             self.input_data = self.dataset[:,startinput:-1]
@@ -269,6 +274,9 @@ class Dataset:
         print("Samples", self.nsamples, "Feasible", self.count_feasible)
     
     def statisticsError(self, save_file_path):
+        """
+        plot Ep vs Ev with limits for feasibility
+        """
         colors = ['black', 'red', 'green', 'blue', 'orange']
         
         # Plot limit lines for feasibility
@@ -281,12 +289,16 @@ class Dataset:
         plt.plot(FIT['FEASIB']['feas_ep'] *np.ones(len(y)), y, color = 'orange')
         plt.plot(x, FIT['FEASIB']['feas_ev']  *np.ones(len(x)), color = 'red')
 
-        if self.inputs_conf['labelType'] != False:
+        if self.inputs_conf['labelType'] != 0:
             for j in range(self.inputs_conf['labelType']): # how many files are there
-                indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
+                indexes = np.where(self.labelType == j)[0] # find which values correspond to a certain creation method
 
-                plt.scatter(self.error[indexes,0], self.error[indexes,1], color = colors[j])
+                plt.scatter(self.error[indexes,0], self.error[indexes,1], color = colors[j], label = j)
+            plt.legend()
 
+        else:
+            plt.scatter(self.error[:,0], self.error[:,1], color = colors[0])
+        
         plt.xscale("log")
         plt.yscale("log")
 
@@ -299,6 +311,7 @@ class Dataset:
         plt.show()
 
     def plotDistributionOfFeasible(self):
+
         count_unfeasible = np.count_nonzero(self.output_class==0)
         count_feasible = len(self.output_class) - count_unfeasible
 
@@ -310,10 +323,9 @@ class Dataset:
         plt.show()
 
     def plotDistributionOfErrors(self, save_file_path, std = True):
-        # fig = plt.figure(figsize = (30,30))
         colors = ['black', 'red', 'green', 'blue', 'orange']
 
-        std = False # use standard values
+        # Standardization
         if std == True: 
             x = self.input_data_std
             y = self.error_std
@@ -321,47 +333,44 @@ class Dataset:
 
             ylabel_p = " Standardized"
             ylabel_v = " Standardized"
-                
-            if self.Log == True:
-                limits_p = (min(y[:,0]), max(y[:,0]))
-                limits_v =  (min(y[:,1]), max(y[:,1]))
-
-                ylabel_p = ylabel_p +" log"
-                ylabel_v = ylabel_v + " log"
-            else:
-                if self.scaling == 0:
-                    limits_p = (1.5e-7, 1.01e0)
-                    limits_v = (1.5e-7, 1.01e0)
-                elif self.scaling == 1:
-                    limits_p = (-1.01e0, 1.01e0)
-                    limits_v = (-1.01e0, 1.01e0)
-            
             
         else:
             x = self.input_data
             y = self.error
             stdlabel = ""
+            ylabel_p = ""
+            ylabel_v = ""
 
-            if self.dataUnits == "AU":
-                limits_p = (1e-6,1e1)
-                limits_v = (1e-2,1e1)
+        limitFactor = 1.1
+        limits_p = (min(y[:,0])*limitFactor, max(y[:,0])*limitFactor)
+        limits_v =  (min(y[:,1])*limitFactor, max(y[:,1])*limitFactor)
+        
+        # Log
+        if self.Log == True:
+            ylabel_p = ylabel_p +" log"
+            ylabel_v = ylabel_v + " log"
+        else:
+            if self.scaling == 0:
+                limits_p = (1.5e-7, 1.01e0)
+                limits_v = (1.5e-7, 1.01e0)
+            elif self.scaling == 1:
+                limits_p = (-1.01e0, 1.01e0)
+                limits_v = (-1.01e0, 1.01e0)
 
-                ylabel_p = " (AU)"
-                ylabel_v = " (AU/year)"
+        # Units
+        if self.dataUnits == "AU":
+            # limits_p = (1e-6,1e1)
+            # limits_v = (1e-2,1e1)
 
-            elif self.dataUnits == "SI":
-                limits_p = (1e4,1e12)
-                limits_v = (1.5e1, 1e5)
+            ylabel_p = ylabel_p +" (AU)"
+            ylabel_v = ylabel_v +" (AU/year)"
 
-                ylabel_p = " (m)"
-                ylabel_v = " (m/s)"
-            
-            if self.Log == True:
-                limits_p = (np.log10(limits_p[0]), np.log10(limits_p[1]))
-                limits_v = (np.log10(limits_v[0]), np.log10(limits_v[1]))
+        elif self.dataUnits == "SI":
+            # limits_p = (1e4,1e12)
+            # limits_v = (1.5e1, 1e5)
 
-                ylabel_p = " log" + ylabel_p
-                ylabel_v = " log" + ylabel_v
+            ylabel_p = ylabel_p +" (m)"
+            ylabel_v = ylabel_v +" (m/s)"
             
 
         # Error in position adn velocity
@@ -378,23 +387,116 @@ class Dataset:
             for i in range(self.n_input):
                 ax = fig.add_subplot(self.n_input//2, 2, i+1)
 
-                if self.inputs_conf['labelType'] != False:
+                if self.inputs_conf['labelType'] != 0:
                     for j in range(self.inputs_conf['labelType']): # how many files are there
-                        indexes = np.where(self.dataset[:,-1] == j)[0] # find which values correspond to a certain creation method
-
-                        ax.scatter(x[indexes,i] , y[indexes, 0],\
+                        indexes = np.where(self.labelType == j)[0] # find which values correspond to a certain creation method
+                        ax.scatter(x[indexes,i] , y[indexes, plot],\
                             color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
                 else:
-                    ax.plot(x[:,i] , y[:, 0], 'ko', markersize = 5, label = "Optimized")
+                    ax.plot(x[:,i] , y[:, plot], 'ko', markersize = 5, label = "Optimized")
                 
                 # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
                 
                 ax.set_xlabel(self.labels[i+7], labelpad = -2)
 
                 if self.Log == False:
-                    if std == True and self.scaling ==0:
+                    if self.scaling ==0:
                         ax.set_yscale('log')
-                    elif std == True and self.scaling == 1:
+                    elif self.scaling == 1:
+                        ax.set_yscale('symlog') # To display negative values
+                
+                ax.set_ylim(limits_epev[plot])
+
+                plt.legend()
+
+            plt.suptitle(ylabel_epev[plot], y=1.01)
+
+            plt.tight_layout()
+            plt.savefig(save_file_path_epev[plot], dpi = 100)
+            plt.show()
+
+
+    def plotOutputsWRTInputs(self, save_file_path, std = True):
+        colors = ['black', 'red', 'green', 'blue', 'orange']
+
+        # Standardization
+        if std == True: 
+            x = self.input_data_std
+            y = self.error_std
+            stdlabel = "_std_"+str(self.scaling)
+
+            ylabel_p = " Standardized"
+            ylabel_v = " Standardized"
+            
+        else:
+            x = self.input_data
+            y = self.error
+            stdlabel = ""
+            ylabel_p = ""
+            ylabel_v = ""
+
+        limitFactor = 1.1
+        limits_p = (min(y[:,0])*limitFactor, max(y[:,0])*limitFactor)
+        limits_v =  (min(y[:,1])*limitFactor, max(y[:,1])*limitFactor)
+        
+        # Log
+        if self.Log == True:
+            ylabel_p = ylabel_p +" log"
+            ylabel_v = ylabel_v + " log"
+        else:
+            if self.scaling == 0:
+                limits_p = (1.5e-7, 1.01e0)
+                limits_v = (1.5e-7, 1.01e0)
+            elif self.scaling == 1:
+                limits_p = (-1.01e0, 1.01e0)
+                limits_v = (-1.01e0, 1.01e0)
+
+        # Units
+        if self.dataUnits == "AU":
+            # limits_p = (1e-6,1e1)
+            # limits_v = (1e-2,1e1)
+
+            ylabel_p = ylabel_p +" (AU)"
+            ylabel_v = ylabel_v +" (AU/year)"
+
+        elif self.dataUnits == "SI":
+            # limits_p = (1e4,1e12)
+            # limits_v = (1.5e1, 1e5)
+
+            ylabel_p = ylabel_p +" (m)"
+            ylabel_v = ylabel_v +" (m/s)"
+            
+
+        # Error in position adn velocity
+        save_file_path_epev = [save_file_path+"Inputs_ErrorPosition" +stdlabel+".png",\
+                            save_file_path+"Inputs_ErrorVelocity" +stdlabel+".png"]
+
+        ylabel_epev = ["Error in position" + ylabel_p,\
+                        "Error in velocity" + ylabel_v]
+
+        limits_epev = [limits_p, limits_v]
+
+        for plot in range(2): # one for ep, one for ev
+            fig = plt.figure(figsize = (15,15))
+            for i in range(self.n_input):
+                ax = fig.add_subplot(self.n_input//2, 2, i+1)
+
+                if self.inputs_conf['labelType'] != 0:
+                    for j in range(self.inputs_conf['labelType']): # how many files are there
+                        indexes = np.where(self.labelType == j)[0] # find which values correspond to a certain creation method
+                        ax.scatter(x[indexes,i] , y[indexes, plot],\
+                            color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
+                else:
+                    ax.plot(x[:,i] , y[:, plot], 'ko', markersize = 5, label = "Optimized")
+                
+                # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
+                
+                ax.set_xlabel(self.labels[i+7], labelpad = -2)
+
+                if self.Log == False:
+                    if self.scaling ==0:
+                        ax.set_yscale('log')
+                    elif self.scaling == 1:
                         ax.set_yscale('symlog') # To display negative values
                 
                 ax.set_ylim(limits_epev[plot])
@@ -408,9 +510,10 @@ class Dataset:
             plt.show()
 
     def plotDistributionErrorsPD(self, save_file_path):
-        save_file_path_epev = save_file_path+"Distribtuion_output_" +str(self.typeOutput)+".png"
-        dataset = pd.DataFrame(data = np.log10(self.output_reg))
+        save_file_path_epev = save_file_path+"Distribution_output_" +str(self.typeOutput)+".png"
+        dataset = pd.DataFrame(data = np.log10(self.output_reg), columns = self.output_label )
         sns.displot(dataset)
+        # plt.legend(self.output_label, loc='upper left')
         plt.tight_layout()
         plt.savefig(save_file_path_epev, dpi = 100)
         plt.show()
@@ -510,6 +613,39 @@ class Dataset:
 
         return E, I
 
+    def noise_gauss(self, mean, std):
+        if self.inputs_conf['labelType'] == 0:
+            self.labelType == np.zeros((len(self.nsamples))).flatten()
+            self.inputs_conf['labelType'] = 1
+
+        # Create copies
+        output_2 = self.output_reg_std.copy()
+        input_2 = self.input_data_std.copy()
+        labelType_2 = self.labelType.copy()
+
+        # Add noise
+        output_2 += np.random.normal(mean, std, np.shape(self.output_reg_std)) 
+        input_2 += np.random.normal(mean, std, np.shape(self.input_data_std)) 
+        labelType_2 += self.inputs_conf['labelType']
+
+        self.inputs_conf['labelType'] *= 2
+
+        # Append to current list
+        if self.n_outputs == 1:
+            self.output_reg_std = np.concatenate((self.output_reg_std, output_2))
+        else:
+            self.output_reg_std = np.vstack((self.output_reg_std, output_2))
+        self.input_data_std = np.vstack((self.input_data_std, input_2))
+        self.labelType = np.concatenate((self.labelType, labelType_2))
+
+        
+        # Find error again
+        if self.typeOutput == 'epevmf':
+            self.error_std = self.output_reg_std[:,1:3] 
+        elif self.typeOutput == 'epev':
+            self.error_std = self.output_reg_std[:,0:2]
+        elif self.typeOutput == 'objfunc' or self.typeOutput == 'ep' or self.typeOutput == 'ev' or self.typeOutput == 'mf':
+            self.error_std = np.zeros(np.shape(self.error)) 
     # def plotDataPandas(self):
     #     df = 
     #     g = sns.pairplot(df)
@@ -611,24 +747,33 @@ def LoadNumpy(train_file_path, save_file_path = None, \
             dataUnits = "AU", Log = False, \
             outputs =  {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': 1, 'add': 'vector'},
             output_type = 'epev',
-            labelType = False,
-            plotDistribution = False, plotErrors = False):
+            labelType = 0,
+            plotDistribution = False, plotErrors = False, 
+            plotOutputDistr = False, plotEpvsEv = False,
+            data_augmentation = False):
 
+    if type(data_augmentation) != bool and data_augmentation['type'] == 'multiplication': # Augmentation = true
+        train_file_path2 = train_file_path.copy()
+        for rep in range(data_augmentation['times']-1):
+            train_file_path2.extend(train_file_path)
+
+        train_file_path = train_file_path2
+
+    if type(train_file_path) == list: # files have to be joined
+        labelType = len(train_file_path)
+        train_file_path2 = save_file_path +'Together.txt'
+        join_files( train_file_path, train_file_path2)
+        train_file_path = train_file_path2
+        
     # Load with numpy to see plot
-    
     dataset_np = Dataset(train_file_path, \
         inputs = {'labelType': labelType},\
         outputs =outputs, \
         actions = {'shuffle': True })
 
-
-    # Plot distribution of feasible/unfeasible
-    if plotDistribution == True:
-        dataset_np.plotDistributionOfFeasible()
-
-    if plotErrors == True and save_file_path != None:
+    if plotEpvsEv == True and save_file_path != None:
         dataset_np.statisticsError(save_file_path)
-    
+
     if scaling == 0 or scaling == 1: # common
         dataset_np.commonStandardization(scaling, dataUnits, Log, output_type)
     else:
@@ -636,12 +781,30 @@ def LoadNumpy(train_file_path, save_file_path = None, \
     # else:
     #     setattr(dataset_np, "Log", Log)
     #     setattr(dataset_np, "DataUnits", dataUnits)
-            
-    if plotErrors == True:
+
+
+    if plotDistribution == True:
+        dataset_np.plotDistributionOfFeasible()
+
+    if plotOutputDistr == True:
         dataset_np.plotDistributionErrorsPD(save_file_path)
-        dataset_np.plotDistributionOfErrors(save_file_path)
+
+    if type(data_augmentation) != bool:
+        save_file_path = save_file_path +"_aumented_"
+
+    if type(data_augmentation) != bool and data_augmentation['type'] == 'noise_gauss':
+        dataset_np.noise_gauss(data_augmentation['mean'], data_augmentation['std'])
+        std_Error = True
+    else:
+        std_Error = False # TODO: Can be modified to obtain other plots
+
+    
+    if plotErrors == True:
+        dataset_np.plotDistributionOfErrors(save_file_path, std_Error)
+        # dataset_np.plotDistributionOfErrors(save_file_path)
 
     return dataset_np
+
 
 
 def splitData_class( dataset_np):
