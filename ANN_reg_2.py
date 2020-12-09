@@ -7,7 +7,9 @@ import tensorflow as tf
 from tensorflow import keras
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from math import floor, ceil
 
 from sklearn.metrics import roc_auc_score, accuracy_score, mean_squared_error
@@ -299,6 +301,17 @@ class ANN_reg:
         plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  ".png", dpi = 100)
         plt.show()
 
+
+        if std == False:
+            dataset = pd.DataFrame(data = np.log10(self.Output_pred)) 
+        else:
+            dataset = pd.DataFrame(data = np.log10(self.Output_pred_unscale)) 
+        sns.displot(dataset)
+        # plt.legend(self.output_label, loc='upper left')
+        plt.tight_layout()
+        plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  "_pd.png", dpi = 100)
+        plt.show()
+
     def singlePrediction(self, input_case):
         print(input_case)
         input_batch = np.array([input_case])
@@ -341,11 +354,12 @@ def Network(dataset_np, save_path):
     perceptron.plotPredictions(std = True)
 
 def Fitness_network():
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/500/"
 
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
-    file_path = [base+ 'Random_MBH_eval.txt', base+ 'Random_MBH.txt']
+    file_path = [base+ 'Random_MBH_eval.txt', base+ 'Random_MBH.txt',
+                base+'Lambert_eval.txt', base+'Lambert.txt']
 
 
     # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
@@ -358,12 +372,14 @@ def Fitness_network():
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
-            # data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
-                data_augmentation=False)
+            plotDistribution=False, plotErrors=False,
+            plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            # plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+
     
-    # Network(dataset_np, base)
+    Network(dataset_np, base)
 
 def Opt_network():
     base = "./databaseANN/DatabaseOptimized/deltakeplerian/"

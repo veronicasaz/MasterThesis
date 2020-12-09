@@ -16,8 +16,8 @@ from sklearn.datasets import make_regression
 from sklearn.model_selection import RepeatedKFold
 
 import LoadConfigFiles as CONF
-import TrainingDataKeras as TD
-import ANN_reg as AR
+import TrainingData as TD
+import ANN_reg_2 as AR
 
 ###################################################################
 # https://stackabuse.com/tensorflow-2-0-solving-classification-and-regression-problems/
@@ -122,24 +122,19 @@ def compareInputs(repetitions, typeInputs, save_study_path): # Using same values
         # stand_file_path = save_file_path + 'Together_' + str(values_type_stand[i]) +'_' + str(values_scaling[j]) +'.txt'
         for k in range(repetitions):
             # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
-            dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
-                    equalize = False, \
-                    standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+            dataset_np = TD.LoadNumpy(train_file_path,
+                    scaling = Scaling['scaling'],\
                     dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-                    plotDistribution=False, plotErrors=False, labelType = 3)
+                    outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+                    output_type = Dataset_conf.Dataset_config['Outputs'],
+                    plotDistribution=False, plotErrors=False, labelType = 2)
 
-            dataset_np = TD.LoadNumpy(train_file_path, save_file_path = save_file_path, 
-                scaling = Scaling['scaling'], 
-                dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-                outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-                output_type = Dataset_conf.Dataset_config['Outputs'])
-            
             traindata, testdata = TD.splitData_reg(dataset_np)
 
             ###############################################
             # CREATE AND TRAIN CLASS NETWORK
             ###############################################
-            perceptron = AR.ANN_reg(dataset_np, , save_path = save_file_path)
+            perceptron = AR.ANN_reg(dataset_np, save_path = save_file_path)
             perceptron.get_traintestdata(traindata, testdata)
             loss[i, k], val_loss[i, k] = perceptron.training()
 
@@ -179,22 +174,20 @@ def compareNumSamples(save_study_path, typeSamples, repetitions):
     val_loss = np.zeros([len(typeSamples),  repetitions])
 
     
+    for i in range(len(typeSamples)):
+        base = "./databaseANN/DatabaseFitness/deltakeplerian/"   
+        save_file_path = base + str(typeSamples[i]) +"/"
 
-    for i in range(len(typeSamples)):   
-        if typeSamples[i] == 500:
-            save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/" 
-        elif typeSamples[i] == 5000:
-            save_file_path =  "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
-        
-        train_file_path = save_file_path + 'Random.txt'
+        train_file_path = save_file_path + 'Together.txt'
 
         # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
-        dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
-                equalize = False, \
-                standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+        dataset_np = TD.LoadNumpy(train_file_path,
+                scaling = Scaling['scaling'],\
                 dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-                plotDistribution=False, plotErrors=False, labelType = False)
-        
+                outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+                output_type = Dataset_conf.Dataset_config['Outputs'],
+                plotDistribution=False, plotErrors=False, labelType = 2)
+
         traindata, testdata = TD.splitData_reg(dataset_np)
         traindata2 = [0,0]
         for k in range(repetitions):
@@ -238,7 +231,69 @@ def plot_compareNumSamples(path, typeSamples, repetitions):
     plt.savefig(path+"comparison.png", dpi = 100)
     plt.show()
 
+def comparetypeLog(save_study_path, typeLog, repetitions):
+    loss = np.zeros([len(typeLog), repetitions])
+    val_loss = np.zeros([len(typeLog),  repetitions])
 
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/500"   
+    save_file_path = base +"/"
+
+    train_file_path = save_file_path + 'Together.txt'
+
+    for i in range(len(typeLog)):
+        if typeLog[i] == 'Log':
+            logtype = True
+        else:
+            logtype = False
+
+        # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
+        dataset_np = TD.LoadNumpy(train_file_path,
+                scaling = Scaling['scaling'],\
+                dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = logtype,\
+                outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+                output_type = Dataset_conf.Dataset_config['Outputs'],
+                plotDistribution=False, plotErrors=False, labelType = 4)
+
+        traindata, testdata = TD.splitData_reg(dataset_np)
+
+        for k in range(repetitions):
+            ###############################################
+            # CREATE AND TRAIN CLASS NETWORK
+            ###############################################
+            perceptron = AR.ANN_reg(dataset_np)
+            perceptron.get_traintestdata(traindata, testdata)
+            loss[i, k], val_loss[i, k] = perceptron.training()
+
+            print("####################################################")
+            print(loss, i, k )
+        
+    with open(save_study_path+"loss.txt", "w") as myfile:
+        np.savetxt(myfile, loss)
+    myfile.close()
+    with open(save_study_path+"val_loss.txt", "w") as myfile:
+        np.savetxt(myfile, val_loss)
+    myfile.close()
+
+    return save_study_path
+
+def plot_comparetypeLog(path, typeLog, repetitions):
+    loss = np.loadtxt(path+"loss.txt")
+    val_loss = np.loadtxt(path+"val_loss.txt")
+
+    color = ['black', 'blue', 'green', 'orange', 'yellow']
+
+    for i in range(len(typeLog)):
+        plt.plot( np.arange(0,repetitions, 1), loss[i, :], marker = 'o', color = color[i], label = typeLog[i] )
+    
+    plt.xticks(np.arange(0, repetitions, 1))
+    plt.title("Mean Squared Error when applying log() to the errors")
+    plt.xlabel('Repetitions')
+    plt.ylabel("Loss (MSE)")
+    plt.legend()
+    plt.grid(alpha = 0.5)
+    plt.tight_layout()
+    plt.savefig(path+"comparison.png", dpi = 100)
+    plt.show()
 
 if __name__ == "__main__":
     # COMPARE STANDARDIZATION
@@ -254,11 +309,19 @@ if __name__ == "__main__":
     typeInputs = ['cartesian', 'deltakeplerian', 'deltakeplerian_planet']
     save_study_path =  "./Results/StudyInputs/"
     # compareInputs(repetitions, typeInputs, save_study_path)
-    # plot_compareInputse_study_path, repetitions, typeInputs)
+    # plot_compareInputs(save_study_path, repetitions, typeInputs)
     
     # COMPARE NUMBER SAMPLES: LEARNING CURVE
     repetitions = 5
-    typeSamples = [500, 5000]
+    typeSamples = [500, 1000, 5000]
     save_study_path =  "./Results/StudyNSamples/DifferentFiles/"
     # compareNumSamples(save_study_path, typeSamples, repetitions)
     # plot_compareNumSamples(save_study_path, typeSamples, repetitions)
+
+
+    # COMPARE EFFECT OF LOG IN ERRORS
+    repetitions = 5
+    typeLog = ['Without log', 'Log']
+    save_study_path =  "./Results/StudytypeLog/"
+    # comparetypeLog(save_study_path, typeLog, repetitions)
+    # plot_comparetypeLog(save_study_path, typeLog, repetitions)

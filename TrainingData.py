@@ -277,7 +277,8 @@ class Dataset:
         """
         plot Ep vs Ev with limits for feasibility
         """
-        colors = ['black', 'red', 'green', 'blue', 'orange']
+        colors = ['black', 'red', 'green', 'blue', 'orange', 'yellow', 'purple',\
+            'pink']
         
         # Plot limit lines for feasibility
         x = [min(self.error[:,0]) , max(self.error[:,0]) ]
@@ -416,6 +417,7 @@ class Dataset:
             plt.show()
 
 
+#TODO: not used:
     def plotOutputsWRTInputs(self, save_file_path, std = True):
         colors = ['black', 'red', 'green', 'blue', 'orange']
 
@@ -750,9 +752,9 @@ def LoadNumpy(train_file_path, save_file_path = None, \
             labelType = 0,
             plotDistribution = False, plotErrors = False, 
             plotOutputDistr = False, plotEpvsEv = False,
-            data_augmentation = False):
+            data_augmentation = 'False'):
 
-    if type(data_augmentation) != bool and data_augmentation['type'] == 'multiplication': # Augmentation = true
+    if data_augmentation != 'False' and data_augmentation['type'] == 'multiplication': # Augmentation = true
         train_file_path2 = train_file_path.copy()
         for rep in range(data_augmentation['times']-1):
             train_file_path2.extend(train_file_path)
@@ -789,10 +791,10 @@ def LoadNumpy(train_file_path, save_file_path = None, \
     if plotOutputDistr == True:
         dataset_np.plotDistributionErrorsPD(save_file_path)
 
-    if type(data_augmentation) != bool:
-        save_file_path = save_file_path +"_aumented_"
+    if data_augmentation != 'False':
+        save_file_path = save_file_path +"_aumented_"+data_augmentation['type']+"_"
 
-    if type(data_augmentation) != bool and data_augmentation['type'] == 'noise_gauss':
+    if data_augmentation != 'False' and data_augmentation['type'] == 'noise_gauss':
         dataset_np.noise_gauss(data_augmentation['mean'], data_augmentation['std'])
         std_Error = True
     else:
@@ -847,25 +849,42 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseOptimized/deltakeplerian/5000_AU/"
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
     # file_path = [base + 'Random.txt']
-    file_path = [base +'Random_eval.txt', base +'Random.txt']
+    # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+    file_path = [base+ 'fp1/Random_MBH.txt',
+                base+ 'fp2/Random_MBH.txt',
+                base+ 'fp5/Random_MBH.txt',
+                base+ '500/Random_MBH.txt',
+                base+ 'fp50/Random_MBH.txt',
+                base+ 'fp100/Random_MBH.txt']
     
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    file_path_together = base +'Together.txt'
+    file_path_together = base +'ComparisonObjFunction.txt'
     join_files(file_path, file_path_together)
 
 
+    dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = len(file_path),
+            plotDistribution=False, plotErrors=False,
+            # plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)
-    dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
-            equalize =  False, \
-            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            Outputs= Dataset_conf.Dataset_config['Outputs'],
-            plotDistribution=False, plotErrors=True, labelType = 2)
+    # dataset_np = LoadNumpy(file_path_together, base, error= 'vector',\
+    #         equalize =  False, \
+    #         standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'],\
+    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+    #         Outputs= Dataset_conf.Dataset_config['Outputs'],
+    #         plotDistribution=False, plotErrors=True, labelType = 2)
 
     # save_standard(dataset_np, base + 'Together_')
