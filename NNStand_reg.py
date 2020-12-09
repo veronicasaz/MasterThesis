@@ -295,6 +295,31 @@ def plot_comparetypeLog(path, typeLog, repetitions):
     plt.savefig(path+"comparison.png", dpi = 100)
     plt.show()
 
+def compareObjFunctions():
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
+    file_path = [base+ 'fp1/Random_MBH.txt',
+                base+ 'fp2/Random_MBH.txt',
+                base+ 'fp5/Random_MBH.txt',
+                base+ '500/Random_MBH.txt',
+                base+ 'fp50/Random_MBH.txt',
+                base+ 'fp100/Random_MBH.txt']
+    
+    file_path_together = base +'ComparisonObjFunction.txt'
+    TD.join_files(file_path, file_path_together)
+
+
+    dataset_np = TD.LoadNumpy(file_path_together, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = len(file_path),
+            plotDistribution=False, plotErrors=False,
+            # plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            plotOutputDistr = False, plotEpvsEv = True,
+            data_augmentation = 'False')
+
 if __name__ == "__main__":
     # COMPARE STANDARDIZATION
     values_type_stand = [0, 1, 2]
@@ -325,3 +350,6 @@ if __name__ == "__main__":
     save_study_path =  "./Results/StudytypeLog/"
     # comparetypeLog(save_study_path, typeLog, repetitions)
     # plot_comparetypeLog(save_study_path, typeLog, repetitions)
+
+    # COMPARE OBJECTIVE FUNCTIONS
+    compareObjFunctions()
