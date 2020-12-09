@@ -1,11 +1,11 @@
 Training:
  train_size: 0.9 # % of the data for training, the rest is testing
  validation_size: 0.2 # % To validate 
- epochs: 150
+ epochs: 1000
  random_state: 1
  learning_rate: 0.001
  regularization: False
- regularizer_rate: 0.1
+ regularizer_rate: 0.001
  dropout_prob: 0.6
  
 TrainingKfold:
@@ -17,8 +17,8 @@ TrainingKfold:
  
 
 Architecture:
- hidden_layers: 2 # number of hidden layers
+ hidden_layers: 3 # number of hidden layers
  neuron_hidden: 100 # number of neurons in each hidden layer
- regularizer_value: 0.001
+ regularizer_value: 0.0005
 
 

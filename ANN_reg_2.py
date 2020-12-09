@@ -45,7 +45,7 @@ class ANN_reg:
         if save_path == False:
             self.checkpoint_path = "./trainedCNet_Reg/training/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
         else:
-            self.checkpoint_path = save_path +"./trainedCNet_Reg/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
+            self.checkpoint_path = save_path +"./trainedCNet_Reg/"+Dataset_conf.Dataset_config['Outputs']+'/'
 
     def create_model(self):
         # Create architecture
@@ -354,12 +354,18 @@ def Network(dataset_np, save_path):
     perceptron.plotPredictions(std = True)
 
 def Fitness_network():
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/500/"
+    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
 
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
-    file_path = [base+ 'Random_MBH_eval.txt', base+ 'Random_MBH.txt',
-                base+'Lambert_eval.txt', base+'Lambert.txt']
+    file_path = base+ '500/Random_MBH_3.txt'
+    # [
+                # base+ '500/Random_MBH_eval.txt', 
+                
+                # base+ '1000/Random_MBH_eval.txt', base+ '1000/Random_MBH_3.txt',
+                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
+                # base+'Lambert_eval.txt', base+'Lambert.txt'
+                # ]
 
 
     # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
@@ -373,10 +379,48 @@ def Fitness_network():
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
             plotDistribution=False, plotErrors=False,
-            plotOutputDistr = False, plotEpvsEv = False,
+            # plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            # plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+            plotOutputDistr = True, plotEpvsEv = False,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+
+    
+    Network(dataset_np, base)
+
+def Fitness_network_optDecV():
+    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
+
+    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
+    #     base+ 'Lambert_opt.txt']
+    file_path = [base + 'Random1000_MBH_eval.txt',
+                base + 'Random1000_MBH.txt',
+                base + 'Random_1000.txt',
+                base + 'Random_500.txt'
+                # base + 'OthersFromFitness/Random_MBH5000_3.txt',
+                # base + 'OthersFromFitness/Random_MBH1000_3.txt',
+                
+                # base + 'OthersFromFitness/Random_MBH500_3.txt', 
+                # base + 'OthersFromFitness/Random_MBH500_5.txt', 
+                # base + 'OthersFromFitness/Lambert_3.txt'
+                ]
+
+
+
+    # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
+    
+    train_file_path = file_path
+    # train_file_path = base +'Random.txt'
+
+    dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            plotDistribution=False, plotErrors=False,
+            # plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     
     Network(dataset_np, base)
@@ -387,7 +431,6 @@ def Opt_network():
     train_file_path = base +'Random.txt'
 
 
-
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
@@ -396,11 +439,13 @@ def Opt_network():
             plotDistribution=True, plotErrors=True,
             plotOutputDistr = True, plotEpvsEv = True,
             # data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
-                data_augmentation=False)
+                data_augmentation= Dataset_conf.Dataset_config['dataAugmentation']['type'])
     
-    # Network(dataset_np)
+    Network(dataset_np, base)
 
 
 if __name__ == "__main__":
-    Fitness_network()
+    # Fitness_network()
+
+    Fitness_network_optDecV()
     # Opt_network()

@@ -1,10 +1,12 @@
 Creation:
- typeinputs: "deltakeplerian_planet" # cartesian or deltakeplerian deltakeplerian_planet
- creationMethod: 'Random' # 'Exposin', 'Lambert', 'Random, Random_MBH
+ typeoutputs: "fit" # fit or opt
+ autodecV: True
+ typeinputs: "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
+ creationMethod: 'Random_MBH' # 'Exposin', 'Lambert', 'Random, Random_MBH
  lhypercube: True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized 
  evaluate: True #evaluate and save initial samples
- samples_rand: 500 # samples with random mor hypercube initialization
+ samples_rand: 5000 # samples with random mor hypercube initialization
  samples_L: 2000 # samples for Lambert and Exposin
  appendToFile: False # append instead of creating a new file. To increase the number of values
  
@@ -16,10 +18,15 @@ Scaling:
  # type_stand: 2 # 0- common standardization, 1-input-output separated, 2-input-output-output separated
  # scaling: 1 # options: 0-minmax  scaler, 1-standard scaler, 2-normalizer
  
-Outputs: 'ep' #objfunc gives one output with the result of the objective function.
+Outputs: 'epev' #objfunc gives one output with the result of the objective function.
                  #epevmf: gives three outputs, mass of fuel, error in position, error in velocity. 
                  #epev: gives two outputs, the error in position and the error in velocity
                  #ep
                  #ev
                  #mf
 
+dataAugmentation:
+ type: 'noise_gauss' #multiplication a certain number of times, noise_gauss 'False'
+ times: 3 # in case type == multiplicate
+ mean: 0.001 # mean and std of the gaussian distribution
+ std: 0.0001

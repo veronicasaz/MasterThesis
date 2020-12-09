@@ -7,12 +7,12 @@ SimsFlan:
  Nimp: 11 #Number of impulses. Must be odd so that there is a middle point!!! 
 
 bounds:
- v0: !!python/tuple [0., 2800.] #Relative to the planet. Value from dawn mission (ref: Sims Flan, Preliminary...)
+ v0: !!python/tuple [0., 3400.] #Relative to the planet. Value from dawn mission (ref: Sims Flan, Preliminary...)
  v0_angle: !!python/tuple [0, 2] #times pi
  vf: !!python/tuple [0., 8000.] #Relative to the planet
  vf_angle: !!python/tuple [0, 2] #times pi
  t0: !!python/tuple [0, 1000.] #+t0 for both
- t_t: !!python/tuple [200, 900.] #convert from days to seconds
+ t_t: !!python/tuple [200, 1500.] #convert from days to seconds
  deltav_mag: !!python/tuple [0., 1.] #magnitude
  deltav_ang: !!python/tuple [-1, 1] #times pi
 

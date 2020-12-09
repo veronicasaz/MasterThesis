@@ -33,17 +33,29 @@ fitness = FIT_f.Fitness()
 ###################################################################
 # https://deeplizard.com/learn/video/8krd5qKVw-Q
 ###################################################################
-def join_files(file_path, filename):
+def join_files(file_path, filename, label_available = False):
+    """
+    label_available: True if files have previously been merged and the last column is the label
+    """
     dataset = np.loadtxt(file_path[0], skiprows = 1)
-    label = np.ones(len(dataset[:,0])) * 0
-    dataset = np.column_stack((dataset, label))
+
+    if label_available == False:
+        label = np.ones(len(dataset[:,0])) * 0
+        dataset = np.column_stack((dataset, label))
+    else:
+        label = dataset[:,-1]
 
     print("Type %i, Number samples: %i"%(0, len(dataset[:,0])))
 
     for i, file_i in enumerate(file_path[1:]):
         dataset_i = np.loadtxt(file_i, skiprows = 1)
-        label = np.ones(len(dataset_i[:,0]))* (i+1)
-        dataset_i = np.column_stack((dataset_i, label))
+
+        if label_available == False:
+            label = np.ones(len(dataset_i[:,0]))* (i+1)
+            dataset_i = np.column_stack((dataset_i, label))
+        else:
+            label = dataset_i[:,-1] + (max(label) +1)
+            dataset_i[:,-1] = label
 
         print("Type %i, Number samples: %i"%(i+1, len(dataset_i[:,0])))
 
@@ -58,7 +70,8 @@ def join_files(file_path, filename):
         labels = line.split(" ")
     fh.close()
 
-    labels.append( 'Datatype')
+    if label_available == False:
+        labels.append( 'Datatype')
 
     # Save labels
     with open(filename, "w") as myfile:
@@ -648,13 +661,8 @@ class Dataset:
             self.error_std = self.output_reg_std[:,0:2]
         elif self.typeOutput == 'objfunc' or self.typeOutput == 'ep' or self.typeOutput == 'ev' or self.typeOutput == 'mf':
             self.error_std = np.zeros(np.shape(self.error)) 
-    # def plotDataPandas(self):
-    #     df = 
-    #     g = sns.pairplot(df)
-    #     # g.set(yscale = 'log', xscale= 'log')
-    #     plt.tight_layout()
-    #     plt.savefig(save_file_path+"/Pairplot.png", dpi = 100)
-    #     plt.show()
+   
+
 
 
 def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
@@ -729,7 +737,7 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
         g = sns.pairplot(df)
         # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
-        plt.savefig(save_file_path+"/Pairplot.png", dpi = 100)
+        plt.savefig(save_file_path+"Pairplot.png", dpi = 100)
         plt.show()
 
     if corrplot == True: # correlations matrix
@@ -754,19 +762,27 @@ def LoadNumpy(train_file_path, save_file_path = None, \
             plotOutputDistr = False, plotEpvsEv = False,
             data_augmentation = 'False'):
 
-    if data_augmentation != 'False' and data_augmentation['type'] == 'multiplication': # Augmentation = true
-        train_file_path2 = train_file_path.copy()
-        for rep in range(data_augmentation['times']-1):
-            train_file_path2.extend(train_file_path)
+    if data_augmentation == 'multiplication': # Augmentation = true
+        if type(train_file_path) == str:
+            train_file_path2 = [train_file_path] * (Dataset_conf.Dataset_config['dataAugmentation']['times'])
+        else:
+            train_file_path2 = train_file_path.copy()
+            for rep in range(Dataset_conf.Dataset_config['dataAugmentation']['times']-1):
+                train_file_path2.extend(train_file_path)
 
         train_file_path = train_file_path2
+
+    if labelType > 0: # last column already exists
+        label_available = True
+    else:
+        label_available = False
 
     if type(train_file_path) == list: # files have to be joined
         labelType = len(train_file_path)
         train_file_path2 = save_file_path +'Together.txt'
-        join_files( train_file_path, train_file_path2)
+        join_files( train_file_path, train_file_path2, label_available = label_available)
         train_file_path = train_file_path2
-        
+
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, \
         inputs = {'labelType': labelType},\
@@ -792,10 +808,10 @@ def LoadNumpy(train_file_path, save_file_path = None, \
         dataset_np.plotDistributionErrorsPD(save_file_path)
 
     if data_augmentation != 'False':
-        save_file_path = save_file_path +"_aumented_"+data_augmentation['type']+"_"
+        save_file_path = save_file_path +"_aumented_"+data_augmentation+"_"
 
-    if data_augmentation != 'False' and data_augmentation['type'] == 'noise_gauss':
-        dataset_np.noise_gauss(data_augmentation['mean'], data_augmentation['std'])
+    if data_augmentation  == 'noise_gauss':
+        dataset_np.noise_gauss(Dataset_conf.Dataset_config['dataAugmentation']['mean'], Dataset_conf.Dataset_config['dataAugmentation']['std'])
         std_Error = True
     else:
         std_Error = False # TODO: Can be modified to obtain other plots
@@ -853,30 +869,30 @@ if __name__ == "__main__":
     # file_path = [base + 'Random.txt']
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
-    file_path = [base+ 'fp1/Random_MBH.txt',
-                base+ 'fp2/Random_MBH.txt',
-                base+ 'fp5/Random_MBH.txt',
-                base+ '500/Random_MBH.txt',
-                base+ 'fp50/Random_MBH.txt',
-                base+ 'fp100/Random_MBH.txt']
+    file_path = [
+                base+ '500/Random_MBH_eval.txt', base+ '500/Random_MBH_3.txt',
+                base+ '1000/Random_MBH_eval.txt', base+ '1000/Random_MBH_3.txt',
+                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
+                base+'Lambert_eval.txt', base+'Lambert.txt'
+                ]
     
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    file_path_together = base +'ComparisonObjFunction.txt'
+    file_path_together = base +'/ComparisonNInputs_files/Tog_1000.txt'
     join_files(file_path, file_path_together)
 
 
-    dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
-            scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-            output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = len(file_path),
-            plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
-            # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+    # dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
+    #         scaling = Scaling['scaling'], 
+    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+    #         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+    #         output_type = Dataset_conf.Dataset_config['Outputs'],
+    #         labelType = len(file_path),
+    #         plotDistribution=False, plotErrors=False,
+    #         # plotOutputDistr = False, plotEpvsEv = False,
+    #         # plotDistribution=True, plotErrors=True,
+    #         plotOutputDistr = True, plotEpvsEv = True,
+    #         data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)

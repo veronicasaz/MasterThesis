@@ -23,8 +23,12 @@ MBH = opt_config.MBH_generateDatabase
 Dataset_c = CONFIG.Dataset()
 Dataset_conf = Dataset_c.Dataset_config
 
-def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate):
-    if typeoutputs == "opt":
+def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate, autodecV):
+    if autodecV == True:
+        fileName = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod + '_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod + '.txt'
+        matrix_file =  "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" 
+    elif typeoutputs == "opt":
         fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod + '_eval.txt'
         fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'.txt'
         matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
@@ -133,12 +137,13 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
 
     return v1_opt_v, v2_opt_v, acc_vector
 
-def latinhypercube(ninputs, samples):
+def latinhypercube(nsize, ninputs, samples):
     lhd = lhs(ninputs, samples=samples)
     # lhd = norm(loc=0, scale=1).ppf(lhd)  # this applies to both factors here
 
-    dataset = np.zeros(np.shape(lhd))
-    for item in range(len(SF.bnds)):
+    # nsize - ninputs are empty
+    dataset = np.zeros((samples, nsize))
+    for item in range(ninputs):
         f = SF.bnds[item][1] - SF.bnds[item][0]
         a = np.ones((samples)) * SF.bnds[item][0]
         dataset[:,item] = lhd[:, item] * f + a
@@ -157,6 +162,12 @@ if __name__ == "__main__":
     def f(DecV):
         return Fit.calculateFitness(DecV)
 
+    def f_autodecV(dV, add):
+        DecV = np.zeros((len(dV)+8))
+        DecV[0:8] = add 
+        DecV[8:] = dV 
+        return Fit.calculateFitness(DecV)
+
     ######################################
     # CHOICE OF GENERATION OF THE DATABASE
     ######################################
@@ -166,6 +177,7 @@ if __name__ == "__main__":
     creationMethod = Dataset_conf['Creation']['creationMethod'] # 'Exposin', 'Lambert', 'Random
     lhypercube = Dataset_conf['Creation']['lhypercube'] # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized 
+    autodecV = Dataset_conf['Creation']['autodecV']
     evaluate = Dataset_conf['Creation']['evaluate']
     samples_rand = Dataset_conf['Creation']['samples_rand'] # samples with random mor hypercube initialization
     samples_L = Dataset_conf['Creation']['samples_L'] # samples for Lambert and Exposin
@@ -178,7 +190,7 @@ if __name__ == "__main__":
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt, matrix_file = \
-            createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate)
+            createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate, autodecV)
     
     ####################
     # DATABASE CREATION
@@ -190,10 +202,18 @@ if __name__ == "__main__":
                 high = SF.bnds[decv][1], size = samples_L)
     else:
         if lhypercube == True:
-            samples_initial = latinhypercube(len(SF.bnds), samples_rand)
+            if autodecV == True:
+                sizelatinh = 8 # only latin hypercube to the ones without dec v
+            else:
+                sizelatinh = len(SF.bnds)
+            samples_initial = latinhypercube(len(SF.bnds), sizelatinh, samples_rand)
         else:
             samples_initial = np.zeros((samples_L, len(SF.bnds)))
-            for decv in range(len(SF.bnds)): 
+            if autodecV == True:
+                sizelatinh = 8 # only latin hypercube to the ones without dec v
+            else:
+                sizelatinh = len(SF.bnds)
+            for decv in range(sizelatinh): 
                 samples_initial[:, decv] = np.random.uniform(low = SF.bnds[decv][0], \
                     high = SF.bnds[decv][1], size = samples_L)
         
@@ -308,9 +328,21 @@ if __name__ == "__main__":
             print("Sample %i"%i_sample)
             print("-------------------------------")
             sample = sample_inputs[i_sample, :]
-            fvalue = Fit.calculateFitness(sample, printValue = False)
-            Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
-            
+            # fvalue = Fit.calculateFitness(sample, printValue = False)
+            # Fit.savetoFile(typeinputs, feasibilityFileName) # saves the current values
+
+            if autodecV == True:
+                solutionLocal = spy.minimize(f_autodecV, sample[8:], args = (sample[0:8]), method = 'SLSQP', \
+                        tol = MBH['tolLocal'], bounds = SF.bnds[8:], options = {'maxiter': MBH['niter_local']} )
+
+                fvalue = f_autodecV(solutionLocal.x, sample[0:8])
+                feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds[8:])
+                if feasible == True: 
+                    Fit.savetoFile(typeinputs, feasibilityFileName)
+                    # Fit.printResult()
+                else:
+                    print("Out of bounds")
+                
 
 
     ####################
@@ -330,7 +362,7 @@ if __name__ == "__main__":
         # Fit.savetoFile(typeinputs, feasibilityFileName, massFileName) # saves the current values
         # Not needed as saved before        
         Fit.printResult()
-        
+
         # optimize starting from sample
         if creationMethod == 'Random_MBH':
             solutionLocal, Best = AL_OPT.MonotonicBasinHopping(f, sample, mytakestep,\
