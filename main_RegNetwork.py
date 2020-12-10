@@ -4,11 +4,10 @@ import scipy.optimize as spy
 from FitnessFunction_normalized import Fitness
 from ANN_reg_2 import ANN_reg
 import TrainingData as TD
+from GenerateTrainingDataFromOpt import latinhypercube
 
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_OPT as AL_OPT
-import GenerateTrainingDataFromOpt as GTD
-import ANN_reg as AR
 
 import LoadConfigFiles as CONFIG
 
@@ -44,13 +43,13 @@ dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base,
             labelType=2,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
             
-ANN = AR.ANN_reg(dataset_np, save_path = base)
+ANN = ANN_reg(dataset_np, save_path = base)
 
 
 ########################
 # Calculate fitness
 ########################
-def f(DecV):
+def f_ANN(DecV):
     # Error
     t0_reg = time.time()
     # Transform inputs
@@ -61,12 +60,13 @@ def f(DecV):
     
     # Standardize input vector
     input_Vector_std = dataset_np.standardize_withoutFitting(input_Vector, 'I')
+    
     # Feasibility 
     feas = ANN.predict(fromFile = True, 
                         testfile = input_Vector_std,
                         rescale = True)
     tf_reg = (time.time() - t0_reg) 
-    print('Time network eval', tf_reg)
+    print('Time eval eval', tf_reg)
 
     # Fitness Function
     value = np.zeros((ind,1))
@@ -134,14 +134,18 @@ def MBH_self():
     Fitness.printResult()
 
 def MBH_batch_f(ML = False):
+    if ML == True:
+        f_opt = f_ANN
+    else:
+        f_opt = None
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
-    DecV = GTD.latinhypercube(len(SF.bnds), MBH_batch['nind']) #initialize with latin hypercube
+    DecV = latinhypercube(len(SF.bnds), len(SF.bnds), MBH_batch['nind']) #initialize with latin hypercube
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping_batch(f_notANN, DecV, mytakestep,\
-                f_opt = f, 
+                f_opt = f_opt, 
                 nind = MBH_batch['nind'], 
                 niter = MBH_batch['niter_total'], 
                 niter_sucess = MBH_batch['niter_success'], \
