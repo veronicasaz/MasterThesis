@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow import keras
 from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
+import joblib
 
 import numpy as np
 import pandas as pd
@@ -534,7 +535,7 @@ class Dataset:
         plt.show()
 
 
-    def commonStandardization(self, scaling, dataUnits, Log, typeOutput):
+    def commonStandardization(self, scaling, dataUnits, Log, typeOutput, savepath):
         """
         standardize inputs and errors together
         """
@@ -565,7 +566,12 @@ class Dataset:
             self.scaler = StandardScaler()
 
         database = np.column_stack((self.output_reg, self.input_data))
-        self.scaler.fit(database)
+        fittedModel = self.scaler.fit(database)
+
+        # Save scaler 
+        self.path_stand_model = savepath + '/std_scaler.bin'
+        joblib.dump(fittedModel, self.path_stand_model, compress=True)
+
 
         database2 = self.scaler.transform(database)
         if self.typeOutput == 'epevmf':
@@ -584,9 +590,10 @@ class Dataset:
             self.input_data_std = database2[:,1:]
 
 
-
     def commonInverseStandardization(self, y, x):
         database = np.column_stack((y,x))
+
+        self.scaler = joblib.load(self.path_stand_model)
         
         x2 = self.scaler.inverse_transform(database)
         
@@ -793,7 +800,7 @@ def LoadNumpy(train_file_path, save_file_path = None, \
         dataset_np.statisticsError(save_file_path)
 
     if scaling == 0 or scaling == 1: # common
-        dataset_np.commonStandardization(scaling, dataUnits, Log, output_type)
+        dataset_np.commonStandardization(scaling, dataUnits, Log, output_type, save_file_path)
     else:
         dataset_np.select_output(output_type)
     # else:

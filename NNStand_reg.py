@@ -270,15 +270,16 @@ def plot_compareNumSamples(path, typeSamples, repetitions):
     plt.savefig(path+"comparison2.png", dpi = 100)
     plt.show()
 
-def compareNumSamples_val(save_study_path, typeSamples, repetitions):
+def compareNumSamples_val(base, save_study_path, typeSamples, repetitions):
     loss = np.zeros([len(typeSamples), repetitions])
     val_loss = np.zeros([len(typeSamples),  repetitions])
 
-    
     for i in range(len(typeSamples)):
-        base = "./databaseANN/DatabaseFitness/deltakeplerian/ComparisonNInputs_files/"   
+        # base = "./databaseANN/DatabaseFitness/deltakeplerian/ComparisonNInputs_files/" 
+        # train_file_path = base + "Tog_" +typeSamples[i] +".txt"
 
-        train_file_path = base + "Tog_" +typeSamples[i] +".txt"
+         
+        train_file_path = base + typeSamples[i] +".txt"
 
         # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
         dataset_np = TD.LoadNumpy(train_file_path,
@@ -367,11 +368,10 @@ def plot_compareNumSamples_val(path, typeSamples, repetitions):
     plt.savefig(path+"comparison2.png", dpi = 100)
     plt.show()
 
-def compareDataAugm(save_study_path, typeSamples, repetitions):
+def compareDataAugm(base, save_study_path, typeSamples, repetitions):
     loss = np.zeros([len(typeSamples), repetitions])
     val_loss = np.zeros([len(typeSamples),  repetitions])
 
-    base = "./Results/StudyDataAugmentation/"   
     train_file_path = base + "Tog_500_1000_L.txt"
 
     for i in range(len(typeSamples)):
@@ -581,16 +581,19 @@ if __name__ == "__main__":
 
     # COMPARE NUMBER SAMPLES: LEARNING CURVE. Train and val loss
     repetitions = 3
-    typeSamples = ['500', '500_1000','500_1000_L', '500_L', '1000', '1000_L']
-    save_study_path =  "./Results/StudyNSamples2/"
-    # compareNumSamples_val(save_study_path, typeSamples, repetitions)
+    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"   
+    save_study_path = base + 'Results/StudyNSamples/'
+    # typeSamples = ['500', '500_1000','500_1000_L', '500_L', '1000', '1000_L']
+    typeSamples = ['Random_500.txt', 'Random1000_MBH.txt', 'Random5000_MBH.txt']
+    # compareNumSamples_val(base, save_study_path, typeSamples, repetitions)
     # plot_compareNumSamples_val(save_study_path, typeSamples, repetitions)
 
     # DATA AUGMENTATION
     repetitions = 3
     typeAugm = ['multiplication', 'noise_gauss', 'False']
-    save_study_path =  "./Results/StudyDataAugmentation/"
-    # compareDataAugm(save_study_path, typeAugm, repetitions)
+    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"   
+    save_study_path =  base+  "Results/StudyDataAugmentation/"
+    # compareDataAugm(base, save_study_path, typeAugm, repetitions)
     # plot_compareDataAugm(save_study_path, typeAugm, repetitions)
 
 

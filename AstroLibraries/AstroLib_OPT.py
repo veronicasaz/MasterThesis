@@ -720,7 +720,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
     Step for jump is small, as minimum cluster together.
     Jump from current min until n_no improve reaches the lim, then the jump is random again.
     """
-
+    f_batch = kwargs.get('f_batch', False) # Function allows for batch eval
     f_opt = kwargs.get('f_opt', None) # function to optimze locally
     nind = kwargs.get('nind', 100)
     niter = kwargs.get('niter', 100)
@@ -728,6 +728,9 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
     bnds = kwargs.get('bnds', None)
     jumpMagnitude_default =  kwargs.get('jumpMagnitude', 0.1) # Small jumps to search around the minimum
     tolGlobal = kwargs.get('tolGobal', 1e-5)
+
+    niter_local = kwargs.get('niter_local', 50)
+    tolLocal = kwargs.get('tolLocal', 1e2)
     
     n_itercounter = 1
     n_noimprove = np.zeros((nind))
@@ -737,6 +740,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
     previousMin = seqEval(f, x)
     jumpMagnitude = np.ones((nind)) * jumpMagnitude_default
     accepted = np.zeros((nind))
+    feasibility = np.zeros((nind))
 
     while n_itercounter < niter:
         n_itercounter += 1
@@ -750,18 +754,32 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
                 feasible = check_feasibility(x_test[ind], bnds)
 
         # Local optimization 
-        currentMin = f_opt(x_test)
+        if f_opt != None:
+            currentMin = f_opt(x_test)
+        else:
+            currentMin = np.zeros((nind))
+            solutionLocal = np.zeros(np.shape(x))
+            for ind in range(nind):
+                solLocal = spy.minimize(f, x_test[ind], method = 'SLSQP', \
+                tol = tolLocal, bounds = bnds, options = {'maxiter': niter_local} )
+                solutionLocal[ind] = solLocal.x
 
+                feasibility[ind] = check_feasibility(solLocal.x, bnds)
+                if feasibility[ind] == False:
+                    print("Warning: Point out of limits")
+            
+            currentMin = seqEval(f, solutionLocal)
+
+             
         for ind in range(nind):
-            feasible = check_feasibility(currentMin[ind], bnds) 
-
+  
             # Check te current point from which to jump: after doing a long jump or
             # when the solution is improved        
             if jumpMagnitude[ind] == 1 or currentMin[ind] < previousMin[ind]:
                 x[ind] = x_test[ind]
                 
             # Check improvement      
-            if currentMin[ind] < bestMin[ind] and feasible == True: # Improvement            
+            if currentMin[ind] < bestMin[ind] and feasibility[ind] == True: # Improvement            
                 Best[ind] = x[ind]
                 bestMin = currentMin
                 accepted[ind] = True
@@ -786,7 +804,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
 
         # Save results every 5 iter
         if n_itercounter % 20 == 0:
-            AL_BF.writeData(Best, 'w', 'SolutionMBH_batch.txt')
+            AL_BF.writeData(Best, 'w', '/Opt/SolutionMBH_batch.txt')
         
         print("iter", n_itercounter)
         print("Current min vs best one", currentMin, bestMin)

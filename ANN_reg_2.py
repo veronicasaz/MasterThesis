@@ -93,9 +93,15 @@ class ANN_reg:
                     validation_split= ANN['Training']['validation_size'],
                     epochs = ANN['Training']['epochs'] )
 
-        self.model.save_weights(self.checkpoint_path+"cp.ckpt")
 
-        
+        # Save model and weights
+        # model_json = self.model.to_json()
+        # with open(self.checkpoint_path+"model.json", "w") as json_file:
+        #     json_file.write(model_json)
+        # self.model.save_weights(self.checkpoint_path+"cp.ckpt")
+        self.model.save(self.checkpoint_path + "model.h5")
+
+        self.model.summary()        
         print('MSE: %.3f (%.3f)' %(self.history.history['loss'][-1], self.history.history['val_loss'][-1]))
 
         return self.history.history['loss'][-1], self.history.history['val_loss'][-1]
@@ -176,8 +182,18 @@ class ANN_reg:
         plt.show()
 
     def load_model_fromFile(self):
-        model_fromFile = self.create_model()
-        model_fromFile.load_weights(self.checkpoint_path+"cp.ckpt").expect_partial()
+        # model_fromFile = self.create_model()
+
+        # Load model
+        # json_file = open(self.checkpoint_path+"model.json", "r")
+        # loaded_model_json = json_file.read()
+        # json_file.close()
+        # model_fromFile = model_from_json(loaded_model_json)
+
+        model_fromFile = keras.models.load_model(self.checkpoint_path+"model.h5")
+
+        # Load weights
+        # model_fromFile.load_weights(self.checkpoint_path+"cp.ckpt").expect_partial()
         self.model = model_fromFile
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
@@ -221,6 +237,8 @@ class ANN_reg:
             
             if type(testfile) == bool:
                 self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
+                self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
+                
                 for i in range(len(predictions_unscaled)):
                     print('i', i)
                     # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
@@ -228,19 +246,20 @@ class ANN_reg:
                     print("------------------------")
                     for output_i in range(self.n_classes):
                         self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
+                        self.Output_pred_unscale_ptg[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i] ) /true_value[i,output_i]
                         print(predictions_unscaled[i,output_i], true_value[i,output_i ])
     
         return pred_test
 
     def plotPredictions(self, std):
 
-        labels = ['Difference in mass of fuel', 'Difference in position error', 'Difference in velocity error']
+        labels = 'Difference in predicted ' 
         symbols = ['r-x', 'g-x', 'b-x']
         if std == False: # No inverse standarization possible or not needed
             fig, ax = plt.subplots() 
             
             for i in range(self.n_classes):
-                plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,i], symbols[i], label = labels[i])
+                plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,i], symbols[i], label = labels+ self.dataset_np.output_label[i])
 
             plt.xlabel("Samples to predict")
             plt.grid(alpha = 0.5)
@@ -259,7 +278,7 @@ class ANN_reg:
             
             fig.subplots_adjust(wspace=0.1, hspace=0.05)
             for i in range(self.n_classes):
-                ax_i[i].plot(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,i], symbols[i], label = labels[i])
+                ax_i[i].scatter(np.arange(0, len(self.Output_pred_unscale_ptg)), self.Output_pred_unscale_ptg[:,i], marker =  'x', label = labels+ self.dataset_np.output_label[i])
 
             if Dataset_conf.Dataset_config['Outputs'] == 'epev' or\
                Dataset_conf.Dataset_config['Outputs'] == 'ep' or\
@@ -302,10 +321,11 @@ class ANN_reg:
         plt.show()
 
 
+        # As a pde distribution
         if std == False:
             dataset = pd.DataFrame(data = np.log10(self.Output_pred)) 
         else:
-            dataset = pd.DataFrame(data = np.log10(self.Output_pred_unscale)) 
+            dataset = pd.DataFrame(data = np.log10(self.Output_pred_unscale_ptg)) 
         sns.displot(dataset)
         # plt.legend(self.output_label, loc='upper left')
         plt.tight_layout()
@@ -340,15 +360,15 @@ def Network(dataset_np, save_path):
     perceptron = ANN_reg(dataset_np, save_path = save_path)
     perceptron.get_traintestdata(traindata, testdata)
     
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
     
     # perceptron.trainingKFoldCross()
     # perceptron.plotTrainingKFold()
     
     print("EVALUATE")
-    predictions = perceptron.predict(fromFile=True, rescale = False)
-    perceptron.plotPredictions(std = False)
+    # predictions = perceptron.predict(fromFile=True, rescale = False)
+    # perceptron.plotPredictions(std = False)
     print("Rescaled:")
     predictions = perceptron.predict(fromFile=True, rescale = True)
     perceptron.plotPredictions(std = True)
@@ -393,9 +413,9 @@ def Fitness_network_optDecV():
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
     file_path = [base + 'Random1000_MBH_eval.txt',
-                base + 'Random1000_MBH.txt',
-                base + 'Random_1000.txt',
-                base + 'Random_500.txt'
+                base + 'Random1000_MBH.txt'
+                # base + 'Random_1000.txt',
+                # base + 'Random_500.txt'
                 # base + 'OthersFromFitness/Random_MBH5000_3.txt',
                 # base + 'OthersFromFitness/Random_MBH1000_3.txt',
                 
@@ -417,9 +437,9 @@ def Fitness_network_optDecV():
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
             plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
+            plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
+            # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     

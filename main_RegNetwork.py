@@ -2,8 +2,8 @@ import numpy as np
 import scipy.optimize as spy
 
 from FitnessFunction_normalized import Fitness
-from ANN_reg import ANN_reg
-import TrainingDataKeras as TD
+from ANN_reg_2 import ANN_reg
+import TrainingData as TD
 
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_OPT as AL_OPT
@@ -33,20 +33,18 @@ MBH_batch = opt_config.MBH_batch
 
 
 # Database for inverse standardization
-train_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/Random.txt"
-save_file_path = "./databaseANN/DatabaseOptimized/deltakeplerian/500_AU/"
+base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
+train_file_path = base + 'Together.txt'
 
-dataset_np = TD.LoadNumpy(train_file_path, save_file_path, error= 'vector',\
-            standardizationType = Scaling['type_stand'], scaling = Scaling['scaling'], \
+dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
+            scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            plotDistribution=False, plotErrors=False) # It is necessary to fit the data for the rescaling
-    
-traindata, testdata = TD.splitData_reg(dataset_np)
-ANN = AR.ANN_reg(dataset_np)
-ANN.get_traintestdata(traindata, testdata)
-
-
-# optimization
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType=2,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+            
+ANN = AR.ANN_reg(dataset_np, save_path = base)
 
 
 ########################
@@ -135,12 +133,11 @@ def MBH_self():
     Fitness.calculateFitness(fmin_4, plot = True)
     Fitness.printResult()
 
-def MBH_batch_f():
+def MBH_batch_f(ML = False):
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
     DecV = GTD.latinhypercube(len(SF.bnds), MBH_batch['nind']) #initialize with latin hypercube
-
 
     start_time = time.time()
     fmin_4, Best = AL_OPT.MonotonicBasinHopping_batch(f_notANN, DecV, mytakestep,\
@@ -162,6 +159,8 @@ def MBH_batch_f():
                 tol = 0.01, bounds = SF.bnds)
     Fitness.calculateFitness(solutionLocal.x, plot = True)
     Fitness.printResult()
+
+
 
 def evaluateFeasibility():
     ind = 1000
@@ -220,7 +219,11 @@ def propagateOne():
 if __name__ == "__main__":
     # EA()
     # MBH_self()
-    MBH_batch_f()
+    MBH_batch_f(ML = False) # Without ML
+    # MBH_batch_f(ML = True) # With ML
+
     # propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations
+
+    # Without ML
 
