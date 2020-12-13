@@ -382,7 +382,7 @@ def propagateSimsFlanagan():
     print(decv)
 
     Fit = Fitness(Nimp = SF.Nimp)
-    Fit.calculateFeasibility(decv)
+    Fit.calculateFitness(decv)
     Fit.printResult()
 
     # We plot
@@ -576,6 +576,6 @@ if __name__ == "__main__":
     # propagateLambert()
     # print("Universal propagation")
     # propagateUniversalLambert()
-    # propagateSimsFlanagan()
+    propagateSimsFlanagan()
     # propagateSimsFlanaganForward()
-    test_Exposin()
+    # test_Exposin()

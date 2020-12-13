@@ -569,8 +569,9 @@ class Dataset:
         fittedModel = self.scaler.fit(database)
 
         # Save scaler 
-        self.path_stand_model = savepath + '/std_scaler.bin'
-        joblib.dump(fittedModel, self.path_stand_model, compress=True)
+        if savepath != None:
+            self.path_stand_model = savepath + '/std_scaler.bin'
+            joblib.dump(fittedModel, self.path_stand_model, compress=True)
 
 
         database2 = self.scaler.transform(database)
@@ -588,6 +589,27 @@ class Dataset:
             self.error_std = np.zeros(np.shape(self.error)) # does not apply
             self.output_reg_std = database2[:, 0]
             self.input_data_std = database2[:,1:]
+
+
+    def standardize_withoutFitting(self, input_vec, typeInput):
+        
+        # Adapt inputs to size of fitted database
+        if typeInput == "I": # we only know the inputs
+            database = np.column_stack(( np.zeros((len(input_vec[:,0]), self.n_outputs)), input_vec ))
+        elif typeInput == "O":
+            database = np.column_stack(( input_vec, np.zeros(np.shape(self.input_data)) ))
+        else:
+            database = input_vec
+
+        self.scaler = joblib.load(self.path_stand_model)
+        database2 = self.scaler.transform(database)
+
+        if typeInput == "I": # we only know the inputs
+            return database2[:, self.n_outputs:]
+        elif typeInput == "O":
+            return database2[:, 0: self.n_outputs]
+        else:
+            return database2
 
 
     def commonInverseStandardization(self, y, x):
@@ -872,34 +894,34 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
+    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
     # file_path = [base + 'Random.txt']
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
     file_path = [
-                base+ '500/Random_MBH_eval.txt', base+ '500/Random_MBH_3.txt',
-                base+ '1000/Random_MBH_eval.txt', base+ '1000/Random_MBH_3.txt',
+                base+ 'databaseSaved/Random_MBH_200_3_eval.txt', base+ 'databaseSaved/Random_MBH_200_3.txt',
+                base+ 'databaseSaved/Random_MBH_1000_3_eval.txt', base+ 'databaseSaved/Random_MBH_1000_3.txt',
                 # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
-                base+'Lambert_eval.txt', base+'Lambert.txt'
+                # base+'Lambert_eval.txt', base+'Lambert.txt'
                 ]
     
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    file_path_together = base +'/ComparisonNInputs_files/Tog_1000.txt'
+    file_path_together = base +'/databaseSaved/Together.txt'
     join_files(file_path, file_path_together)
 
 
-    # dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
-    #         scaling = Scaling['scaling'], 
-    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-    #         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-    #         output_type = Dataset_conf.Dataset_config['Outputs'],
-    #         labelType = len(file_path),
-    #         plotDistribution=False, plotErrors=False,
-    #         # plotOutputDistr = False, plotEpvsEv = False,
-    #         # plotDistribution=True, plotErrors=True,
-    #         plotOutputDistr = True, plotEpvsEv = True,
-    #         data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+    dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = len(file_path),
+            plotDistribution=False, plotErrors=False,
+            # plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)

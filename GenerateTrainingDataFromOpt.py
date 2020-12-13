@@ -371,7 +371,11 @@ if __name__ == "__main__":
                 jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
                 tolGlobal = MBH['tolGlobal'])
             fvalue = f(solutionLocal)
-            Fit.savetoFile(typeinputs, feasibilityFileName_opt)
+            
+            if typeoutputs == 'fit':
+                Fit.savetoFile(typeinputs, feasibilityFileName_opt)
+            elif typeoutputs == 'opt': # save inputs with their optimum output
+                Fit.savetoFile(typeinputs, feasibilityFileName_opt,  inputs = sample)
             Fit.printResult()
             
         else:
