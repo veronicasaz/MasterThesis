@@ -261,7 +261,7 @@ class Fitness:
                 SV_list[imp + 1, :] = SV_i
 
             # Add impulse if not in last point
-            if imp != self.Nimp:
+            if imp != (self.Nimp + 1)//2:
                 if thrust == 'free':
                     if backwards == True:
                         SV_i[3:] -= self.DeltaV_list[imp, :] * self.DeltaV_max # Reduce the impulses
@@ -274,6 +274,10 @@ class Fitness:
                         SV_i[3:] -= SV_i[3:]/np.linalg.norm(SV_i[3:])* sign* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max # Reduce the impulses
                     else:
                         SV_i[3:] += SV_i[3:]/np.linalg.norm(SV_i[3:])* sign* np.linalg.norm(self.DeltaV_list[imp, :]) * self.DeltaV_max
+
+            else: # To compare, only add impulse on the one forward to compare delta v
+                 if backwards != True:
+                        SV_i[3:] += self.DeltaV_list[imp, :] * self.DeltaV_max # Reduce the impulses
 
         if saveState == True:
             return SV_list # All states
@@ -298,6 +302,8 @@ class Fitness:
         self.m0 = \
             self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
 
+        # self.SV_0
+        # self.SV_f = 
 
     def DecV2inputV(self, typeinputs, newDecV = 0):
 
@@ -359,8 +365,8 @@ class Fitness:
             inputs[4] = np.cos(inputs[4])# cosine
         
         elif typeinputs == "cartesian":
-            delta_r = np.array(self.r_p1) - np.array(self.r_p0)
-            delta_v = np.array(self.vf) - np.array(self.v0)  
+            delta_r = np.array(self.SV_f[0:3]) - np.array(self.SV_0[0:3])
+            delta_v = np.array(self.SV_f[3:]) - np.array(self.SV_0[3:])  
             inputs[2:5] = delta_r
             inputs[5:] = delta_v
 
@@ -375,7 +381,7 @@ class Fitness:
             feasible = 0
         return feasible
 
-    def savetoFile(self, typeinputs, filepath_feas):
+    def savetoFile(self, typeinputs,   filepath_feas, inputs = None):
         """
         savetoFile: save input parameters for neural network and the fitness and
         feasibility
@@ -411,9 +417,12 @@ class Fitness:
         # massFileName = filepath_m
         
         # Inputs 
-        inputs = self.DecV2inputV(typeinputs)
-
+        if inputs == None:
+            inputs = self.DecV2inputV(typeinputs)
+        else:
+            inputs = self.DecV2inputV(typeinputs, newDecV = inputs)
         # Feasibility
+        
         feasible = self.studyFeasibility()
         feasible = np.append(feasible, self.m_fuel)
 
@@ -749,6 +758,6 @@ class Propagate:
 
         dpi = kwargs.get('dpi', 200) 
         layoutSave = kwargs.get('layout', 'tight')
-        plt.savefig('resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+        plt.savefig('./OptSol/resultopt.png', dpi = dpi, bbox_inches = layoutSave)
 
         plt.show()
