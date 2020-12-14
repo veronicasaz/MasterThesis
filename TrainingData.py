@@ -899,15 +899,17 @@ if __name__ == "__main__":
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
     file_path = [
-                base+ 'databaseSaved/Random_MBH_200_3_eval.txt', base+ 'databaseSaved/Random_MBH_200_3.txt',
-                base+ 'databaseSaved/Random_MBH_1000_3_eval.txt', base+ 'databaseSaved/Random_MBH_1000_3.txt',
+                base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
+                base+ 'databaseSaved_fp10/Random_MBH_200_3.txt',
+                # base+ 'databaseSaved/Random_MBH_5000_3.txt',
+                # base+ 'databaseSaved_fp100/Random_MBH_200_20.txt'
                 # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
                 # base+'Lambert_eval.txt', base+'Lambert.txt'
                 ]
     
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    file_path_together = base +'/databaseSaved/Together.txt'
+    file_path_together = base +'Together.txt'
     join_files(file_path, file_path_together)
 
 
@@ -921,7 +923,7 @@ if __name__ == "__main__":
             # plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
             plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation'])
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)
