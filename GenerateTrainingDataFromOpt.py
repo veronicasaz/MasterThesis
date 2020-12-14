@@ -339,6 +339,7 @@ if __name__ == "__main__":
                 feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds[8:])
                 if feasible == True: 
                     Fit.savetoFile(typeinputs, feasibilityFileName)
+                    sample[8:] = solutionLocal.x # Start from local opt
                     # Fit.printResult()
                 else:
                     print("Out of bounds")
@@ -379,10 +380,12 @@ if __name__ == "__main__":
             Fit.printResult()
             
         else:
+            print("Sample", sample[0:8])
             solutionLocal = spy.minimize(f, sample, method = 'SLSQP', \
                 tol = MBH['tolLocal'], bounds = SF.bnds, options = {'maxiter': MBH['niter_local']} )
 
-        
+            print("sol", solutionLocal.x[0:8])
+            print("Error", Fit.error)
             fvalue = f(solutionLocal.x)
             feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds)
             if feasible == True: 
