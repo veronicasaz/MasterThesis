@@ -153,6 +153,146 @@ def EvolAlgorithm(f, bounds, *args, **kwargs):
     return x_minVal, lastMin
 
 
+def EvolAlgorithm_integerinput(f, bounds, *args, **kwargs):
+    """
+    EvolAlgorithm: evolutionary algorithm
+    INPUTS:
+        f: function to be analyzed
+        x: decision variables
+        bounds: bounds of x to initialize the random function
+        x_add: additional parameters for the function. As a vector
+        ind: number of individuals. 
+        cuts: number of cuts to the variable
+        tol: tolerance for convergence
+        max_iter: maximum number of iterations (generations)
+        max_iter_success
+        elitism: percentage of population elitism
+        bulk_fitness: if True, the data has to be passed to the function all 
+                    at once as a matrix with each row being an individual
+        int: force some inputs to be integers
+    """
+    x_add = kwargs.get('x_add', False)
+    ind = kwargs.get('ind', 100)
+    cuts = kwargs.get('cuts', 1)
+    tol = kwargs.get('tol', 1e-4)
+    max_iter = kwargs.get('max_iter', 1e3)
+    max_iter_success = kwargs.get('max_iter_success', 1e2)
+    elitism = kwargs.get('elitism',0.1)
+    mut = kwargs.get('mutation',0.01)
+    cons = kwargs.get('cons', None)
+    bulk = kwargs.get('bulk_fitness', False)
+    int_input = kwargs.get('int_input', np.zeros(len(bounds)))
+
+    
+    def f_evaluate(pop_0):
+        if bulk == True:
+            if x_add == False:
+                pop_0[:,0] = f(pop_0[:,1:])
+            else:
+                pop_0[:,0] = f(pop_0[:,1:], x_add)
+        else:
+            if x_add == False: # No additional arguments needed
+                for i in range(ind):
+                    pop_0[i,0] = f(pop_0[i,1:])
+            else:
+                for i in range(ind):
+                    pop_0[i,0] = f(pop_0[i,1:], x_add)
+
+        return pop_0
+
+    ###############################################
+    ###### GENERATION OF INITIAL POPULATION #######
+    ###############################################
+    pop_0 = np.zeros([ind, len(bounds)+1])
+    for i in range(len(bounds)):
+        pop_0[:,i+1] = np.random.rand(ind) * (bounds[i][1]-bounds[i][0]) + bounds[i][0]
+        if int_input[i] != 0: # Force it to be an integer
+            pop_0[:, i+1] = int(pop_0[:, i+1])
+
+    ###############################################
+    ###### FITNESS EVALUATION               #######
+    ###############################################
+    pop_0 = f_evaluate(pop_0)
+    
+    Sol = pop_0[pop_0[:,0].argsort()]
+    minVal = min(Sol[:,0])
+    x_minVal = Sol[0,:]
+    
+    ###############################################
+    ###### NEXT GENERATION                  #######
+    ###############################################
+    noImprove = 0
+    counter = 0
+    lastMin = minVal
+    
+    Best = np.zeros([max_iter+1,len(bounds)+1])
+    while noImprove <= max_iter_success and counter <= max_iter :
+        
+        ###############################################
+        #Generate descendents
+
+        #Elitism
+        ind_elit = int(round(elitism*ind))
+
+        children = np.zeros(np.shape(pop_0))
+        children[:,1:] = Sol[:,1:]
+
+        #Separate into the number of parents  
+        pop = np.zeros(np.shape(pop_0))
+        pop[:ind_elit,:] = children[:ind_elit,:] #Keep best ones
+        np.random.shuffle(children[:,:]) #shuffle the others
+        
+
+        for j in range ( (len(children)-ind_elit) //2 ):
+            if len(bounds) == 2:
+                cut = 1
+            else:
+                cut = np.random.randint(1,len(bounds)-1)
+
+            pop[ind_elit +2*j,1:] = np.concatenate((children[2*j,1:cut+1],children[2*j +1,cut+1:]),axis = 0)
+            pop[ind_elit+ 2*j + 1,1:] = np.concatenate((children[2*j+1,1:cut+1],children[2*j ,cut+1:]),axis = 0)
+        
+        if (len(children)-ind_elit) %2 != 0:
+            pop[-1,:] = children[-ind_elit,:]
+
+        #Mutation
+        for i in range(ind):
+            for j in range(len(bounds)):
+                if np.random.rand(1) < mut: #probability of mut                    
+                    pop[i,j+1] =  np.random.rand(1) * (bounds[j][1]-bounds[j][0]) + bounds[j][0]
+                    if int_input != 0: # Force to be an int
+                        pop[i,j+1] = int(pop[i,j+1])
+        ###############################################
+        # Fitness
+        pop = f_evaluate(pop)
+
+        Sol = pop[pop[:,0].argsort()]
+        minVal = min(Sol[:,0])
+
+        ###############################################
+        #Check convergence        
+        if  minVal >= lastMin: 
+            noImprove += 1
+#         elif abs(lastMin-minVal)/lastMin > tol:
+#             noImprove += 1
+        else:
+#             print('here')
+            lastMin = minVal 
+            x_minVal = Sol[0,1:]
+            noImprove = 0
+            Best[counter,:] = Sol[0,:] 
+        
+        print(counter, "Minimum: ", minVal)
+        counter += 1 #Count generations 
+        if counter % 20 == 0:
+            AL_BF.writeData(x_minVal, 'w', 'SolutionEA.txt')
+        
+        # print(counter)
+    print("minimum:", lastMin)
+    print("Iterations:", counter)
+    print("Iterations with no improvement:", noImprove)
+    
+    return x_minVal, lastMin
 # # Test
 # bnds = (bnd_tflight,bnd_vE)
 # for i in range(Nimp):
@@ -784,7 +924,6 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
                 Best[ind] = x[ind]
                 bestMin[ind] = currentMin[ind]
                 accepted[ind] = True
-
                 # If the improvement is not large, assume it is not improvement
                 if (previousMin[ind] - currentMin[ind] ) < tolGlobal: 
                     n_noimprove[ind] += 1
@@ -792,7 +931,7 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
                     n_noimprove[ind] = 0
                 jumpMagnitude[ind] = jumpMagnitude_default
 
-            elif n_noimprove[ind] == niter_success: # Not much improvement
+            elif n_noimprove[ind] == niter_success: # Go to a bigger jump
                 accepted[ind] = False
                 jumpMagnitude[ind] = 1
                 n_noimprove[ind] = 0 # Restart count so that it performs jumps around a point
@@ -800,12 +939,12 @@ def MonotonicBasinHopping_batch(f, x, take_step, *args, **kwargs):
                 accepted[ind] = False
                 jumpMagnitude[ind] = jumpMagnitude_default
                 n_noimprove[ind] += 1        
-
+            
             previousMin[ind] = currentMin[ind]
 
         # Save results every 5 iter
         if n_itercounter % 20 == 0:
-            AL_BF.writeData(Best, 'w', './OptSol/SolutionMBH_batch.txt')
+            AL_BF.writeData(Best, 'w', './OptSol/allMBH_batch.txt')
         
         print("iter", n_itercounter)
         print("Current min vs best one", min(currentMin), min(bestMin))

@@ -145,7 +145,8 @@ class Fitness:
 
 
     def calculateFitness(self, DecV, optMode = True, thrust = 'free', 
-        printValue = False, plot = False, massInFunct = True):
+        printValue = False, plot = False, plot3D = False, 
+        massInFunct = True):
         """
         calculateFitness: obtain the value of the fitness function
         INPUTS:
@@ -210,6 +211,9 @@ class Fitness:
         if plot == True:
             # print(np.flipud(SV_list_back))
             self.plot2D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
+        if plot3D == True:
+            # print(np.flipud(SV_list_back))
+            self.plot3D(SV_list_forw, SV_list_back, [self.sun, self.earth, self.mars])
 
         return self.f # *1000 so that in 
                                                             # tol they are in same order of mag
@@ -288,22 +292,25 @@ class Fitness:
         print("Mass of fuel", self.m_fuel, "Error", self.Error)
 
     def adaptDecisionVector_simplified(self, DecV):
-        self.t0, self.t_t = DecV[6:8]
-        DeltaV_list = np.array(DecV[8:]).reshape(-1,3) # make a Nimp x 3 matrix
+        v0_cart, vf_cart = self.adaptDecisionVector(DecV)
 
+        ########################################################################
+        # Propagation
+        ########################################################################
+        # Times and ephemeris
+        # t_0 = AL_Eph.DateConv(self.date0,'calendar') #To JD
+        t_1 = AL_Eph.DateConv(self.t0 + AL_BF.sec2days(self.t_t), 'JD_0' )
 
-        self.DeltaV_max = self.Spacecraft.T / self.Spacecraft.m_dry * \
-            self.t_t / (self.Nimp + 1) 
+        self.r_p0, self.v_p0 = self.earthephem.eph(self.t0)
+        self.r_p1, self.v_p1 = self.marsephem.eph(t_1.JD_0)
+        
+        # Change from relative to heliocentric velocity
+        self.v0 = v0_cart + self.v_p0 
+        self.vf = vf_cart + self.v_p1 
 
-        # Total DeltaV 
-        DeltaV_total = sum(DeltaV_list[:,0]) * self.DeltaV_max
-
-        #Calculate total mass of fuel for the given impulses
-        self.m0 = \
-            self.Spacecraft.MassChangeInverse(self.Spacecraft.m_dry, DeltaV_total)
-
-        # self.SV_0
-        # self.SV_f = 
+        # Create state vector for initial and final point
+        self.SV_0 = np.append(self.r_p0, self.v0)
+        self.SV_f = np.append(self.r_p1, self.vf)
 
     def DecV2inputV(self, typeinputs, newDecV = 0):
 
@@ -381,7 +388,7 @@ class Fitness:
             feasible = 0
         return feasible
 
-    def savetoFile(self, typeinputs,   filepath_feas, inputs = None):
+    def savetoFile(self, typeinputs, filepath_feas, inputs = False):
         """
         savetoFile: save input parameters for neural network and the fitness and
         feasibility
@@ -417,12 +424,12 @@ class Fitness:
         # massFileName = filepath_m
         
         # Inputs 
-        if inputs == None:
+        if type(inputs) == bool:
             inputs = self.DecV2inputV(typeinputs)
         else:
             inputs = self.DecV2inputV(typeinputs, newDecV = inputs)
-        # Feasibility
         
+        # Feasibility
         feasible = self.studyFeasibility()
         feasible = np.append(feasible, self.m_fuel)
 
@@ -449,15 +456,47 @@ class Fitness:
         # myfile.close()
 
 
-    def plot(self, SV_f, SV_b, bodies, *args, **kwargs):
+    def plot3D(self, SV_f, SV_b, bodies, *args, **kwargs):
+
+        """
+        plots look bad because it is not the same propagating for larger times than for smaller ones.
+        Imprecision in the numerical method. Which one is more accurate? With more points more innacurate.
+        Error of changing between M and theta accumulates
+        """
+        # Create more points for display
+        points = 10
+        state_f = np.zeros(( (points+1)*(self.Nimp +1)//2 +1, 6 ))
+        state_b = np.zeros(( (points+1)*(self.Nimp +1)//2 +1, 6 ))
+        t_i = self.t_t / (self.Nimp +1) / (points+1)
+
+
+        # Change velocity backwards to propagate backwards
+        for j in range((self.Nimp+1)//2):
+            state_f[(points+1)*j,:] = SV_f[j,:]
+            state_b[(points+1)*j,:] = SV_b[j,:]
+            for i in range(points):
+                trajectory = AL_2BP.BodyOrbit(state_f[(points+1)*j + i], 'Cartesian', self.sun)
+                state_f[(points+1)*j + i+1,:] = trajectory.Propagation(t_i, 'Cartesian')
+
+                trajectory_b = AL_2BP.BodyOrbit(state_b[(points+1)*j + i,:], 'Cartesian', self.sun)
+                state_b[(points+1)*j + i+1,:] = trajectory_b.Propagation(t_i, 'Cartesian') 
+
+                # trajectory_b = AL_2BP.BodyOrbit(SV_b[j,:], 'Cartesian', self.sun)
+                # state_b[(points+1)*j + i+1,:] = trajectory_b.Propagation(t_i*(i+1), 'Cartesian') 
+
+        state_f[-1,:] = SV_f[-1,:]
+        state_b[-1,:] = SV_b[-1,:]
+
+        # Plot
         fig = plt.figure()
         ax = Axes3D(fig)
-        
+        ax.view_init(azim=0, elev=90)
         # plot planets
         ax.scatter(0, 0, 0,  color = bodies[0].color, marker = 'o', s = 180, alpha = 0.5)
         ax.scatter(SV_f[0,0], SV_f[0,1], SV_f[0,2], c = bodies[1].color, marker = 'o', s = 150, alpha = 0.5)
         ax.scatter(SV_b[0,0], SV_b[0,1], SV_b[0,2], c = bodies[2].color, marker = 'o', s = 150, alpha = 0.5)
 
+        # plot points for Sims-Flanagan
         x_f = SV_f[:,0]
         y_f = SV_f[:,1]
         z_f = SV_f[:,2]
@@ -466,17 +505,24 @@ class Fitness:
         y_b = SV_b[:,1]
         z_b = SV_b[:,2]
 
-        ax.plot(x_f, y_f, z_f, '^-', c = bodies[1].color)
-        ax.plot(x_b, y_b, z_b, '^-', c = bodies[2].color)
+        ax.scatter(x_f, y_f, z_f, '^-', c = bodies[1].color)
+        ax.scatter(x_b, y_b, z_b, '^-', c = bodies[2].color)
 
-        ax.scatter(x_f[-1],y_f[-1],z_f[-1], '^',c = bodies[1].color)
-        ax.scatter(x_b[-1],y_b[-1],z_b[-1], '^',c = bodies[2].color)
+        # ax.scatter(x_f[-1],y_f[-1],z_f[-1], '^',c = bodies[1].color)
+        # ax.scatter(x_b[-1],y_b[-1],z_b[-1], '^',c = bodies[2].color)
 
+        # ax.plot(state_f[:,0],state_f[:,1], state_f[:,2], 'x-',color = bodies[1].color)
+        # ax.plot(state_b[:,0],state_b[:,1], state_b[:,2], 'x-',color = bodies[2].color)
+        ax.plot(state_f[:,0],state_f[:,1], state_f[:,2], color = bodies[1].color)
+        ax.plot(state_b[:,0],state_b[:,1], state_b[:,2], color = bodies[2].color)
+
+
+        # Plot settings
         AL_Plot.set_axes_equal(ax)
 
         dpi = kwargs.get('dpi', 200) 
         layoutSave = kwargs.get('layout', 'tight')
-        plt.savefig('resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+        plt.savefig('OptSol/resultopt3D.png', dpi = dpi, bbox_inches = layoutSave)
 
         plt.show()
 
@@ -519,7 +565,29 @@ class Fitness:
 
         dpi = kwargs.get('dpi', 200) 
         layoutSave = kwargs.get('layout', 'tight')
-        plt.savefig('resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+        plt.savefig('OptSol/resultopt.png', dpi = dpi, bbox_inches = layoutSave)
+
+        plt.show()
+
+    def plot_tvsT(self):
+
+        t = np.linspace(self.t0, self.t0 +AL_BF.sec2days(self.t_t), num = self.Nimp+2)
+        deltaV_i = [np.linalg.norm(self.DeltaV_list[i,:]) *self.DeltaV_max for i in range(len(self.DeltaV_list[:,0])) ]
+        deltaV = np.zeros(self.Nimp +2)
+        deltaV[1:-1] = deltaV_i 
+
+        fig, ax = plt.subplots()
+        plt.plot(t, deltaV, 'o-', color = 'k')
+
+        plt.title("Epoch vs Delta V")
+        plt.ylabel("Delta V (m/s)")
+        plt.xlabel("JD0 (days)")
+        plt.grid(alpha = 0.5)
+        # AL_Plot.set_axes_equal(ax)
+
+        dpi = 200
+        layoutSave = 'tight'
+        plt.savefig('OptSol/tvsT.png', dpi = dpi, bbox_inches = layoutSave)
 
         plt.show()
 

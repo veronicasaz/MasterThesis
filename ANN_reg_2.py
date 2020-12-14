@@ -208,47 +208,47 @@ class ANN_reg:
         if fromFile == True:
             self.load_model_fromFile()
 
-        if type(testfile) == bool:
-            pred_test = self.model.predict(self.testdata[0])
-        else:
+        if type(testfile) != bool:
             pred_test = self.model.predict(testfile)
-
-        if rescale == False and type(testfile) == bool: # No inverse standarization possible
-
-            self.Output_pred = np.zeros((len(pred_test),self.n_classes))
-            if self.n_classes > 1:
-                for i in range(len(pred_test)):
-                    print('i', i)
-                    print(pred_test[i], self.testdata[1][i])
-                    # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
-                    # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
-                    print("------------------------")
-
-                    for output_i in range(self.n_classes):
-                        self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
-            else:
-                for i in range(len(pred_test)):
-                    print(pred_test[i], self.testdata[1][i])
-                    self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
-
         else:
-            predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
-            true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-            
-            if type(testfile) == bool:
-                self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
-                self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
+            pred_test = self.model.predict(self.testdata[0])
+
+            if rescale == False and type(testfile) == bool: # No inverse standarization possible
+
+                self.Output_pred = np.zeros((len(pred_test),self.n_classes))
+                if self.n_classes > 1:
+                    for i in range(len(pred_test)):
+                        print('i', i)
+                        print(pred_test[i], self.testdata[1][i])
+                        # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
+                        # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
+                        print("------------------------")
+
+                        for output_i in range(self.n_classes):
+                            self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
+                else:
+                    for i in range(len(pred_test)):
+                        print(pred_test[i], self.testdata[1][i])
+                        self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
+
+            else:
+                predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
+                true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
                 
-                for i in range(len(predictions_unscaled)):
-                    print('i', i)
-                    # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
-                    # print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
-                    print("------------------------")
-                    for output_i in range(self.n_classes):
-                        self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
-                        self.Output_pred_unscale_ptg[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i] ) /true_value[i,output_i]
-                        print(predictions_unscaled[i,output_i], true_value[i,output_i ])
-    
+                if type(testfile) == bool:
+                    self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
+                    self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
+                    
+                    for i in range(len(predictions_unscaled)):
+                        print('i', i)
+                        # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
+                        # print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
+                        print("------------------------")
+                        for output_i in range(self.n_classes):
+                            self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
+                            self.Output_pred_unscale_ptg[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i] ) /true_value[i,output_i]
+                            print(predictions_unscaled[i,output_i], true_value[i,output_i ])
+        
         return pred_test
 
     def plotPredictions(self, std):
@@ -360,8 +360,8 @@ def Network(dataset_np, save_path):
     perceptron = ANN_reg(dataset_np, save_path = save_path)
     perceptron.get_traintestdata(traindata, testdata)
     
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron.training()
+    perceptron.plotTraining()
     
     # perceptron.trainingKFoldCross()
     # perceptron.plotTrainingKFold()
@@ -409,37 +409,36 @@ def Fitness_network():
 
 def Fitness_network_optDecV():
     base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
-
-    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
-    #     base+ 'Lambert_opt.txt']
-    file_path = [base + 'Random1000_MBH_eval.txt',
-                base + 'Random1000_MBH.txt'
-                # base + 'Random_1000.txt',
-                # base + 'Random_500.txt'
-                # base + 'OthersFromFitness/Random_MBH5000_3.txt',
-                # base + 'OthersFromFitness/Random_MBH1000_3.txt',
-                
-                # base + 'OthersFromFitness/Random_MBH500_3.txt', 
-                # base + 'OthersFromFitness/Random_MBH500_5.txt', 
-                # base + 'OthersFromFitness/Lambert_3.txt'
+    # file_path = [base + 'Random.txt']
+    # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+                # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+    file_path = [
+                # base+ 'databaseSaved/Random_MBH_200_3_eval.txt', 
+                base+ 'databaseSaved/Random_MBH_200_3.txt',
+                base+ 'databaseSaved/Random_MBH_1000_3.txt', 
+                base+ 'databaseSaved/Random_MBH_5000_3.txt'
+                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
+                # base+'Lambert_eval.txt', base+'Lambert.txt'
                 ]
 
-
-
+    
+    # file_path_together = base +'/databaseSaved/Together.txt'
+    # TD.join_files(file_path, file_path_together)
     # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
     
-    train_file_path = file_path
-    # train_file_path = base +'Random.txt'
+    # train_file_path = file_path_together
+    train_file_path = base+ 'databaseSaved/Random_MBH_5000_3.txt'
 
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = 0, 
             plotDistribution=False, plotErrors=False,
-            plotOutputDistr = False, plotEpvsEv = False,
+            # plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            # plotOutputDistr = True, plotEpvsEv = True,
+            plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     
