@@ -23,18 +23,19 @@ MBH = opt_config.MBH_generateDatabase
 Dataset_c = CONFIG.Dataset()
 Dataset_conf = Dataset_c.Dataset_config
 
-def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate, autodecV):
+def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate,
+    autodecV, samples_rand):
     if autodecV == True:
-        fileName = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod + '_eval.txt'
-        fileName_opt = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod + '.txt'
+        fileName = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
         matrix_file =  "./databaseANN/DatabaseBestDeltaV/" + typeinputs + "/" 
     elif typeoutputs == "opt":
-        fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod + '_eval.txt'
-        fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'.txt'
+        fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'
         matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
     elif typeoutputs == "fit":
-        fileName = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod + '_eval.txt'
-        fileName_opt = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod +'.txt'
+        fileName = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+        fileName_opt = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'
         matrix_file = "./databaseANN/DatabaseFitness/" + typeinputs + "/" 
 
     if typeinputs == 'deltakeplerian' or 'deltakeplerian_planet':
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     # FILE CREATION
     ####################
     feasibilityFileName, feasibilityFileName_opt, matrix_file = \
-            createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate, autodecV)
+            createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate, autodecV, samples_rand)
     
     ####################
     # DATABASE CREATION
@@ -354,6 +355,8 @@ if __name__ == "__main__":
     ####################
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
+    t1_start = time.process_time() 
+
     for i_sample in range(len(sample_inputs) ):
         print("-------------------------------")
         print("Sample %i"%i_sample)
@@ -380,19 +383,20 @@ if __name__ == "__main__":
             Fit.printResult()
             
         else:
-            print("Sample", sample[0:8])
             solutionLocal = spy.minimize(f, sample, method = 'SLSQP', \
                 tol = MBH['tolLocal'], bounds = SF.bnds, options = {'maxiter': MBH['niter_local']} )
 
-            print("sol", solutionLocal.x[0:8])
-            print("Error", Fit.error)
             fvalue = f(solutionLocal.x)
             feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds)
             if feasible == True: 
-                Fit.savetoFile(typeinputs, feasibilityFileName_opt)
-                Fit.printResult()
+                if typeoutputs == 'fit':
+                    Fit.savetoFile(typeinputs, feasibilityFileName_opt)
+                elif typeoutputs == 'opt': # save inputs with their optimum output
+                    Fit.savetoFile(typeinputs, feasibilityFileName_opt,  inputs = sample)
             else:
                 print("Out of bounds")
+            Fit.printResult()
         print(fvalue)
         
-    
+    t1_stop = process_time() 
+    print("Time for creation of database: ", t1_stop - t1_start)

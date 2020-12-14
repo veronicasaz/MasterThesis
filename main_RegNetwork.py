@@ -32,8 +32,8 @@ MBH_batch = opt_config.MBH_batch
 
 
 # Database for inverse standardization
-base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
-train_file_path = base + 'Together.txt'
+base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/databaseWrongSimsFlanagan/"
+train_file_path = base + 'Random5000_MBH_eval.txt'
 
 dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
@@ -148,15 +148,16 @@ def MBH_batch_f(ML = False):
                 f_opt = f_opt, 
                 nind = MBH_batch['nind'], 
                 niter = MBH_batch['niter_total'], 
-                niter_sucess = MBH_batch['niter_success'], \
+                niter_success = MBH_batch['niter_success'], \
                 bnds = SF.bnds, \
                 jumpMagnitude = MBH_batch['jumpMagnitude'],\
-                tolGlobal = MBH_batch['tolGlobal'], )
+                tolGlobal = MBH_batch['tolGlobal'],
+                tolLocal = MBH_batch['tolLocal'] )
     
     t = (time.time() - start_time) 
     print("Min4", min(Best), 'time', t)
     best_input = fmin_4[np.where(Best == min(Best))[0] ]
-    AL_BF.writeData(best_input, 'w', 'SolutionMBH_batch.txt')
+    AL_BF.writeData(best_input, 'w', './OptSol/SolutionMBH_batch.txt')
 
     # Locally optimize best to obtain actual inputs of that one
     solutionLocal = spy.minimize(f_notANN, best_input, method = 'SLSQP', \
@@ -215,18 +216,19 @@ def evaluateFeasibility():
     print('Number feasible', np.count_nonzero(feas2==0))
 
 def propagateOne():
-    DecV_I = np.loadtxt("SolutionMBH_self.txt")
+    DecV_I = np.genfromtxt("./OptSol/SolutionMBH_batch.txt", delimiter = ' ', dtype = float)
 
     # f = Fitness.calculateFeasibility(DecV_I)
-    Fitness.calculateFitness(DecV_I, plot = True)
+    Fitness.calculateFitness(DecV_I, plot = False, plot3D = True)
+    # Fitness.plot_tvsT()
 
 if __name__ == "__main__":
     # EA()
     # MBH_self()
-    MBH_batch_f(ML = False) # Without ML
+    # MBH_batch_f(ML = False) # Without ML
     # MBH_batch_f(ML = True) # With ML
 
-    # propagateOne()
+    propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations
 
     # Without ML
