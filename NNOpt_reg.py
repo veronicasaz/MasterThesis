@@ -15,7 +15,8 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import RepeatedKFold
 
 import LoadConfigFiles as CONF
-import TrainingDataKeras as DTS
+import TrainingData as DTS
+from AstroLibraries import AstroLib_OPT as AL_OPT
 
 ANN_reg = CONF.ANN_reg()
 ANN = ANN_reg.ANN_config
@@ -47,9 +48,9 @@ class ANN_reg:
         #             kernel_initializer = initializer,
         #             kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
         # else:
-        for layer in range(dv[0]):
+        for layer in range(int(dv[0])):
             model.add(keras.layers.Dense(
-                dv[1],
+                int(dv[1]),
                 activation='relu', 
                 use_bias=True, bias_initializer='zeros',
                 kernel_initializer = initializer) )
@@ -72,12 +73,12 @@ class ANN_reg:
 
         self.history = self.model.fit(self.traindata[0], self.traindata[1], 
                     validation_split= ANN['Training']['validation_size'],
-                    epochs = dv[2] )
+                    epochs =int( dv[2] ) )
         
         return self.history.history['loss'][-1], self.history.history['val_loss'][-1]
 
 
-def optComplete(base, perceptron, bounds):
+def optComplete(base, perceptron, bounds, nind):
     solution = np.zeros((nind, len(bounds) ))
 
     FileName1 = base+"Results/Study_RegParams/regparams.txt"
@@ -93,16 +94,17 @@ def optComplete(base, perceptron, bounds):
         vector = np.column_stack((fobj, train_accuracy))
         vector = np.column_stack((vector, val_accuracy))
         vector = np.column_stack((vector, t))
-        vector = np.column_stack((vector, inputs))
+        vector = np.column_stack((vector, inputs.reshape((1,4))))
+        vector = vector.flatten()
 
-        with open(FileName1, "a") as f:
+        with open(FileName1, "a") as myfile:
             for value in vector:
-                    if value != vector[-1]:
-                        myfile.write(str(value) +" ")
-                    else:
-                        myfile.write(str(value))
-                myfile.write("\n")
-        f.close()
+                if value != vector[-1]:
+                    myfile.write(str(value) +" ")
+                else:
+                    myfile.write(str(value))
+                    myfile.write("\n")
+        myfile.close()
 
         return fobj
 
@@ -112,7 +114,7 @@ def optComplete(base, perceptron, bounds):
 
     f_min, Best = AL_OPT.EvolAlgorithm_integerinput(f, bounds , x_add = False, \
         ind = 10, 
-        max_iter = 10,
+        max_iter = 3,
         max_iter_success = 3,
         elitism = 0, 
         mutation = 0.001, 
@@ -236,18 +238,18 @@ if __name__ == "__main__":
     # Choose which ones to choose:
     base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
  
-    train_file_path = base +'databaseSaved_fp100/Random_MBH_5000_3.txt'
+    train_file_path = base +'databaseSaved_fp100/Random_MBH_200_3.txt'
 
-    dataset_np = DTS.LoadNumpy(train_file_path, save_file_path = base, error='vector',\
+    dataset_np = DTS.LoadNumpy(train_file_path, save_file_path = base,\
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
             labelType = 0, 
             plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
+            plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
+            # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = 'False')
 
     # dataset_np = DTS.LoadNumpy(train_file_path)
@@ -273,8 +275,9 @@ if __name__ == "__main__":
     dv_EP = [10, 500]
     dv_LR = [0.0001, 0.01]
 
-    bounds = [dv_HL, dv_NH, dv_EP]
-    optComplete(base, perceptron, bounds )
+    bounds = [dv_HL, dv_NH, dv_EP, dv_LR]
+    nind = 10
+    optComplete(base, perceptron, bounds, nind )
     plot_complete(base, bounds)
 
 

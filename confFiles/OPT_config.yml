@@ -7,10 +7,11 @@ MBH:
  tolGlobal: 0.00001
  
 MBH_batch:
- nind: 5
- niter_total: 20
- niter_success: 10 #Number of iterations before a big jump
- jumpMagnitude: 0.005 #Magnitude of the small jump 
+ nind: 10
+ niter_total: 100
+ niter_success: 5 #Number of iterations before a big jump
+ tolLocal: 0.01
+ jumpMagnitude: 0.01 #Magnitude of the small jump 
  tolGlobal: 0.00001
 
 MBH_generateDatabase: #For only small steps

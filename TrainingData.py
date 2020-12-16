@@ -898,18 +898,37 @@ if __name__ == "__main__":
     # file_path = [base + 'Random.txt']
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+
+    # file_path = [
+    #             base+ 'databaseSaved_fp10/Random_MBH_5000_3.txt',
+    #             # base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
+    #             base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt',
+    #             base+ 'databaseSaved_fp100/Random_MBH_1000.txt'
+    #             # base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
+    #             # base+ 'databaseSaved_fp100/Random_MBH_10000.txt'
+    #             # base+ 'databaseSaved/Random_MBH_5000_3.txt',
+    #             # base+ 'databaseSaved_fp100/Random_MBH_200_20.txt'
+    #             # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
+    #             # base+'Lambert_eval.txt', base+'Lambert.txt'
+    #             ]
+    
     file_path = [
-                base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
-                base+ 'databaseSaved_fp10/Random_MBH_200_3.txt',
+                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_200_3.txt',
+                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_1000.txt',
+                # base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_1000_eval.txt'
+                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_5000.txt'
+                # base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
+                # base+ 'databaseSaved_fp100/Random_MBH_10000.txt'
                 # base+ 'databaseSaved/Random_MBH_5000_3.txt',
                 # base+ 'databaseSaved_fp100/Random_MBH_200_20.txt'
                 # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
                 # base+'Lambert_eval.txt', base+'Lambert.txt'
                 ]
-    
+
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    file_path_together = base +'Together.txt'
+    # file_path_together = base +'Together.txt'
+    file_path_together =  base +'Results/StudyNSamples/scripts_compare/5000_1000_200.txt'
     join_files(file_path, file_path_together)
 
 
@@ -920,10 +939,11 @@ if __name__ == "__main__":
             output_type = Dataset_conf.Dataset_config['Outputs'],
             labelType = len(file_path),
             plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
+            plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
+            # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)

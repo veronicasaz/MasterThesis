@@ -1,5 +1,5 @@
 FEASIB:
- factor_pos: 10 #multiplication of position vector for scaling
+ factor_pos: 100 #multiplication of position vector for scaling
  factor_vel: 1 #multiplication of velocity vector for scaling
  factor_mass: 0.01 #multiplication of mass for scaling
  range_mass: !!python/tuple [-3, 2]

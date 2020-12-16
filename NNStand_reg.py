@@ -372,7 +372,7 @@ def compareDataAugm(base, save_study_path, typeSamples, repetitions):
     loss = np.zeros([len(typeSamples), repetitions])
     val_loss = np.zeros([len(typeSamples),  repetitions])
 
-    train_file_path = base + "Random_MBH_5000_3.txt"
+    train_file_path = base + "Together.txt"
 
     for i in range(len(typeSamples)):
         dataset_np = TD.LoadNumpy(train_file_path, save_file_path=base,
@@ -585,15 +585,16 @@ if __name__ == "__main__":
     database = base +"databaseSaved/"
     save_study_path = base + 'Results/StudyNSamples/'
     # typeSamples = ['500', '500_1000','500_1000_L', '500_L', '1000', '1000_L']
-    typeSamples = ['200', '1000', '5000']
+    typeSamples = ['200_opt', '1000_opt', '1000_eval_1000_opt', '5000_opt', '5000_1000_200']
     compareNumSamples_val(database, save_study_path, typeSamples, repetitions)
     plot_compareNumSamples_val(save_study_path, typeSamples, repetitions)
+
 
     # DATA AUGMENTATION
     repetitions = 3
     typeAugm = ['False', 'multiplication', 'noise_gauss']
     base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"  
-    database = base +"databaseSaved/" 
+    database = base  
     save_study_path =  base+  "Results/StudyDataAugmentation/"
     compareDataAugm(database, save_study_path, typeAugm, repetitions)
     plot_compareDataAugm(save_study_path, typeAugm, repetitions)

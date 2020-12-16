@@ -398,5 +398,5 @@ if __name__ == "__main__":
             Fit.printResult()
         print(fvalue)
         
-    t1_stop = process_time() 
+    t1_stop = time.process_time() 
     print("Time for creation of database: ", t1_stop - t1_start)

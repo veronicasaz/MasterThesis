@@ -207,7 +207,7 @@ def EvolAlgorithm_integerinput(f, bounds, *args, **kwargs):
     for i in range(len(bounds)):
         pop_0[:,i+1] = np.random.rand(ind) * (bounds[i][1]-bounds[i][0]) + bounds[i][0]
         if int_input[i] != 0: # Force it to be an integer
-            pop_0[:, i+1] = int(pop_0[:, i+1])
+            pop_0[:, i+1] = [int(pop_0[indx, i+1]) for indx in range(ind)]
 
     ###############################################
     ###### FITNESS EVALUATION               #######

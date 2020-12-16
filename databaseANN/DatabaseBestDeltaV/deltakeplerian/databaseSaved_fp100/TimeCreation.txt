@@ -1,3 +1,4 @@
 fp 100, 1000 ind, 3 MBH iter: 
 fp 100, 5000 ind, 3 MBH iter: 
 fp 100, 10000 ind, 3 MBH iter: 
+fp 100, 200 ind, opt (local): 3153.993335457 s
