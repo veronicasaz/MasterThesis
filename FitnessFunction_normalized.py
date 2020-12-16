@@ -260,9 +260,6 @@ class Fitness:
             # Propagate the given time 
             # Coordinates after propagation
             SV_i = trajectory.Propagation(t_i, 'Cartesian') 
-            
-            if saveState == True:
-                SV_list[imp + 1, :] = SV_i
 
             # Add impulse if not in last point
             if imp != (self.Nimp + 1)//2:
@@ -282,6 +279,9 @@ class Fitness:
             else: # To compare, only add impulse on the one forward to compare delta v
                  if backwards != True:
                         SV_i[3:] += self.DeltaV_list[imp, :] * self.DeltaV_max # Reduce the impulses
+
+            if saveState == True:
+                SV_list[imp + 1, :] = SV_i
 
         if saveState == True:
             return SV_list # All states
@@ -459,9 +459,7 @@ class Fitness:
     def plot3D(self, SV_f, SV_b, bodies, *args, **kwargs):
 
         """
-        plots look bad because it is not the same propagating for larger times than for smaller ones.
-        Imprecision in the numerical method. Which one is more accurate? With more points more innacurate.
-        Error of changing between M and theta accumulates
+
         """
         # Create more points for display
         points = 10
