@@ -488,7 +488,7 @@ class Fitness:
         # Plot
         fig = plt.figure()
         ax = Axes3D(fig)
-        ax.view_init(azim=0, elev=90)
+        # ax.view_init(azim=0, elev=10)
         # plot planets
         ax.scatter(0, 0, 0,  color = bodies[0].color, marker = 'o', s = 180, alpha = 0.5)
         ax.scatter(SV_f[0,0], SV_f[0,1], SV_f[0,2], c = bodies[1].color, marker = 'o', s = 150, alpha = 0.5)

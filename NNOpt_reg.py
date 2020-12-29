@@ -75,7 +75,7 @@ class ANN_reg:
                     validation_split= ANN['Training']['validation_size'],
                     epochs =int( dv[2] ) )
         
-        return self.history.history['loss'][-1], self.history.history['val_loss'][-1]
+        return self.history.history['loss'], self.history.history['val_loss']
 
 
 def optComplete(base, perceptron, bounds, nind):
@@ -89,7 +89,7 @@ def optComplete(base, perceptron, bounds, nind):
         train_accuracy, val_accuracy = perceptron.training(inputs)
         t = (time.time() - start_time)
 
-        fobj = train_accuracy + abs(train_accuracy - val_accuracy)/train_accuracy
+        fobj = train_accuracy + (val_accuracy - train_accuracy)
         
         vector = np.column_stack((fobj, train_accuracy))
         vector = np.column_stack((vector, val_accuracy))
@@ -149,108 +149,210 @@ def plot_complete(base, dv):
 
 def optArch(perceptron, dv_HL, dv_NH):
     # Fix training values to study architecture
-    dv2 = 100
+    dv2 = 500
+    dv3 = 0.001
 
-    test_accuracy_Matrix_arch = np.zeros((len(dv_HL), len(dv_NH)))
+    test_accuracy_Matrix_arch_train = np.zeros((len(dv_HL), len(dv_NH)))
+    test_accuracy_Matrix_arch_val = np.zeros((len(dv_HL), len(dv_NH)))
+    history_arch_train = np.zeros((len(dv_HL), len(dv_NH), dv2) )
+    history_arch_val = np.zeros((len(dv_HL), len(dv_NH), dv2) )
 
     # Study architecture
     for i, dv0 in enumerate(dv_HL):
         for j, dv1 in enumerate(dv_NH):
             print("OPT arch", dv0, dv1)
-            dv = [dv0, dv1, dv2]
-            test_accuracy = perceptron.training(dv)
-            test_accuracy_Matrix_arch[i, j] = test_accuracy
+            dv = [dv0, dv1, dv2, dv3]
+            test_accuracy, test_accuracy_val = perceptron.training(dv)
+            
+            test_accuracy_Matrix_arch_train[i, j] = test_accuracy[-1]
+            test_accuracy_Matrix_arch_val[i, j] = test_accuracy_val[-1]
+            history_arch_train[i, j] = test_accuracy
+            history_arch_val[i, j] = test_accuracy_val
 
     FileName1 = "./Results/Study_RegParams/arch_test.txt"
+    FileName2 = "./Results/Study_RegParams/arch_val.txt"
+    FileName3 = "./Results/Study_RegParams/history_train.npy"
+    FileName4 = "./Results/Study_RegParams/history_val.npy"
 
-    mat = np.matrix(test_accuracy_Matrix_arch)
+    mat = np.matrix(test_accuracy_Matrix_arch_train)
+    mat2 = np.matrix(test_accuracy_Matrix_arch_val)
 
     with open(FileName1, "wb") as f:
         for line in mat:  
-            np.savetxt(f, line, fmt='%.2f')  
+            np.savetxt(f, line, fmt='%.6f')  
     f.close()
+
+    with open(FileName2, "wb") as f:
+        for line in mat2:  
+            np.savetxt(f, line, fmt='%.6f')  
+    f.close()
+
+    np.save(FileName3, history_arch_train)
+    np.save(FileName4, history_arch_val)
    
 
 def optTra(perceptron, dv_EP):
-    test_accuracy_Matrix_train = np.zeros((len(dv_EP), 2 ))
+    
     dv0 = 5
-    dv1 = 40
+    dv1 = 100
+    dv3 = 0.001
 
+    test_accuracy_Matrix_train = np.zeros((len(dv_EP), 3 ))
+    history_test_train = np.zeros((len(dv_EP), 2, dv_EP[-1]))
+    
     for k, dv2 in enumerate(dv_EP):
-        dv = [dv0, dv1, dv2]
+        dv = [dv0, dv1, dv2, dv3]
         t0 = time.time()
-        test_accuracy = perceptron.training(dv)
+        test_accuracy, test_accuracy_val = perceptron.training(dv)
         tf = (time.time() - t0) 
         print('Time network eval', tf)
-        test_accuracy_Matrix_train[k, 0] = test_accuracy
-        test_accuracy_Matrix_train[k, 1] = tf
+        test_accuracy_Matrix_train[k, 0] = test_accuracy[-1]
+        test_accuracy_Matrix_train[k, 1] = test_accuracy_val[-1]
+        test_accuracy_Matrix_train[k, 2] = tf
+
+        history_test_train[k, 0, 0:dv_EP[k]] = test_accuracy
+        history_test_train[k, 1, 0:dv_EP[k]] = test_accuracy_val
                 
-    FileName2 =  "./Results/Study_RegParams/train_test.txt"
+    FileName1 =  "./Results/Study_RegParams/train_test.txt"
+    FileName2 =  "./Results/Study_RegParams/history_train_test.npy"
+
     mat = np.matrix(test_accuracy_Matrix_train) # cannot save 3d matrix
 
-    with open(FileName2, "wb") as f:
+    with open(FileName1, "wb") as f:
         for line in mat:  
-            np.savetxt(f, line, fmt='%.2f')  
+            np.savetxt(f, line, fmt='%.6f')  
     f.close()
 
-def loadData(): 
-    
-    test_acc_arch = np.loadtxt("./Results/Study_RegParams/arch_test.txt")
-    test_acc_train = np.loadtxt("./Results/Study_RegParams/train_test.txt")
+    np.save(FileName2, history_test_train)
 
-    return  test_acc_arch, test_acc_train
+def loadData(): 
+    FileName1 = "./Results/Study_RegParams/arch_test.txt"
+    FileName2 = "./Results/Study_RegParams/arch_val.txt"
+    FileName3 = "./Results/Study_RegParams/history_train.npy"
+    FileName4 = "./Results/Study_RegParams/history_val.npy"
+
+    arch_train = np.loadtxt(FileName1)
+    arch_test = np.loadtxt(FileName2)
+    arch_hist_train = np.load(FileName3)
+    arch_hist_val = np.load(FileName4)
+
+    FileName1 =  "./Results/Study_RegParams/train_test.txt"
+    FileName2 =  "./Results/Study_RegParams/history_train_test.npy"
+    
+    train_train = np.loadtxt(FileName1)
+    train_hist = np.load(FileName2)
+
+    return  [arch_train, arch_test, arch_hist_train, arch_hist_val], \
+        [train_train, train_hist]
 
 def plot(dv_HL, dv_NH, dv_EP):
-    te1, te2= loadData()
-    color = ['red', 'green', 'blue', 'black', 'orange', 'yellow']
-    
-    fig = plt.figure(figsize=(12,12), constrained_layout=True)
-    gs = fig.add_gridspec(3,1)
+    arch, train = loadData()
+    color = ['red', 'green', 'blue', 'black', 'orange', 'yellow', 'red', 'green', 'blue', 'black', 'orange', 'yellow']
+    markers = ['x', 'o', '^', 'x', 'o', '^', 'x', 'o', '^', 'x', 'o', '^']
+    linetype = ['--','--','--', '-.', '-.', '-.', ':', ':', ':' ]
+
+    fig = plt.figure(figsize=(12,12))
+    gs = fig.add_gridspec(2,2)
 
     fig.suptitle("Sweep parameter \n Regression Network", fontsize=16)
     
-    ax = fig.add_subplot(gs[0,:])
+    ax = fig.add_subplot(gs[0,0])
     for i in range(len(dv_HL)):
-        plt.plot(dv_NH, te1[i, :], 'x-', c = color[i], label = dv_HL[i])
+        plt.plot(dv_NH, arch[0][i, :], 'x-', c = color[i], label = dv_HL[i])
     plt.xlabel('Neurons per layer')
-    plt.ylabel('Training MAE')
+    plt.ylabel('Training MSE for training dataset')
     plt.grid()
+    plt.yscale('log')
     plt.legend(title = "Hidden layers")
 
-    ax = fig.add_subplot(gs[1,:])
-    plt.plot(dv_EP, te2[:,0], 'x-', c = color[i])
+    ax = fig.add_subplot(gs[0,1])
+    for i in range(len(dv_HL)):
+        plt.plot(dv_NH, arch[1][i, :], 'x-', c = color[i], label = dv_HL[i])
+    plt.xlabel('Neurons per layer')
+    plt.ylabel('Training MSE for validation dataset')
+    plt.grid()
+    plt.yscale('log')
+    plt.legend(title = "Epoch")
+
+    ax = fig.add_subplot(gs[1,0])
+    for i in range(len(dv_HL)):
+        for j in range(len(dv_NH)):
+            x_axis = np.arange(0,len(arch[2][0,0,:]),1)
+            plt.plot(x_axis, arch[2][i, j, :], ls = linetype[j], marker = markers[j], c = color[i], label = '%i, %i'%(dv_HL[i], dv_NH[j]) )
+    plt.xlabel('Neurons per layer')
+    plt.ylabel('Training MSE for training dataset')
+    plt.yscale('log')
+    plt.grid()
+    plt.legend(title = "Epoch")
+
+    ax = fig.add_subplot(gs[1,1])
+    for i in range(len(dv_HL)):
+        for j in range(len(dv_NH)):
+            x_axis = np.arange(0,len(arch[2][0,0,:]),1)
+            plt.plot(x_axis, arch[3][i, j, :], ls = linetype[j],marker = markers[j], c = color[i])
+    plt.xlabel('Neurons per layer')
+    plt.ylabel('Training MSE for validation dataset')
+    plt.yscale('log')
+    plt.grid()
+    plt.legend(title = "Hidden layers // Neurons per layer")
+
+    plt.savefig("./Results/Study_RegParams/RegNet_paramOpt_arch.png", dpi = 100)
+    plt.show()
+
+    ###########################################################
+    fig = plt.figure(figsize=(12,12), constrained_layout=True)
+    gs = fig.add_gridspec(2,2)
+
+    fig.suptitle("Sweep parameter \n Regression Network", fontsize=16)
+    
+    ax = fig.add_subplot(gs[0,0])
+    plt.plot(dv_EP, train[0][:,0], 'x-', c = color[i])
     plt.xlabel('Training epochs')
-    plt.ylabel('Training MAE')
+    plt.ylabel('Training MSE for training dataset')
     plt.grid()
 
-    ax = fig.add_subplot(gs[2,:])
-    plt.plot(dv_EP, te2[:,1], 'x-', c = color[i])
+    ax = fig.add_subplot(gs[1,0])
+    plt.plot(dv_EP, train[0][:,1], 'x-', c = color[i])
+    plt.xlabel('Training epochs')
+    plt.ylabel('Training MSE for validation dataset')
+    plt.grid()
+
+    ax = fig.add_subplot(gs[0:2,1])
+    plt.plot(dv_EP, train[0][:,2], 'x-', c = color[i])
     plt.xlabel('Training epochs')
     plt.ylabel('Computation time (s)')
     plt.grid()
 
+    # ax = fig.add_subplot(gs[0,0:2])
+    # for i in range(len(dv_EP)):
+    #     x_axis = np.arange(0, dv_EP[i], 1)
+    #     plt.plot(x_axis, train[0][:,2], 'x-', c = color[i])
+    # plt.xlabel('Training epochs')
+    # plt.ylabel('Computation time (s)')
+    # plt.grid()
+
     # plt.tight_layout()
 
-    plt.savefig("./Results/Study_RegParams/RegNet_paramOpt.png", dpi = 100)
+    plt.savefig("./Results/Study_RegParams/RegNet_paramOpt_train.png", dpi = 100)
     plt.show()
 
 if __name__ == "__main__":
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
  
-    train_file_path = base +'databaseSaved_fp100/Random_MBH_200_3.txt'
+    train_file_path = base +'Together.txt'
 
     dataset_np = DTS.LoadNumpy(train_file_path, save_file_path = base,\
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = 0, 
+            labelType = 3, 
             plotDistribution=False, plotErrors=False,
             plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
             # plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = 'False')
+            data_augmentation =  Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     # dataset_np = DTS.LoadNumpy(train_file_path)
     traindata, testdata = DTS.splitData_reg(dataset_np)
@@ -259,14 +361,18 @@ if __name__ == "__main__":
 
     # hidden_layers, neuron_hidden, n_spilts, n_repeats
     dv_HL = [2, 5, 8, 15]
-    dv_NH = [3, 5, 10, 20, 50, 80, 100, 250, 500]
+    dv_NH = [3, 5, 10, 20, 50, 80, 100, 250]
     dv_EP = [10, 30, 50, 100, 250, 500]
+
+    # dv_HL = [1, 2]
+    # dv_NH = [2, 3]
+    # dv_EP = [10, 20]
 
     # ACCURACY
     # optArch(perceptron,  dv_HL, dv_NH)
     # optTra(perceptron, dv_EP)
     
-    # plot(dv_HL, dv_NH, dv_EP)
+    plot(dv_HL, dv_NH, dv_EP)
 
 
     # OPTIMIZATION
@@ -275,10 +381,10 @@ if __name__ == "__main__":
     dv_EP = [10, 500]
     dv_LR = [0.0001, 0.01]
 
-    bounds = [dv_HL, dv_NH, dv_EP, dv_LR]
-    nind = 10
-    optComplete(base, perceptron, bounds, nind )
-    plot_complete(base, bounds)
+    # bounds = [dv_HL, dv_NH, dv_EP, dv_LR]
+    # nind = 10
+    # optComplete(base, perceptron, bounds, nind )
+    # plot_complete(base, bounds)
 
 
     

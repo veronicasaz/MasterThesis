@@ -32,15 +32,15 @@ MBH_batch = opt_config.MBH_batch
 
 
 # Database for inverse standardization
-base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/databaseWrongSimsFlanagan/"
-train_file_path = base + 'Random5000_MBH_eval.txt'
+base = ".//databaseANN/3_DatabaseLast/deltakeplerian/"
+train_file_path = base + 'Together.txt'
 
 dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType=2,
+            labelType=3,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
             
 ANN = ANN_reg(dataset_np, save_path = base)
@@ -138,6 +138,7 @@ def MBH_batch_f(ML = False):
         f_opt = f_ANN
     else:
         f_opt = None
+        
     mytakestep = AL_OPT.MyTakeStep(SF.Nimp, SF.bnds)
 
     DecV = np.zeros(len(SF.bnds))
@@ -218,6 +219,13 @@ def evaluateFeasibility():
 def propagateOne():
     DecV_I = np.genfromtxt("./OptSol/SolutionMBH_batch.txt", delimiter = ' ', dtype = float)
 
+    # Random generation
+    DecV_R = np.zeros(len(SF.bnds))
+    for decv in range(len(SF.bnds)): # Add impulses that won't be used for Lambert
+        DecV_R[decv] = np.random.uniform(low = SF.bnds[decv][0], \
+            high = SF.bnds[decv][1], size = 1)
+
+    # print(DecV_R)
     # f = Fitness.calculateFeasibility(DecV_I)
     Fitness.calculateFitness(DecV_I, plot = False, plot3D = True)
     # Fitness.plot_tvsT()
@@ -225,11 +233,10 @@ def propagateOne():
 if __name__ == "__main__":
     # EA()
     # MBH_self()
-    # MBH_batch_f(ML = False) # Without ML
+    MBH_batch_f(ML = False) # Without ML
     # MBH_batch_f(ML = True) # With ML
 
-    propagateOne()
+    # propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations
 
     # Without ML
-

@@ -291,7 +291,7 @@ class Dataset:
         """
         plot Ep vs Ev with limits for feasibility
         """
-        colors = ['black', 'red', 'green', 'blue', 'orange', 'yellow', 'purple',\
+        colors = ['black', 'green', 'blue', 'red',  'orange', 'yellow', 'purple',\
             'pink']
         
         # Plot limit lines for feasibility
@@ -754,10 +754,12 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     
     Err = np.column_stack((Ep, Ev))
     database_2 = np.column_stack((database[:,1], Err))
-    database_2 = np.column_stack((database_2, database[:,8:]))
+    database_2 = np.column_stack((database_2, database[:,8:-1]))
+    # database_2 = np.column_stack((database_2, database[:,8:]))
 
     labels =['Mf','Ep', 'Ev']
-    labels.extend(labels_feas[8:])
+    # labels.extend(labels_feas[8:])
+    labels.extend(labels_feas[8:-1])
 
     df = pd.DataFrame(data=database_2, columns =  labels)
 
@@ -894,41 +896,30 @@ def splitData_reg(dataset_np, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
     # file_path = [base + 'Random.txt']
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
 
-    # file_path = [
-    #             base+ 'databaseSaved_fp10/Random_MBH_5000_3.txt',
-    #             # base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
-    #             base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt',
-    #             base+ 'databaseSaved_fp100/Random_MBH_1000.txt'
-    #             # base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
+    file_path = [
+                base+ 'databaseSaved_fp10/Random_MBH_5000_fp10.txt',
+                base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
+                base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt'# base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
+                
+    #             # base+ 'databaseSaved_fp100/Random_MBH_1000.txt',
+                
     #             # base+ 'databaseSaved_fp100/Random_MBH_10000.txt'
     #             # base+ 'databaseSaved/Random_MBH_5000_3.txt',
     #             # base+ 'databaseSaved_fp100/Random_MBH_200_20.txt'
     #             # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
     #             # base+'Lambert_eval.txt', base+'Lambert.txt'
-    #             ]
-    
-    file_path = [
-                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_200_3.txt',
-                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_1000.txt',
-                # base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_1000_eval.txt'
-                base+ 'Results/StudyNSamples/scripts_compare/Random_fp100_5000.txt'
-                # base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
-                # base+ 'databaseSaved_fp100/Random_MBH_10000.txt'
-                # base+ 'databaseSaved/Random_MBH_5000_3.txt',
-                # base+ 'databaseSaved_fp100/Random_MBH_200_20.txt'
-                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
-                # base+'Lambert_eval.txt', base+'Lambert.txt'
                 ]
+
 
     # file_path_together = base + 'Random.txt'
     # # Join files together into 1
-    # file_path_together = base +'Together.txt'
-    file_path_together =  base +'Results/StudyNSamples/scripts_compare/5000_1000_200.txt'
+    file_path_together = base +'Together.txt'
+    # file_path_together =  base +'Results/StudyNSamples/scripts_compare/5000_5000_1000_mixed.txt'
     join_files(file_path, file_path_together)
 
 
@@ -939,9 +930,9 @@ if __name__ == "__main__":
             output_type = Dataset_conf.Dataset_config['Outputs'],
             labelType = len(file_path),
             plotDistribution=False, plotErrors=False,
-            plotOutputDistr = False, plotEpvsEv = False,
+            # plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            # plotOutputDistr = True, plotEpvsEv = True,
+            plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
 

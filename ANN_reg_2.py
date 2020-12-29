@@ -409,36 +409,30 @@ def Fitness_network():
 
 def Fitness_network_optDecV():
     base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
-    # file_path = [base + 'Random.txt']
-    # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
-                # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
+
     file_path = [
-                # base+ 'databaseSaved/Random_MBH_200_3_eval.txt', 
-                base+ 'databaseSaved/Random_MBH_200_3.txt',
-                base+ 'databaseSaved/Random_MBH_1000_3.txt', 
-                base+ 'databaseSaved/Random_MBH_5000_3.txt'
-                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
-                # base+'Lambert_eval.txt', base+'Lambert.txt'
+                base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt',
+                base+ 'databaseSaved_fp10/Random_MBH_5000_3.txt',
+                base+ 'databaseSaved_fp100/Random_MBH_5000.txt'
                 ]
 
     
-    # file_path_together = base +'/databaseSaved/Together.txt'
-    # TD.join_files(file_path, file_path_together)
-    # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
+    file_path_together = base +'Together.txt'
+    TD.join_files(file_path, file_path_together)
     
-    # train_file_path = file_path_together
-    train_file_path = base+ 'databaseSaved/Random_MBH_5000_3.txt'
+    train_file_path = file_path_together
+    # train_file_path = base+ 'databaseSaved/Random_MBH_5000_3.txt'
 
     dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = 0, 
+            labelType = len(file_path), 
             plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
+            plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
+            # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
     
