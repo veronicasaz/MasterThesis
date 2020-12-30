@@ -45,7 +45,7 @@ class ANN_reg:
         if save_path == False:
             self.checkpoint_path = "./trainedCNet_Reg/training/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
         else:
-            self.checkpoint_path = save_path +"./trainedCNet_Reg/"+Dataset_conf.Dataset_config['Outputs']+'/'
+            self.checkpoint_path = save_path +"trainedCNet_Reg/"+Dataset_conf.Dataset_config['Outputs']+'/'
 
     def create_model(self):
         # Create architecture
@@ -160,6 +160,7 @@ class ANN_reg:
 
         plt.title('Model loss')
         plt.ylabel(self.loss)
+        plt.yscale('log')
         plt.xlabel('epoch')
         plt.legend(['train', 'validation'], loc='upper right')
         plt.grid(alpha = 0.5)
@@ -374,41 +375,27 @@ def Network(dataset_np, save_path):
     perceptron.plotPredictions(std = True)
 
 def Fitness_network():
-    base = "./databaseANN/DatabaseFitness/deltakeplerian/"
-
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
-    file_path = base+ '500/Random_MBH_3.txt'
-    # [
-                # base+ '500/Random_MBH_eval.txt', 
-                
-                # base+ '1000/Random_MBH_eval.txt', base+ '1000/Random_MBH_3.txt',
-                # base+ '5000/Random_MBH_eval.txt', base+ '5000/Random_MBH_3.txt',
-                # base+'Lambert_eval.txt', base+'Lambert.txt'
-                # ]
+    file_path = base+ 'Together.txt'
 
-
-    # file_path = [base+ 'Random.txt',  base+ 'Random_opt_5.txt']
-    
-    train_file_path = file_path
-    # train_file_path = base +'Random.txt'
-
-    dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
+    dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
             dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = 3, 
             plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
+            plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = False,
+            # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
-    
     Network(dataset_np, base)
 
-def Fitness_network_optDecV():
-    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
+def Fitness_network_join():
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
 
     file_path = [
                 base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt',
@@ -458,7 +445,7 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    # Fitness_network()
+    Fitness_network()
 
-    Fitness_network_optDecV()
+    # Fitness_network_join()
     # Opt_network()
