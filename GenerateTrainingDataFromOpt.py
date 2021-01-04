@@ -138,15 +138,18 @@ def exposin_opt(r_1, r_2, v_E, v_M, t_t, mu):
 
     return v1_opt_v, v2_opt_v, acc_vector
 
-def latinhypercube(nsize, ninputs, samples):
+def latinhypercube(nsize, ninputs, samples, lims = False):
     lhd = lhs(ninputs, samples=samples)
     # lhd = norm(loc=0, scale=1).ppf(lhd)  # this applies to both factors here
+    
+    if type(lims) == bool:
+        lims = SF.bnds
 
     # nsize - ninputs are empty
     dataset = np.zeros((samples, nsize))
     for item in range(ninputs):
-        f = SF.bnds[item][1] - SF.bnds[item][0]
-        a = np.ones((samples)) * SF.bnds[item][0]
+        f = lims[item][1] - lims[item][0]
+        a = np.ones((samples)) * lims[item][0]
         dataset[:,item] = lhd[:, item] * f + a
 
     return dataset

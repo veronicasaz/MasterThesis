@@ -360,8 +360,8 @@ if __name__ == "__main__":
     perceptron.get_traintestdata(traindata, testdata)
 
     # hidden_layers, neuron_hidden, n_spilts, n_repeats
-    dv_HL = [2, 5, 8, 15]
-    dv_NH = [3, 5, 10, 20, 50, 80, 100, 250]
+    dv_HL = [5, 8, 15, 25]
+    dv_NH = [50, 80, 100, 250, 400, 600]
     dv_EP = [10, 30, 50, 100, 250, 500]
 
     # dv_HL = [1, 2]

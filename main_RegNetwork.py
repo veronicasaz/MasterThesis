@@ -8,6 +8,7 @@ from GenerateTrainingDataFromOpt import latinhypercube
 
 import AstroLibraries.AstroLib_Basic as AL_BF 
 from AstroLibraries import AstroLib_OPT as AL_OPT
+from AstroLibraries import AstroLib_Ephem as AL_Eph
 
 import LoadConfigFiles as CONFIG
 
@@ -82,6 +83,41 @@ def f_notANN(DecV):
     # value = np.zeros((ind,1))
     # for i in range(ind):
     value = Fitness.calculateFitness(DecV)
+
+    # ind = len(DecV[:,0])
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    #     value[i] = Fitness.calculateFitness(DecV[i])
+    return value 
+
+def f_notANN_test(DecV):
+    """
+    pass 1 dec v, not an array
+    """
+
+    v0 = np.sqrt(11.5) * 1000
+    v1 = np.sqrt(18.6) * 1000
+    t0 = AL_Eph.DateConv([16, 6, 2022], 'calendar')
+    t0 = t0.JD_0
+    tf = AL_Eph.DateConv([5, 2, 2025], 'calendar')
+    t_t = AL_BF.days2sec( tf.JD_0 - t0)
+
+    fixed = [v0, v1, t0, t_t]
+    fix = [0, 3, 6, 7]
+
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    DecV_2 = np.zeros(len(DecV)+len(fix))
+
+    index = 0
+    for i in range(len(DecV)):
+        if i in fix:
+            DecV_2[i] = fixed[fix.index(i)] 
+        else:
+            DecV_2[i] = DecV[index]
+            index += 1
+   
+    value = Fitness.calculateFitness(DecV_2)
 
     # ind = len(DecV[:,0])
     # value = np.zeros((ind,1))
@@ -166,7 +202,79 @@ def MBH_batch_f(ML = False):
     Fitness.calculateFitness(solutionLocal.x, plot = True)
     Fitness.printResult()
 
+def MBH_batch_test(ML = False):
+    """
+    test with reference problem to see the optimization results. The velocities are 
+    fixed in magnitude to overcome the fact that in the paper mars is just a GA
+    """
+    if ML == True:
+        f_opt = f_ANN
+    else:
+        f_opt = None
+        
+    # exclude limits of v magn in the dec vector
+    lims = list(SF.bnds)
+    fix = [0, 3, 6, 7] # choose indixes of values of decv to fix
+    for i in reversed(fix):
+        del lims[i]
 
+    lims = tuple(lims)
+
+    mytakestep = AL_OPT.MyTakeStep(SF.Nimp, lims)
+
+    DecV = np.zeros(len(lims))
+    DecV = latinhypercube(len(lims), len(lims), MBH_batch['nind'], lims = lims) #initialize with latin hypercube
+
+    start_time = time.time()
+    fmin_4, Best = AL_OPT.MonotonicBasinHopping_batch(f_notANN_test, DecV, mytakestep,\
+                f_opt = f_opt, 
+                nind = MBH_batch['nind'], 
+                niter = MBH_batch['niter_total'], 
+                niter_success = MBH_batch['niter_success'], \
+                bnds = lims, \
+                jumpMagnitude = MBH_batch['jumpMagnitude'],\
+                tolGlobal = MBH_batch['tolGlobal'],
+                tolLocal = MBH_batch['tolLocal'] )
+    
+    t = (time.time() - start_time) 
+    print("Min4", min(Best), 'time', t)
+    best_input = fmin_4[np.where(Best == min(Best))[0] ]
+    AL_BF.writeData(best_input, 'w', './OptSol/SolutionMBH_batch.txt')
+
+def propagate_test():
+    DecV = np.genfromtxt("./OptSol/SolutionMBH_batch.txt", delimiter = ' ', dtype = float)
+
+    v0 = np.sqrt(11.5) * 1000
+    v1 = np.sqrt(18.6) * 1000
+    t0 = AL_Eph.DateConv([16, 6, 2022], 'calendar')
+    t0 = t0.JD_0
+    tf = AL_Eph.DateConv([5, 2, 2025], 'calendar')
+    t_t = AL_BF.days2sec( tf.JD_0 - t0)
+
+    fixed = [v0, v1, t0, t_t]
+    fix = [0, 3, 6, 7]
+
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    DecV_2 = np.zeros(len(DecV)+len(fix))
+
+    index = 0
+    for i in range(len(DecV)):
+        if i in fix:
+            DecV_2[i] = fixed[fix.index(i)] 
+        else:
+            DecV_2[i] = DecV[index]
+            index += 1
+   
+    value = Fitness.calculateFitness(DecV_2, plot = True)
+    Fitness.printResult()
+    # ind = len(DecV[:,0])
+    # value = np.zeros((ind,1))
+    # for i in range(ind):
+    #     value[i] = Fitness.calculateFitness(DecV[i])
+    return value 
+
+    Fitness.printResult()
 
 def evaluateFeasibility():
     ind = 1000
@@ -233,8 +341,12 @@ def propagateOne():
 if __name__ == "__main__":
     # EA()
     # MBH_self()
-    MBH_batch_f(ML = False) # Without ML
+    # MBH_batch_f(ML = False) # Without ML
     # MBH_batch_f(ML = True) # With ML
+
+    # TEST WITH PAPER
+    # MBH_batch_test(ML = False) # Without ML
+    propagate_test()
 
     # propagateOne()
     # evaluateFeasibility() # Compare speed of 3 evaluations

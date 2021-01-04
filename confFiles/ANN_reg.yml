@@ -1,12 +1,26 @@
 Training:
  train_size: 0.75 # % of the data for training, the rest is testing
  validation_size: 0.2 # % To validate 
- epochs: 300
+ epochs: 500
  random_state: 1
- learning_rate: 0.0001
+ 
+ # learning rate
+ learning_rate: 0.0001 # value: fixed lr. 'variable'
+ lr_i: 0.0001
+ lr_f: 0.00001
+ lr_decaysteps: 50
+ lr_decayrate: 0.95
+ 
+ # regularization and dropout
  regularization: False
- regularizer_rate: 0.001
+ regularizer_value: 0.0005
+ 
  dropout_prob: 0.6
+ 
+ # weights 
+ initializer: 1 # 1: glorot initialization, 2: random for relu
+ clipnorm: 1 # Gradient clipping to avoid exploding gradients
+ clipvalue: 0.5
  
 TrainingKfold:
  train_size: 0.95 # % of the data for training, the rest is testing
@@ -17,8 +31,8 @@ TrainingKfold:
  
 
 Architecture:
- hidden_layers: 8 # number of hidden layers
- neuron_hidden: 250 # number of neurons in each hidden layer
- regularizer_value: 0.0005
+ hidden_layers: 4 # number of hidden layers
+ neuron_hidden: 200 # number of neurons in each hidden layer
+ 
 
 

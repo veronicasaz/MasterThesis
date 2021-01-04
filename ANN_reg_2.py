@@ -49,20 +49,41 @@ class ANN_reg:
 
     def create_model(self):
         # Create architecture
-        initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
-        
+        if ANN['Training']['initializer'] == 1:
+            initializer = tf.keras.initializers.GlorotNormal() # Glorot uniform by defaut
+        else:
+            def my_init(shape, dtype=None):            
+                return np.random.randn(shape[0], shape[1]) * np.sqrt(2/(shape[1]))
+
+            initializer = my_init
+
         model = keras.Sequential()
 
         if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(ANN['Architecture']['hidden_layers']):
+                
+                # if ANN['Training']['initializer'] == 2:
+                #     if layer == 0: 
+                #         shape = [ANN['Architecture']['neuron_hidden'], self.n_input]
+                #     else:
+                #         shape = [ANN['Architecture']['neuron_hidden'], ANN['Architecture']['neuron_hidden']]
+                #     initializer = my_init()
+
                 model.add(keras.layers.Dense(
                     ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
                     use_bias=True, bias_initializer='zeros',
                     kernel_initializer = initializer,
-                    kernel_regularizer= keras.regularizers.l2(ANN['Architecture']['regularizer_value']) ))
+                    kernel_regularizer= keras.regularizers.l2(ANN['Training']['regularizer_value']) ))
         else:
             for layer in range(ANN['Architecture']['hidden_layers']):
+                # if ANN['Training']['initializer'] == 2:
+                #     if layer == 0: 
+                #         shape = [ANN['Architecture']['neuron_hidden'], self.n_input]
+                #     else:
+                #         shape = [ANN['Architecture']['neuron_hidden'], ANN['Architecture']['neuron_hidden']]
+                #     initializer = my_init(shape)
+
                 model.add(keras.layers.Dense(
                     ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
@@ -73,7 +94,24 @@ class ANN_reg:
        
         # Compile
         self.loss = 'mse'
-        opt = keras.optimizers.Adam(learning_rate=ANN['Training']['learning_rate'])
+
+        if ANN['Training']['learning_rate'] == 'variable':
+            # lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+            #         initial_learning_rate=ANN['Training']['lr_i'],
+            #         decay_steps=ANN['Training']['lr_decaysteps'],
+            #         decay_rate=ANN['Training']['lr_decayrate'])
+
+            lr_schedule = keras.optimizers.schedules.PolynomialDecay(
+                    initial_learning_rate=ANN['Training']['lr_i'],
+                    decay_steps=ANN['Training']['lr_decaysteps'],
+                    end_learning_rate=ANN['Training']['lr_f'],
+                    power=1.0)
+
+        else:
+            lr_schedule = ANN['Training']['learning_rate']
+
+        opt = keras.optimizers.Adam(learning_rate=lr_schedule)
+                                    # clipnorm=ANN['Training']['clipnorm'])
         model.compile(loss=self.loss, optimizer =opt)
 
         return model
