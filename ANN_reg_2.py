@@ -96,22 +96,32 @@ class ANN_reg:
         self.loss = 'mse'
 
         if ANN['Training']['learning_rate'] == 'variable':
+            # exponential
             # lr_schedule = keras.optimizers.schedules.ExponentialDecay(
             #         initial_learning_rate=ANN['Training']['lr_i'],
             #         decay_steps=ANN['Training']['lr_decaysteps'],
             #         decay_rate=ANN['Training']['lr_decayrate'])
 
-            lr_schedule = keras.optimizers.schedules.PolynomialDecay(
-                    initial_learning_rate=ANN['Training']['lr_i'],
-                    decay_steps=ANN['Training']['lr_decaysteps'],
-                    end_learning_rate=ANN['Training']['lr_f'],
-                    power=1.0)
+            # polinomial
+            # lr_schedule = keras.optimizers.schedules.PolynomialDecay(
+            #         initial_learning_rate=ANN['Training']['lr_i'],
+            #         decay_steps=ANN['Training']['lr_decaysteps'],
+            #         end_learning_rate=ANN['Training']['lr_f'],
+            #         power=1.0)
+
+            # time based: https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/#:~:text=Keras%20has%20a%20time%2Dbased%20learning%20rate%20schedule%20built%20in.&text=When%20the%20decay%20argument%20is,effect%20on%20the%20learning%20rate.&text=When%20the%20decay%20argument%20is%20specified%2C%20it%20will%20decrease%20the,by%20the%20given%20fixed%20amount
+            lr_schedule = ANN['Training']['lr_i']
+            decay_rate = ANN['Training']['lr_decayrate']
 
         else:
             lr_schedule = ANN['Training']['learning_rate']
+            decay_rate = 0
 
-        opt = keras.optimizers.Adam(learning_rate=lr_schedule)
+        # opt = keras.optimizers.Adam(learning_rate=lr_schedule)
+        opt = keras.optimizers.Adam(learning_rate=lr_schedule, 
+                                    decay = decay_rate )
                                     # clipnorm=ANN['Training']['clipnorm'])
+
         model.compile(loss=self.loss, optimizer =opt)
 
         return model
