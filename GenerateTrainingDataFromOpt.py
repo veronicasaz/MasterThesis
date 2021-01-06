@@ -26,9 +26,14 @@ Dataset_conf = Dataset_c.Dataset_config
 def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate,
     autodecV, samples_rand):
     if autodecV == True:
-        fileName = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
-        fileName_opt = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
-        matrix_file =  "./databaseANN/3_DatabaseLast/" + typeinputs + "/" 
+        if typeoutputs == "fit":
+            fileName = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/3_DatabaseLast/" + typeinputs + "/" 
+        elif typeoutputs == "opt":
+            fileName = "./databaseANN/3_DatabaseLast/" + 'opt' + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/3_DatabaseLast/" + 'opt' + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/3_DatabaseLast/" + 'opt' + "/" 
     elif typeoutputs == "opt":
         fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '_eval.txt'
         fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'

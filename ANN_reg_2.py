@@ -381,11 +381,12 @@ class ANN_reg:
         plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  "_pd.png", dpi = 100)
         plt.show()
 
-    def singlePrediction(self, input_case):
-        print(input_case)
+    def singlePrediction(self, input_case, fromFile = False):
+        if fromFile == True:
+            self.load_model_fromFile()
         input_batch = np.array([input_case])
         prediction = self.probability_model.predict(input_batch)
-        print("Prediction", prediction, "predicted label", np.argmax(prediction))
+        return prediction
 
     def printWeights(self):
         weights_h = list()

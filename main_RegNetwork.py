@@ -45,7 +45,7 @@ dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
             
 ANN = ANN_reg(dataset_np, save_path = base)
-
+ANN.load_model_fromFile() # To speed it up later
 
 ########################
 # Calculate fitness
@@ -63,9 +63,9 @@ def f_ANN(DecV):
     input_Vector_std = dataset_np.standardize_withoutFitting(input_Vector, 'I')
     
     # Feasibility 
-    feas = ANN.predict(fromFile = True, 
+    feas = ANN.predict(fromFile = False, 
                         testfile = input_Vector_std,
-                        rescale = True)
+                        rescale = True) # Already loaded above
     tf_reg = (time.time() - t0_reg) 
     print('Time eval eval', tf_reg)
 
@@ -277,6 +277,9 @@ def propagate_test():
     Fitness.printResult()
 
 def evaluateFeasibility():
+    """
+    compare speeds of ML and numerical calculation of the fitness
+    """
     ind = 1000
     pop_0 = np.zeros([ind, len(SF.bnds)])
     for i in range(len(SF.bnds)):
@@ -287,10 +290,9 @@ def evaluateFeasibility():
     t0_fit = time.time()
     for i in range(ind):
         DecV = pop_0[i,:]
-        Fitness.calculateFeasibility(DecV)
-        feas[i] = Fitness.studyFeasibility()
+        feas[i] = Fitness.calculateFitness(DecV)
 
-    tf_fit = (time.time() - t0_fit) 
+    tf_1 = (time.time() - t0_fit) 
     print('Time fitness eval', tf_fit)
     print('Number feasible', np.count_nonzero(feas==1))
 
@@ -304,12 +306,12 @@ def evaluateFeasibility():
         # Feasibility
         feas2[i] = ANN.predict_single(input_Vector)
 
-    tf_class = (time.time() - t0_class) 
+    tf_2 = (time.time() - t0_class) 
     print('Time network eval', tf_class)
     print('Number feasible', np.count_nonzero(feas2==1))
 
     # ANN batch
-    feas2 = np.zeros(ind)
+    feas3 = np.zeros(ind)
     t0_class = time.time()
     input_Vector = np.zeros((ind,8))
     for i in range(ind):
@@ -317,10 +319,8 @@ def evaluateFeasibility():
         # Transform inputs
         input_Vector[i,:] = Fitness.DecV2inputV(newDecV = DecV)
     # Feasibility
-    feas2 = ANN.predict(input_Vector)
-    feas2 = abs(np.array(feas2)-1)
-
-    tf_class = (time.time() - t0_class) 
+    feas3 = ANN.predict(input_Vector)
+    tf_3 = (time.time() - t0_class) 
     print('Time network eval', tf_class)
     print('Number feasible', np.count_nonzero(feas2==0))
 
