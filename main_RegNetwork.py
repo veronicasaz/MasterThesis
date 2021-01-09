@@ -33,7 +33,7 @@ MBH_batch = opt_config.MBH_batch
 
 
 # Database for inverse standardization
-base = ".//databaseANN/3_DatabaseLast/deltakeplerian/"
+base = "./databaseANN/3_DatabaseLast/deltakeplerian/1_Best/" #select best network
 train_file_path = base + 'Together.txt'
 
 dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
@@ -285,44 +285,47 @@ def evaluateFeasibility():
     for i in range(len(SF.bnds)):
         pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
     
-    #Fitness function
-    feas = np.zeros(ind)
-    t0_fit = time.time()
-    for i in range(ind):
-        DecV = pop_0[i,:]
-        feas[i] = Fitness.calculateFitness(DecV)
+    # #Fitness function
+    # feas = np.zeros((ind, 2))
+    # t0_fit = time.time()
+    # for i in range(ind):
+    #     DecV = pop_0[i,:]
+    #     fitness = Fitness.calculateFitness(DecV)
+    #     feas[i, 0] = Fitness.Epnorm
+    #     feas[i, 1] = Fitness.Evnorm
+    # tf_1 = (time.time() - t0_fit) 
+    # print('Time fitness eval', tf_1)
+    # print('Number feasible', np.count_nonzero(feas==1))
 
-    tf_1 = (time.time() - t0_fit) 
-    print('Time fitness eval', tf_fit)
-    print('Number feasible', np.count_nonzero(feas==1))
+    # # ANN individual
+    # feas2 = np.zeros((ind, 2))
+    # t0_class = time.time()
+    # for i in range(ind):
+    #     DecV = pop_0[i,:]
+    #     # Transform inputs
+    #     input_Vector = Fitness.DecV2inputV( 'deltakeplerian', newDecV = DecV)
+    #     # Feasibility
+    #     feas2[i, :] = ANN.singlePrediction(input_Vector)
 
-    # ANN individual
-    feas2 = np.zeros(ind)
-    t0_class = time.time()
-    for i in range(ind):
-        DecV = pop_0[i,:]
-        # Transform inputs
-        input_Vector = Fitness.DecV2inputV(newDecV = DecV)
-        # Feasibility
-        feas2[i] = ANN.predict_single(input_Vector)
-
-    tf_2 = (time.time() - t0_class) 
-    print('Time network eval', tf_class)
-    print('Number feasible', np.count_nonzero(feas2==1))
+    # tf_2 = (time.time() - t0_class) 
+    # print('Time network eval', tf_2)
+    # print('Number feasible', np.count_nonzero(feas2==1))
 
     # ANN batch
-    feas3 = np.zeros(ind)
+    feas3 = np.zeros((ind, 2))
     t0_class = time.time()
     input_Vector = np.zeros((ind,8))
     for i in range(ind):
         DecV = pop_0[i,:]
         # Transform inputs
-        input_Vector[i,:] = Fitness.DecV2inputV(newDecV = DecV)
+        input_Vector[i,:] = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
+    
+    t0_class_2 = time.time()
     # Feasibility
-    feas3 = ANN.predict(input_Vector)
+    feas3 = ANN.predict(testfile = input_Vector, rescale = True)
     tf_3 = (time.time() - t0_class) 
-    print('Time network eval', tf_class)
-    print('Number feasible', np.count_nonzero(feas2==0))
+    tf_3_mid = ( t0_class_2 - t0_class) 
+    print('Time network eval', tf_3, "Conversion of vector:", tf_3_mid)
 
 def propagateOne():
     DecV_I = np.genfromtxt("./OptSol/SolutionMBH_batch.txt", delimiter = ' ', dtype = float)
@@ -346,9 +349,9 @@ if __name__ == "__main__":
 
     # TEST WITH PAPER
     # MBH_batch_test(ML = False) # Without ML
-    propagate_test()
+    # propagate_test()
 
     # propagateOne()
-    # evaluateFeasibility() # Compare speed of 3 evaluations
+    evaluateFeasibility() # Compare speed of 3 evaluations
 
     # Without ML

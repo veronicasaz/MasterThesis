@@ -102,6 +102,8 @@ class Fitness:
         # fc1 = np.linalg.norm(Error[0:3])
         # fc2 = np.linalg.norm(Error[3:])
 
+        self.Epnorm = fc1
+        self.Evnorm = fc2
         # print('------------------------')
         # print(m_fuel, Error)
         # print(fc1, fc2)

@@ -254,7 +254,7 @@ class ANN_reg:
                     testfile = dataset to be evaluated.
             rescale: rescale the output (True) or not (False)
         """
-        if fromFile == True:
+        if type(fromFile) == bool:
             self.load_model_fromFile()
 
         if type(testfile) != bool:
@@ -384,9 +384,10 @@ class ANN_reg:
     def singlePrediction(self, input_case, fromFile = False):
         if fromFile == True:
             self.load_model_fromFile()
-        input_batch = np.array([input_case])
-        prediction = self.probability_model.predict(input_batch)
-        return prediction
+        # input_batch = np.array([input_case])
+        input_batch = input_case.reshape(1, -1)
+        prediction = self.model.predict(input_batch)
+        return prediction[0,:]
 
     def printWeights(self):
         weights_h = list()
