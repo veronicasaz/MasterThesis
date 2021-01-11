@@ -280,36 +280,36 @@ def evaluateFeasibility():
     """
     compare speeds of ML and numerical calculation of the fitness
     """
-    ind = 1000
+    ind = 10
     pop_0 = np.zeros([ind, len(SF.bnds)])
     for i in range(len(SF.bnds)):
         pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
     
-    # #Fitness function
-    # feas = np.zeros((ind, 2))
-    # t0_fit = time.time()
-    # for i in range(ind):
-    #     DecV = pop_0[i,:]
-    #     fitness = Fitness.calculateFitness(DecV)
-    #     feas[i, 0] = Fitness.Epnorm
-    #     feas[i, 1] = Fitness.Evnorm
-    # tf_1 = (time.time() - t0_fit) 
-    # print('Time fitness eval', tf_1)
-    # print('Number feasible', np.count_nonzero(feas==1))
+    #Fitness function
+    feas = np.zeros((ind, 2))
+    t0_fit = time.time()
+    for i in range(ind):
+        DecV = pop_0[i,:]
+        fitness = Fitness.calculateFitness(DecV)
+        feas[i, 0] = Fitness.Epnorm
+        feas[i, 1] = Fitness.Evnorm
+    tf_1 = (time.time() - t0_fit) 
+    
 
-    # # ANN individual
-    # feas2 = np.zeros((ind, 2))
-    # t0_class = time.time()
-    # for i in range(ind):
-    #     DecV = pop_0[i,:]
-    #     # Transform inputs
-    #     input_Vector = Fitness.DecV2inputV( 'deltakeplerian', newDecV = DecV)
-    #     # Feasibility
-    #     feas2[i, :] = ANN.singlePrediction(input_Vector)
+    # ANN individual
+    feas2 = np.zeros((ind, 2))
+    t0_class = time.time()
+    for i in range(ind):
+        DecV = pop_0[i,:]
+        # Transform inputs
+        input_Vector = Fitness.DecV2inputV( 'deltakeplerian', newDecV = DecV)
+        input_Vector_std = dataset_np.standardize_withoutFitting(input_Vector, 'I')
+    
+        # Feasibility
+        feas2[i, :] = ANN.singlePrediction(input_Vector_std)
 
-    # tf_2 = (time.time() - t0_class) 
-    # print('Time network eval', tf_2)
-    # print('Number feasible', np.count_nonzero(feas2==1))
+    tf_2 = (time.time() - t0_class) 
+
 
     # ANN batch
     feas3 = np.zeros((ind, 2))
@@ -318,14 +318,23 @@ def evaluateFeasibility():
     for i in range(ind):
         DecV = pop_0[i,:]
         # Transform inputs
-        input_Vector[i,:] = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
-    
+        input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
+        input_Vector[i,:] = dataset_np.standardize_withoutFitting(input_Vector_i, 'I')
     t0_class_2 = time.time()
     # Feasibility
     feas3 = ANN.predict(testfile = input_Vector, rescale = True)
     tf_3 = (time.time() - t0_class) 
     tf_3_mid = ( t0_class_2 - t0_class) 
-    print('Time network eval', tf_3, "Conversion of vector:", tf_3_mid)
+
+
+    print('Time fitness eval 1', tf_1)
+    print('Time network eval 2', tf_2)
+    print('Time network eval 3', tf_3, "Conversion of vector:", tf_3_mid)
+
+
+    for i in range(ind):
+        print(feas[i,:],'\n', feas3[i,:], '\n',feas2[i,:])
+        print("===============================")
 
 def propagateOne():
     DecV_I = np.genfromtxt("./OptSol/SolutionMBH_batch.txt", delimiter = ' ', dtype = float)
@@ -352,6 +361,6 @@ if __name__ == "__main__":
     # propagate_test()
 
     # propagateOne()
-    evaluateFeasibility() # Compare speed of 3 evaluations
+    evaluateFeasibility() # Compare speed of 3 evaluations with and without ML
 
     # Without ML

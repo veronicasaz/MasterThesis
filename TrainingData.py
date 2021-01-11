@@ -125,7 +125,7 @@ def save_standard(dataset, save_file_path):
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, \
-        inputs = {'labelType': 0},\
+        inputs = {'labelType': 0, 'decv': False},\
         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': 1, 'add': 'vector'}, \
         actions = {'shuffle': True }
         ):
@@ -241,12 +241,25 @@ class Dataset:
         else:
             print("Error: choose valid type of output")
 
-        startinput = self.outputs['outputs_err'][1]
 
-        if self.inputs_conf['labelType'] == 0:
-            self.input_data = self.dataset[:,startinput:]
+        # INPUT DATA
+        startinput = self.outputs['outputs_err'][1]
+        if self.inputs_conf['decV'] == True:
+            endinput = 8 + SF.Nimp*3# lenght of dec v. Only if hte database contains decv
+            if self.inputs_conf['labelType'] == 0:
+                self.input_data = self.dataset[:,startinput:-endinput]
+                self.decV = self.dataset[:, -endinput:]
+            else:
+                self.input_data = self.dataset[:,startinput:-endinput-1]
+                self.decV = self.dataset[:, -endinput-1:-1]
+            
         else:
-            self.input_data = self.dataset[:,startinput:-1]
+            if self.inputs_conf['labelType'] == 0:
+                self.input_data = self.dataset[:,startinput:]
+            else:
+                self.input_data = self.dataset[:,startinput:-1]
+
+        
             
         self.n_input = self.input_data.shape[1]
 
@@ -595,7 +608,11 @@ class Dataset:
         
         # Adapt inputs to size of fitted database
         if typeInput == "I": # we only know the inputs
-            database = np.column_stack(( np.zeros((len(input_vec[:,0]), self.n_outputs)), input_vec ))
+            if input_vec.ndim == 1:
+                database = np.array([ np.concatenate(( np.zeros( self.n_outputs), input_vec )) ])
+            else:   
+                database = np.column_stack(( np.zeros((len(input_vec[:,0]), self.n_outputs)), input_vec ))
+
         elif typeInput == "O":
             database = np.column_stack(( input_vec, np.zeros(np.shape(self.input_data)) ))
         else:
@@ -633,8 +650,6 @@ class Dataset:
         E = x2[:, 0:startinput]
         I = x2[:, startinput:]
 
-        print(database[0:10, :], startinput)
-
         if self.typeOutput == 'ep' or self.typeOutput == 'epev' or self.typeOutput == 'epevmf':
             if self.Log == True:
                 E[:,starterror] = np.array([10**(E[i,starterror]) for i in range(len(E[:,starterror]))])
@@ -659,7 +674,7 @@ class Dataset:
 
     def noise_gauss(self, mean, std):
         if self.inputs_conf['labelType'] == 0:
-            self.labelType == np.zeros((len(self.nsamples))).flatten()
+            self.labelType = np.zeros(self.nsamples)
             self.inputs_conf['labelType'] = 1
 
         # Create copies
@@ -791,7 +806,8 @@ def LoadNumpy(train_file_path, save_file_path = None, \
             labelType = 0,
             plotDistribution = False, plotErrors = False, 
             plotOutputDistr = False, plotEpvsEv = False,
-            data_augmentation = 'False'):
+            data_augmentation = 'False',
+            decV = False):
 
     if data_augmentation == 'multiplication': # Augmentation = true
         if type(train_file_path) == str:
@@ -816,7 +832,7 @@ def LoadNumpy(train_file_path, save_file_path = None, \
 
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, \
-        inputs = {'labelType': labelType},\
+        inputs = {'labelType': labelType, 'decV': decV},\
         outputs =outputs, \
         actions = {'shuffle': True })
 
@@ -923,17 +939,17 @@ if __name__ == "__main__":
     join_files(file_path, file_path_together)
 
 
-    dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
-            scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-            output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = len(file_path),
-            plotDistribution=False, plotErrors=False,
-            # plotOutputDistr = False, plotEpvsEv = False,
-            # plotDistribution=True, plotErrors=True,
-            plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+    # dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
+    #         scaling = Scaling['scaling'], 
+    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+    #         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+    #         output_type = Dataset_conf.Dataset_config['Outputs'],
+    #         labelType = len(file_path),
+    #         plotDistribution=False, plotErrors=False,
+    #         # plotOutputDistr = False, plotEpvsEv = False,
+    #         # plotDistribution=True, plotErrors=True,
+    #         plotOutputDistr = True, plotEpvsEv = True,
+    #         data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
 
     # See inputs

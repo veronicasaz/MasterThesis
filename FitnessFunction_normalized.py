@@ -102,8 +102,8 @@ class Fitness:
         # fc1 = np.linalg.norm(Error[0:3])
         # fc2 = np.linalg.norm(Error[3:])
 
-        self.Epnorm = fc1
-        self.Evnorm = fc2
+        self.Epnorm = np.linalg.norm(Error[0:3])
+        self.Evnorm = np.linalg.norm(Error[3:])
         # print('------------------------')
         # print(m_fuel, Error)
         # print(fc1, fc2)
@@ -324,7 +324,6 @@ class Fitness:
         inputs[1] = self.m0
 
         if typeinputs == "deltakeplerian":
-            t_1 = self.t0 + AL_BF.sec2days(self.t_t)
 
             # Elements of the planets
             # elem_0 = self.earthephem.osculating_elements(pk.epoch(self.t0, 'mjd2000') )
@@ -438,9 +437,11 @@ class Fitness:
         # Write to file
         vectorFeasibility = np.append(feasible, self.Error)
         vectorFeasibility = np.append(vectorFeasibility, inputs)
+        vectorFeasibility = np.append(vectorFeasibility, self.DecV)
+        
         with open(feasibilityFileName, "a") as myfile:
-            for value in vectorFeasibility:
-                if value != vectorFeasibility[-1]:
+            for v, value in enumerate(vectorFeasibility):
+                if v != len(vectorFeasibility)-1:
                     myfile.write(str(value) +" ")
                 else:
                     myfile.write(str(value))

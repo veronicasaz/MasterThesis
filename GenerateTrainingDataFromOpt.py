@@ -52,6 +52,15 @@ def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate,
             "Delta_y", "Delta_z", "Delta_vx",\
             "Delta_vy", "Delta_vz"]
 
+    inputsHeading = ['v0', 'alpha0', 'beta0', 'v1', 'alpha1', 'beta1', 't0', 't_t']
+    for x in range(SF.Nimp):
+        if x != 0:
+            inputsHeading += [' i', 'alphai', 'betai']
+        else:
+            inputsHeading += ['i', 'alphai', 'betai']
+
+    Heading = Heading + inputsHeading
+
     if appendToFile == False:
         with open(fileName, "w") as myfile:
             for i in Heading:
@@ -382,8 +391,9 @@ if __name__ == "__main__":
                 niter_success = MBH['niter_success'], bnds = SF.bnds, \
                 jumpMagnitude = MBH['jumpMagnitude'], tolLocal = MBH['tolLocal'],\
                 tolGlobal = MBH['tolGlobal'])
-            fvalue = f(solutionLocal)
             
+            fvalue = Fit.calculateFitness(solutionLocal)
+
             if typeoutputs == 'fit':
                 Fit.savetoFile(typeinputs, feasibilityFileName_opt)
             elif typeoutputs == 'opt': # save inputs with their optimum output
@@ -395,6 +405,8 @@ if __name__ == "__main__":
                 tol = MBH['tolLocal'], bounds = SF.bnds, options = {'maxiter': MBH['niter_local']} )
 
             fvalue = f(solutionLocal.x)
+            fvalue = Fit.calculateFitness(solutionLocal.x)
+
             feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds)
             if feasible == True: 
                 if typeoutputs == 'fit':

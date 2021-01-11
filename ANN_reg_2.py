@@ -17,8 +17,11 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.datasets import make_regression
 from sklearn.model_selection import RepeatedKFold
 
+from FitnessFunction_normalized import Fitness
 import LoadConfigFiles as CONF
 import TrainingData as TD
+
+import time
 
 ###################################################################
 # https://stackabuse.com/tensorflow-2-0-solving-classification-and-regression-problems/
@@ -33,6 +36,9 @@ Scaling = Dataset_conf.Dataset_config['Scaling']
 
 FIT_C = CONF.Fitness_config()
 FIT = FIT_C.Fit_config
+
+SF = CONF.SimsFlan_config() # Load Sims-Flanagan config variables 
+Fitness = Fitness(Nimp = SF.Nimp)
 
 class ANN_reg:
     def __init__(self, dataset, save_path = False):
@@ -262,47 +268,55 @@ class ANN_reg:
         else:
             pred_test = self.model.predict(self.testdata[0])
 
-            if rescale == False and type(testfile) == bool: # No inverse standarization possible
+        if rescale == False and type(testfile) == bool: # No inverse standarization possible
 
-                self.Output_pred = np.zeros((len(pred_test),self.n_classes))
-                if self.n_classes > 1:
-                    for i in range(len(pred_test)):
-                        print('i', i)
-                        print(pred_test[i], self.testdata[1][i])
-                        # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
-                        # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
-                        print("------------------------")
+            self.Output_pred = np.zeros((len(pred_test),self.n_classes))
+            if self.n_classes > 1:
+                for i in range(len(pred_test)):
+                    print('i', i)
+                    print(pred_test[i], self.testdata[1][i])
+                    # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
+                    # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
+                    print("------------------------")
 
-                        for output_i in range(self.n_classes):
-                            self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
-                else:
-                    for i in range(len(pred_test)):
-                        print(pred_test[i], self.testdata[1][i])
-                        self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
-
+                    for output_i in range(self.n_classes):
+                        self.Output_pred[i,output_i] = abs( pred_test[i,output_i] - self.testdata[1][i,output_i] )
             else:
-                predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
-                true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
-                
-                if type(testfile) == bool:
-                    self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
-                    self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
-                    
-                    for i in range(len(predictions_unscaled)):
-                        print('i', i)
-                        # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
-                        # print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
-                        print("------------------------")
-                        for output_i in range(self.n_classes):
-                            self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
-                            self.Output_pred_unscale_ptg[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i] ) /true_value[i,output_i]
-                            print(predictions_unscaled[i,output_i], true_value[i,output_i ])
-        
-        return pred_test
+                for i in range(len(pred_test)):
+                    print(pred_test[i], self.testdata[1][i])
+                    self.Output_pred[i,0] = abs( pred_test[i] - self.testdata[1][i])
+            
+            return pred_test
+
+        elif type(testfile) == bool:
+            predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
+            true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
+            
+            self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
+            self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
+            
+            for i in range(len(predictions_unscaled)):
+                print('i', i)
+                # print("Predictions, %e, %e, %e"%(predictions_unscaled[i,0], predictions_unscaled[i,1], predictions_unscaled[i,2]) )
+                # print("True value, %e, %e, %e"%(true_value[i,0], true_value[i,1], true_value[i,2] ))
+                print("------------------------")
+                for output_i in range(self.n_classes):
+                    self.Output_pred_unscale[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i ])
+                    self.Output_pred_unscale_ptg[i,output_i] = abs( predictions_unscaled[i,output_i] - true_value[i,output_i] ) /true_value[i,output_i]
+                    print(predictions_unscaled[i,output_i], true_value[i,output_i ])
+
+            return predictions_unscaled
+
+        elif rescale == True and type(testfile) != bool:
+            predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, testfile) #Obtain predictions in actual 
+            return  predictions_unscaled
+
+        else:
+            return pred_test
 
     def plotPredictions(self, std):
 
-        labels = 'Difference in predicted ' 
+        labels = 'Difference in predicted' 
         symbols = ['r-x', 'g-x', 'b-x']
         if std == False: # No inverse standarization possible or not needed
             fig, ax = plt.subplots() 
@@ -315,60 +329,74 @@ class ANN_reg:
             plt.legend()
             
         else:
-            if self.n_classes == 3:
-                fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-                ax_i = [ax1, ax2, ax3]
-            elif self.n_classes == 2:
-                fig, (ax1, ax2) = plt.subplots(1, 2)
-                ax_i = [ax1, ax2]
-            elif self.n_classes == 1:
-                fig, (ax1) = plt.subplots(1, 1)
-                ax_i = [ax1]
+        #     if self.n_classes == 3:
+        #         fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+        #         ax_i = [ax1, ax2, ax3]
+        #     elif self.n_classes == 2:
+        #         fig, (ax1, ax2) = plt.subplots(1, 2)
+        #         ax_i = [ax1, ax2]
+        #     elif self.n_classes == 1:
+        #         fig, (ax1) = plt.subplots(1, 1)
+        #         ax_i = [ax1]
             
-            fig.subplots_adjust(wspace=0.1, hspace=0.05)
-            for i in range(self.n_classes):
-                ax_i[i].scatter(np.arange(0, len(self.Output_pred_unscale_ptg)), self.Output_pred_unscale_ptg[:,i], marker =  'x', label = labels+ self.dataset_np.output_label[i])
+        #     fig.subplots_adjust(wspace=0.1, hspace=0.05)
+        #     for i in range(self.n_classes):
+        #         ax_i[i].scatter(np.arange(0, len(self.Output_pred_unscale_ptg)), self.Output_pred_unscale_ptg[:,i], marker =  'x', label = labels+ self.dataset_np.output_label[i])
 
-            if Dataset_conf.Dataset_config['Outputs'] == 'epev' or\
-               Dataset_conf.Dataset_config['Outputs'] == 'ep' or\
-               Dataset_conf.Dataset_config['Outputs'] == 'ev':
-                for ax in ax_i:
-                    if Scaling['scaling'] == 0:
-            #         for i in range(self.n_classes -1 )
-                        ax.set_yscale('log')
-                    elif Scaling['scaling'] == 1:
-                        ax.set_yscale('symlog')
+        #     if Dataset_conf.Dataset_config['Outputs'] == 'epev' or\
+        #        Dataset_conf.Dataset_config['Outputs'] == 'ep' or\
+        #        Dataset_conf.Dataset_config['Outputs'] == 'ev':
+        #         for ax in ax_i:
+        #             if Scaling['scaling'] == 0:
+        #     #         for i in range(self.n_classes -1 )
+        #                 ax.set_yscale('log')
+        #             elif Scaling['scaling'] == 1:
+        #                 ax.set_yscale('symlog')
 
-            if Dataset_conf.Dataset_config['Outputs'] == 'epevmf':
-                for ax in ax_i[1:]:
-                    if Scaling['scaling'] == 0:
-            #         for i in range(self.n_classes -1 )
-                        ax.set_yscale('log')
-                    elif Scaling['scaling'] == 1:
-                        ax.set_yscale('symlog')
+        #     if Dataset_conf.Dataset_config['Outputs'] == 'epevmf':
+        #         for ax in ax_i[1:]:
+        #             if Scaling['scaling'] == 0:
+        #     #         for i in range(self.n_classes -1 )
+        #                 ax.set_yscale('log')
+        #             elif Scaling['scaling'] == 1:
+        #                 ax.set_yscale('symlog')
 
 
-            #         ax3.set_yscale('log')
-            #     elif Scaling['scaling'] == 1:
+        #     #         ax3.set_yscale('log')
+        #     #     elif Scaling['scaling'] == 1:
 
-            # if self.n_classes == 2 or self.n_classes == 3:
-            #     if Scaling['scaling'] == 0:
-            #         for i in range(self.n_classes -1 )
-            #         ax2.set_yscale('log')
-            #         ax3.set_yscale('log')
-            #     elif Scaling['scaling'] == 1:
-            #         ax2.set_yscale('symlog')
-            #         ax3.set_yscale('symlog')
+        #     # if self.n_classes == 2 or self.n_classes == 3:
+        #     #     if Scaling['scaling'] == 0:
+        #     #         for i in range(self.n_classes -1 )
+        #     #         ax2.set_yscale('log')
+        #     #         ax3.set_yscale('log')
+        #     #     elif Scaling['scaling'] == 1:
+        #     #         ax2.set_yscale('symlog')
+        #     #         ax3.set_yscale('symlog')
 
-            for ax in ax_i:
-                ax.grid(alpha = 0.5)
-                ax.legend()
-                ax.set_xlabel("Samples to predict")
+        #     for ax in ax_i:
+        #         ax.grid(alpha = 0.5)
+        #         ax.legend()
+        #         ax.set_xlabel("Samples to predict")
 
-        # plt.tight_layout()
-        plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  ".png", dpi = 100)
-        plt.show()
+        # # plt.tight_layout()
+        # plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  ".png", dpi = 100)
+        # plt.show()
 
+            # Ep vs Ev
+            fig, (ax1) = plt.subplots(1, 1)
+            ax_i = ax1
+            ax_i.scatter(self.Output_pred_unscale[:,0], self.Output_pred_unscale[:,1], marker =  'x')
+            
+            ax_i.set_yscale('log')
+            ax_i.set_xscale('log')
+
+            ax_i.grid(alpha = 0.5)
+            ax_i.set_xlabel("Samples to predict")
+
+            plt.tight_layout()
+            plt.savefig(self.checkpoint_path+"TestPredictionDifference_std" + str(std) +  ".png", dpi = 100)
+            plt.show()
 
         # As a pde distribution
         if std == False:
@@ -402,14 +430,12 @@ class ANN_reg:
         print("WEIGHTS", weights_h)
         print("WEIGHTS", weights_output)
 
-def Network(dataset_np, save_path):
+
+
+def Network(dataset_np, perceptron, save_path):
     """
     Call the network to train and evaluate
     """
-    traindata, testdata = TD.splitData_reg(dataset_np)
-
-    perceptron = ANN_reg(dataset_np, save_path = save_path)
-    perceptron.get_traintestdata(traindata, testdata)
     
     perceptron.training()
     perceptron.plotTraining()
@@ -424,7 +450,7 @@ def Network(dataset_np, save_path):
     predictions = perceptron.predict(fromFile=True, rescale = True)
     perceptron.plotPredictions(std = True)
 
-def Fitness_network():
+def Fitness_network(train = False):
     base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
@@ -436,13 +462,23 @@ def Fitness_network():
             outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
             output_type = Dataset_conf.Dataset_config['Outputs'],
             labelType = 3, 
+            decV = False,
             plotDistribution=False, plotErrors=False,
             plotOutputDistr = False, plotEpvsEv = False,
             # plotDistribution=True, plotErrors=True,
             # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
-    Network(dataset_np, base)
+    traindata, testdata = TD.splitData_reg(dataset_np)
+
+    perceptron = ANN_reg(dataset_np, save_path =base)
+    perceptron.get_traintestdata(traindata, testdata)
+
+    if train == True:
+        Network(dataset_np, perceptron, base)
+    else:
+        perceptron.load_model_fromFile()
+        evaluatePredictionsNewData(dataset_np, perceptron)
 
 def Fitness_network_join():
     base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
@@ -475,6 +511,121 @@ def Fitness_network_join():
     
     Network(dataset_np, base)
 
+
+    # PREDICT WITHOUT GAUSSIAN NOISE
+
+def evaluatePredictionsNewData(dataset_np, ANN):
+    ind = 5000
+    pop_0 = np.zeros([ind, len(SF.bnds)])
+    for i in range(len(SF.bnds)):
+        pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
+    
+    #Fitness function
+    feas1 = np.zeros((ind, 2))
+    t0_fit = time.time()
+    for i in range(ind):
+        DecV = pop_0[i,:]
+        fitness = Fitness.calculateFitness(DecV)
+        feas1[i, 0] = Fitness.Epnorm
+        feas1[i, 1] = Fitness.Evnorm
+    tf_1 = (time.time() - t0_fit) 
+    
+
+    # ANN batch
+    feas2 = np.zeros((ind, 2))
+    t0_class = time.time()
+    input_Vector = np.zeros((ind,8))
+    for i in range(ind):
+        DecV = pop_0[i,:]
+        # Transform inputs
+        input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
+        input_Vector[i,:] = dataset_np.standardize_withoutFitting(input_Vector_i, 'I')
+
+    t0_class_2 = time.time()
+
+    # Feasibility
+    feas2_unscaled = ANN.predict(testfile = input_Vector, rescale = False)
+    feas2 = ANN.predict(testfile = input_Vector, rescale = True)
+    tf_3 = (time.time() - t0_class) 
+    tf_3_mid = ( t0_class_2 - t0_class) 
+
+    difference = np.zeros((ind, 2))
+    difference = np.absolute(feas2 - feas1) 
+
+    # PLOT DIFFERENCES
+    labels = 'Difference in predicted' 
+    symbols = ['r-x', 'g-x', 'b-x']
+
+    fig, (ax1) = plt.subplots(1, 1)
+    ax_i = [ax1]
+    
+    fig.subplots_adjust(wspace=0.1, hspace=0.05)
+    for i in range(1):
+        ax_i[i].scatter(difference[:,0], difference[:,1], marker =  'x', label = labels+ dataset_np.output_label[i])
+        
+        ax_i[i].set_yscale('log')
+        ax_i[i].set_xscale('log')
+
+        ax_i[i].grid(alpha = 0.5)
+        ax_i[i].legend()
+        ax_i[i].set_xlabel("Samples to predict")
+
+    # plt.tight_layout()
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata.png", dpi = 100)
+    plt.show()
+
+     # As a pde distribution
+
+    # dataset = pd.DataFrame(data = np.log10(difference)) 
+    # sns.displot(dataset)
+    # # plt.legend(self.output_label, loc='upper left')
+    # plt.tight_layout()
+    # plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_pd_newdata_pd.png", dpi = 100)
+    # plt.show()
+
+def checkDatabase():
+    """
+    Check that database provides same fitness as evaluation
+    """
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
+    #     base+ 'Lambert_opt.txt']
+    file_path = base+ 'Random_10.txt'
+
+    dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
+            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = 0, 
+            decV = True,
+            plotDistribution=False, plotErrors=False,
+            plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            # plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+
+    traindata, testdata = TD.splitData_reg(dataset_np)
+
+    ind = 2
+    pop = traindata[0][0:ind, :]
+    popdecv = dataset_np.decV[0:ind, :]
+
+    pop_out, non= dataset_np.commonInverseStandardization(traindata[1][0:ind,:], pop)
+
+    # FITNESS
+    feas1 = np.zeros((ind, 2))
+    t0_fit = time.time()
+    for i in range(ind):
+        DecV = popdecv[i,:]
+        fitness = Fitness.calculateFitness(DecV)
+        feas1[i, 0] = Fitness.Epnorm
+        feas1[i, 1] = Fitness.Evnorm
+
+        print("=========== ============")
+        print("Fitness", feas1[i,:])
+        print("Dataset", pop_out[i])
+
 def Opt_network():
     base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
 
@@ -495,7 +646,10 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    Fitness_network()
+    Fitness_network(train = True)
+    Fitness_network(train = False)
+
+    # checkDatabase()
 
     # Fitness_network_join()
     # Opt_network()

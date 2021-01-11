@@ -1,12 +1,12 @@
 Creation:
- typeoutputs: "opt" # fit or opt
+ typeoutputs: "fit" # fit or opt
  autodecV: True
  typeinputs: "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
  creationMethod: 'Random' # 'Exposin', 'Lambert', 'Random, Random_MBH
  lhypercube: True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized 
  evaluate: False #evaluate and save initial samples
- samples_rand: 1000 # samples with random mor hypercube initialization
+ samples_rand: 10 # samples with random mor hypercube initialization
  samples_L: 2000 # samples for Lambert and Exposin
  appendToFile: False # append instead of creating a new file. To increase the number of values
  
