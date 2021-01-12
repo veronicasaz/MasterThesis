@@ -341,7 +341,7 @@ class ANN_reg:
             
         #     fig.subplots_adjust(wspace=0.1, hspace=0.05)
         #     for i in range(self.n_classes):
-        #         ax_i[i].scatter(np.arange(0, len(self.Output_pred_unscale_ptg)), self.Output_pred_unscale_ptg[:,i], marker =  'x', label = labels+ self.dataset_np.output_label[i])
+        #         ax_i[i].scatter(np.arange(0, len(self.Output_pred_unscale)), self.Output_pred_unscale[:,i], marker =  'x', label = labels+ self.dataset_np.output_label[i])
 
         #     if Dataset_conf.Dataset_config['Outputs'] == 'epev' or\
         #        Dataset_conf.Dataset_config['Outputs'] == 'ep' or\
@@ -646,7 +646,7 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    Fitness_network(train = True)
+    # Fitness_network(train = True)
     Fitness_network(train = False)
 
     # checkDatabase()
