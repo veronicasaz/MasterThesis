@@ -276,10 +276,10 @@ def compareNumSamples_val(base, save_study_path, typeSamples, repetitions):
 
     for i in range(len(typeSamples)):
         # base = "./databaseANN/DatabaseFitness/deltakeplerian/ComparisonNInputs_files/" 
-        # train_file_path = base + "Tog_" +typeSamples[i] +".txt"
+        train_file_path = base + "Random_MBH_" +typeSamples[i] +".txt"
 
          
-        train_file_path = base + 'Random_MBH_'+typeSamples[i] +"_3.txt"
+        # train_file_path = base +typeSamples[i] +".txt"
 
         # TD.plotInitialDataPandasError(train_file_path, save_file_path,  pairplot= True, corrplot= True)
         dataset_np = TD.LoadNumpy(train_file_path,
@@ -341,6 +341,7 @@ def plot_compareNumSamples_val(path, typeSamples, repetitions):
     plt.title("Mean Squared Error for different number of samples")
     plt.xlabel('Repetitions')
     plt.ylabel("Validatoin Loss (MSE)")
+    
     # plt.legend()
     plt.grid(alpha = 0.5)
     plt.tight_layout()
@@ -357,11 +358,12 @@ def plot_compareNumSamples_val(path, typeSamples, repetitions):
         mean_loss[i, 1] = np.mean(val_loss[i,:])
         std_loss[i, 1] = np.std(val_loss[i,:])
 
-    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,0], std_loss[:,0], linestyle='None', marker='^')
-    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,1], std_loss[:,1], linestyle='None', marker='o')
-
+    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,0], std_loss[:,0], linestyle='None', marker='^', label = 'Train loss')
+    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,1], std_loss[:,1], linestyle='None', marker='o', label = 'Validation loss')
+    plt.yscale('log')
+    plt.legend()
     plt.ylabel("Loss (MSE)")
-    plt.xticks(np.arange(0, len(typeSamples), 1), typeSamples)
+    plt.xticks(np.arange(0, len(typeSamples), 1), typeSamples, rotation = 70)
     plt.title("Mean Squared Error for different number of samples")
     plt.grid(alpha = 0.5)
     plt.tight_layout()
@@ -435,9 +437,10 @@ def plot_compareDataAugm(path, typeSamples, repetitions):
         mean_loss[i, 1] = np.mean(val_loss[i,:])
         std_loss[i, 1] = np.std(val_loss[i,:])
 
-    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,0], std_loss[:,0], linestyle='None', marker='^')
-    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,1], std_loss[:,1], linestyle='None', marker='o')
-
+    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,0], std_loss[:,0], linestyle='None', marker='^', label = 'Train loss')
+    plt.errorbar(np.arange(0,len(typeSamples),1), mean_loss[:,1], std_loss[:,1], linestyle='None', marker='o', label = 'Validation loss')
+    plt.yscale('log')
+    plt.legend()
     plt.ylabel("Loss (MSE)")
     plt.xticks(np.arange(0, len(typeSamples), 1), typeSamples)
     plt.title("Mean Squared Error for different number of samples")
@@ -581,24 +584,23 @@ if __name__ == "__main__":
 
     # COMPARE NUMBER SAMPLES: LEARNING CURVE. Train and val loss
     repetitions = 5
-    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"
-    database = base +"databaseSaved/"
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+    database = base +'databaseSaved_fp100/'
     save_study_path = base + 'Results/StudyNSamples/'
-    # typeSamples = ['500', '500_1000','500_1000_L', '500_L', '1000', '1000_L']
-    typeSamples = ['200_opt', '1000_opt', '1000_eval_1000_opt', '5000_opt', '5000_1000_200']
-    compareNumSamples_val(database, save_study_path, typeSamples, repetitions)
-    plot_compareNumSamples_val(save_study_path, typeSamples, repetitions)
+    typeSamples = ['500', '1000','5000']
+    # typeSamples = ['500_opt', '1000_opt', '1000_eval_1000_opt', '5000_opt', '5000_1000_200', '5000_5000_1000_mixed']
+    # compareNumSamples_val(database, save_study_path, typeSamples, repetitions)
+    # plot_compareNumSamples_val(save_study_path, typeSamples, repetitions)
 
 
     # DATA AUGMENTATION
     repetitions = 3
     typeAugm = ['False', 'multiplication', 'noise_gauss']
-    base = "./databaseANN/DatabaseBestDeltaV/deltakeplerian/"  
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
     database = base  
     save_study_path =  base+  "Results/StudyDataAugmentation/"
     compareDataAugm(database, save_study_path, typeAugm, repetitions)
     plot_compareDataAugm(save_study_path, typeAugm, repetitions)
-
 
 
     # COMPARE EFFECT OF LOG IN ERRORS

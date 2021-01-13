@@ -32,19 +32,11 @@ MBH = opt_config.MBH
 MBH_batch = opt_config.MBH_batch
 
 
-# Database for inverse standardization
-base = "./databaseANN/3_DatabaseLast/deltakeplerian/1_Best/" #select best network
-train_file_path = base + 'Together.txt'
-
-dataset_np = TD.LoadNumpy(train_file_path, save_file_path = base, 
-            scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-            output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType=3,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
-            
-ANN = ANN_reg(dataset_np, save_path = base)
+# Load database
+base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+ANN = ANN_reg(dataset_np, save_path = base, 
+              n_classes = 2, n_input = 8, 
+              output_label= ['ep', 'ev']) # from dataset_np to not load it
 ANN.load_model_fromFile() # To speed it up later
 
 ########################
@@ -60,7 +52,7 @@ def f_ANN(DecV):
         input_Vector[i,:] = Fitness.DecV2inputV( 'deltakeplerian', newDecV = DecV[i,:])
     
     # Standardize input vector
-    input_Vector_std = dataset_np.standardize_withoutFitting(input_Vector, 'I')
+    input_Vector_std = TD.standardize_withoutFitting(input_Vector, 'I', base)
     
     # Feasibility 
     feas = ANN.predict(fromFile = False, 

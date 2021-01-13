@@ -84,44 +84,6 @@ def join_files(file_path, filename, label_available = False):
         np.savetxt(myfile, dataset)
     myfile.close()
 
-def save_standard(dataset, save_file_path):
-    """
-        0: feasibility label
-        1: norm ep
-        2: norm ev
-        3-end: inputs
-        load as:
-            labelType = False
-            errorType = 'norm'
-    """
-    filename = save_file_path + str(Scaling['type_stand']) + '_' + str(Scaling['scaling']) + '.txt' 
-
-    # Outputs:
-    dataset_2 = np.column_stack(( dataset.output , dataset.error_std ))
-    dataset_2 = np.column_stack(( dataset_2, dataset.input_data_std ))
-
-    # Heading
-    if dataset.errorType == 'vector': # eliminate cartesian names
-        labels2 = [dataset.labels[0]]
-        labels2.extend( ['Ep', 'Ev'] )
-        if dataset.labelType != 0: # delete last label
-            labels2.extend( dataset.labels[7:-1] )
-        else: 
-            labels2.extend( dataset.labels[7:] )
-    else:
-        labels2 = dataset.labels
-
-    # Save to file
-    with open(filename, "w") as myfile:
-        for i in labels2:
-            if i != labels2[-1]:
-                myfile.write(i +" ")
-            else:
-                myfile.write(i+"\n")
-        np.savetxt(myfile, dataset_2)
-    myfile.close()
-
-
 
 class Dataset:
     def __init__(self, file_path, dataset_preloaded = False, \
@@ -145,7 +107,7 @@ class Dataset:
                     
         """
         self.inputs_conf = inputs
-        self.outputs = outputs
+        self.outputs_conf = outputs
 
         # Load with numpy
         if type(dataset_preloaded) == bool: # Not preloaded
@@ -172,21 +134,38 @@ class Dataset:
         self.nsamples = len(self.dataset[:,0])
         if self.inputs_conf['labelType'] != 0:
             self.labelType = self.dataset[:,-1]
-
-        self.output_adapt(self.outputs['outputs_err']) # Adapt error 
-    
-    def output_adapt(self, output_err):   
-        if self.outputs['add'] == 'vector':
+  
+        output_err = self.outputs_conf['outputs_err']
+        if self.outputs_conf['add'] == 'vector':
             cuterror = int( (output_err[1] - output_err[0]) /2 + output_err[0] )       
             error_p = [np.linalg.norm(self.dataset[i, output_err[0]:cuterror]) for i in range(self.nsamples)]
             error_v = [np.linalg.norm(self.dataset[i, cuterror:output_err[1]]) for i in range(self.nsamples)]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
-        elif self.outputs['add'] == 'norm':
+        elif self.outputs_conf['add'] == 'norm':
             error_p = self.dataset[:, output_err[0]]
             error_v = self.dataset[:, output_err[1]-1]
             self.error = np.column_stack((error_p, error_v)) # error in position and velocity
 
+
+    def normalize_outputs(self, scaling, dataUnits, Log, typeOutput):
+        self.scaling = scaling
+        self.dataUnits = dataUnits
+        self.Log = Log
+
+        # Normalization
+        if dataUnits == 'AU':
+            self.error[:,0] /= AL_BF.AU # Normalize with AU
+            self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
+        
+        self.Spacecraft = AL_2BP.Spacecraft( )
+
+        if Log == True: # Apply logarithm 
+            self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
+            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]  
+
+        if typeOutput == 'epevmf' or typeOutput == 'mf':
+            self.dataset[:,self.outputs_conf['outputs_mf']] /= self.Spacecraft.m_dry 
 
     def select_output(self, typeOutput):
         """
@@ -202,7 +181,7 @@ class Dataset:
         self.typeOutput = typeOutput
 
         # Choose outputs
-        self.output_class = self.dataset[:,self.outputs['outputs_class'][0]:self.outputs['outputs_class'][1]]
+        self.output_class = self.dataset[:,self.outputs_conf['outputs_class'][0]:self.outputs_conf['outputs_class'][1]]
         self.n_classes = 2
                 
         if self.typeOutput == 'objfunc':
@@ -210,13 +189,13 @@ class Dataset:
             self.output_label = [self.typeOutput]
             self.output_reg = np.zeros( (self.nsamples, self.n_outputs))
             for i in range(self.nsamples):
-                self.output_reg[i] = fitness.objFunction(self.error[i,:], m_fuel = self.dataset[i,self.outputs['outputs_mf']])
+                self.output_reg[i] = fitness.objFunction(self.error[i,:], m_fuel = self.dataset[i,self.outputs_conf['outputs_mf']])
 
         elif self.typeOutput == 'epevmf':
             self.n_outputs = 3
             self.output_label = ['ep', 'ev', 'mf']
             self.output_reg = np.zeros( (self.nsamples, self.n_outputs))
-            self.output_reg = np.column_stack((self.dataset[:,self.outputs['outputs_mf']], self.error))
+            self.output_reg = np.column_stack((self.dataset[:,self.outputs_conf['outputs_mf']], self.error))
 
         elif self.typeOutput == 'epev':
             self.n_outputs = 2
@@ -236,14 +215,14 @@ class Dataset:
         elif self.typeOutput == 'mf':
             self.n_outputs = 1
             self.output_label = ['mf']
-            self.output_reg = self.dataset[:,self.outputs['outputs_mf']].copy()
+            self.output_reg = self.dataset[:,self.outputs_conf['outputs_mf']].copy()
 
         else:
             print("Error: choose valid type of output")
 
 
         # INPUT DATA
-        startinput = self.outputs['outputs_err'][1]
+        startinput = self.outputs_conf['outputs_err'][1]
         if self.inputs_conf['decV'] == True:
             endinput = 8 + SF.Nimp*3# lenght of dec v. Only if hte database contains decv
             if self.inputs_conf['labelType'] == 0:
@@ -258,43 +237,14 @@ class Dataset:
                 self.input_data = self.dataset[:,startinput:]
             else:
                 self.input_data = self.dataset[:,startinput:-1]
-
-        
             
         self.n_input = self.input_data.shape[1]
 
 
-    def equalize_fun(self, base_vector):
-        """
-        equalize_fun: eliminate most common samples based on a criterion 
-        INPUTS:
-            x: database
-            column: column to equalize
-        """
-        # By orders of magnitude
-        indexes = [ int(np.log10( base_vector[i] )) for i in range(self.nsamples)  ]
 
-        counter = np.zeros(12)
-        for i in np.arange(0,12,1):
-            counter[i] = indexes.count(i)
-
-        mean = int( np.mean(counter[np.nonzero(counter)]) )
-        print("equalize", counter)
-
-        indexes_delete = list()
-        for j in range(len(counter)):
-            if counter[j] > mean: # more samples than it should
-                ii = np.where((np.array(indexes) == j))[0]
-                np.random.shuffle(ii)
-                a = (ii[0:int(counter[j])-mean]).tolist()
-                indexes_delete.extend( a )
-
-        self.input_data = np.delete(self.input_data, indexes_delete, 0)
-        self.output_class = np.delete(self.output_class, indexes_delete, 0)
-        self.output_reg = np.delete(self.output_reg, indexes_delete, 0)
-        self.error = np.delete(self.error, indexes_delete, 0)
-        self.dataset = np.delete(self.dataset, indexes_delete, 0)
-        self.nsamples = len(self.output_class)
+    ##################################################################
+    ######### PLOTS ##################################################
+    ##################################################################
 
     def statisticsFeasible(self):
         self.count_feasible = np.count_nonzero(self.output_class)
@@ -444,100 +394,6 @@ class Dataset:
             plt.show()
 
 
-#TODO: not used:
-    def plotOutputsWRTInputs(self, save_file_path, std = True):
-        colors = ['black', 'red', 'green', 'blue', 'orange']
-
-        # Standardization
-        if std == True: 
-            x = self.input_data_std
-            y = self.error_std
-            stdlabel = "_std_"+str(self.scaling)
-
-            ylabel_p = " Standardized"
-            ylabel_v = " Standardized"
-            
-        else:
-            x = self.input_data
-            y = self.error
-            stdlabel = ""
-            ylabel_p = ""
-            ylabel_v = ""
-
-        limitFactor = 1.1
-        limits_p = (min(y[:,0])*limitFactor, max(y[:,0])*limitFactor)
-        limits_v =  (min(y[:,1])*limitFactor, max(y[:,1])*limitFactor)
-        
-        # Log
-        if self.Log == True:
-            ylabel_p = ylabel_p +" log"
-            ylabel_v = ylabel_v + " log"
-        else:
-            if self.scaling == 0:
-                limits_p = (1.5e-7, 1.01e0)
-                limits_v = (1.5e-7, 1.01e0)
-            elif self.scaling == 1:
-                limits_p = (-1.01e0, 1.01e0)
-                limits_v = (-1.01e0, 1.01e0)
-
-        # Units
-        if self.dataUnits == "AU":
-            # limits_p = (1e-6,1e1)
-            # limits_v = (1e-2,1e1)
-
-            ylabel_p = ylabel_p +" (AU)"
-            ylabel_v = ylabel_v +" (AU/year)"
-
-        elif self.dataUnits == "SI":
-            # limits_p = (1e4,1e12)
-            # limits_v = (1.5e1, 1e5)
-
-            ylabel_p = ylabel_p +" (m)"
-            ylabel_v = ylabel_v +" (m/s)"
-            
-
-        # Error in position adn velocity
-        save_file_path_epev = [save_file_path+"Inputs_ErrorPosition" +stdlabel+".png",\
-                            save_file_path+"Inputs_ErrorVelocity" +stdlabel+".png"]
-
-        ylabel_epev = ["Error in position" + ylabel_p,\
-                        "Error in velocity" + ylabel_v]
-
-        limits_epev = [limits_p, limits_v]
-
-        for plot in range(2): # one for ep, one for ev
-            fig = plt.figure(figsize = (15,15))
-            for i in range(self.n_input):
-                ax = fig.add_subplot(self.n_input//2, 2, i+1)
-
-                if self.inputs_conf['labelType'] != 0:
-                    for j in range(self.inputs_conf['labelType']): # how many files are there
-                        indexes = np.where(self.labelType == j)[0] # find which values correspond to a certain creation method
-                        ax.scatter(x[indexes,i] , y[indexes, plot],\
-                            color = colors[j%len(colors)], marker = 'o', alpha = 0.5, label = j)
-                else:
-                    ax.plot(x[:,i] , y[:, plot], 'ko', markersize = 5, label = "Optimized")
-                
-                # print(np.log(min(self.error_std[:, 0])), np.log(max(self.error_std[:, 0])))
-                
-                ax.set_xlabel(self.labels[i+7], labelpad = -2)
-
-                if self.Log == False:
-                    if self.scaling ==0:
-                        ax.set_yscale('log')
-                    elif self.scaling == 1:
-                        ax.set_yscale('symlog') # To display negative values
-                
-                ax.set_ylim(limits_epev[plot])
-
-                plt.legend()
-
-            plt.suptitle(ylabel_epev[plot], y=1.01)
-
-            plt.tight_layout()
-            plt.savefig(save_file_path_epev[plot], dpi = 100)
-            plt.show()
-
     def plotDistributionErrorsPD(self, save_file_path):
         save_file_path_epev = save_file_path+"Distribution_output_" +str(self.typeOutput)+".png"
         dataset = pd.DataFrame(data = np.log10(self.output_reg), columns = self.output_label )
@@ -548,34 +404,18 @@ class Dataset:
         plt.show()
 
 
-    def commonStandardization(self, scaling, dataUnits, Log, typeOutput, savepath):
+
+    ##################################################################
+    ######### STANDARDIZATION ########################################
+    ##################################################################
+    def commonStandardization(self, savepath):
         """
         standardize inputs and errors together
         """
-        self.scaling = scaling
-        self.dataUnits = dataUnits
-        self.Log = Log
-
-        # Normalization
-        if dataUnits == 'AU':
-            self.error[:,0] /= AL_BF.AU # Normalize with AU
-            self.error[:,1] = self.error[:,1] / AL_BF.AU * AL_BF.year2sec(1)
-        
-        self.Spacecraft = AL_2BP.Spacecraft( )
-
-        if Log == True: # Apply logarithm 
-            self.error[:,0] = [np.log10(self.error[i,0]) for i in range(len(self.error[:,0]))]
-            self.error[:,1] = [np.log10(self.error[i,1]) for i in range(len(self.error[:,1]))]  
-
-        if typeOutput == 'epevmf' or typeOutput == 'mf':
-            self.dataset[:,self.outputs['outputs_mf']] /= self.Spacecraft.m_dry 
-
-        self.select_output(typeOutput)
-
         # Scaling
-        if scaling == 0:
+        if self.scaling == 0:
             self.scaler = MinMaxScaler()
-        elif scaling == 1:
+        elif self.scaling == 1:
             self.scaler = StandardScaler()
 
         database = np.column_stack((self.output_reg, self.input_data))
@@ -583,9 +423,10 @@ class Dataset:
 
         # Save scaler 
         if savepath != None:
-            self.path_stand_model = savepath + '/std_scaler.bin'
+            self.path_stand_model = savepath + 'std_scaler.bin'
             joblib.dump(fittedModel, self.path_stand_model, compress=True)
-
+        else:
+            self.path_stand_model = None
 
         database2 = self.scaler.transform(database)
         if self.typeOutput == 'epevmf':
@@ -602,75 +443,6 @@ class Dataset:
             self.error_std = np.zeros(np.shape(self.error)) # does not apply
             self.output_reg_std = database2[:, 0]
             self.input_data_std = database2[:,1:]
-
-
-    def standardize_withoutFitting(self, input_vec, typeInput):
-        
-        # Adapt inputs to size of fitted database
-        if typeInput == "I": # we only know the inputs
-            if input_vec.ndim == 1:
-                database = np.array([ np.concatenate(( np.zeros( self.n_outputs), input_vec )) ])
-            else:   
-                database = np.column_stack(( np.zeros((len(input_vec[:,0]), self.n_outputs)), input_vec ))
-
-        elif typeInput == "O":
-            database = np.column_stack(( input_vec, np.zeros(np.shape(self.input_data)) ))
-        else:
-            database = input_vec
-
-        self.scaler = joblib.load(self.path_stand_model)
-        database2 = self.scaler.transform(database)
-
-        if typeInput == "I": # we only know the inputs
-            return database2[:, self.n_outputs:]
-        elif typeInput == "O":
-            return database2[:, 0: self.n_outputs]
-        else:
-            return database2
-
-
-    def commonInverseStandardization(self, y, x):
-        database = np.column_stack((y,x))
-
-        self.scaler = joblib.load(self.path_stand_model)
-        
-        x2 = self.scaler.inverse_transform(database)
-        
-        if self.typeOutput == 'epevmf':
-            startinput = 3
-            starterror = 1
-        elif self.typeOutput == 'epev':
-            startinput = 2
-            starterror = 0
-        elif self.typeOutput == 'objfunc' or self.typeOutput == 'ep' or self.typeOutput == 'ev' or self.typeOutput == 'mf':
-            startinput = 1
-            starterror = 0
-
-
-        E = x2[:, 0:startinput]
-        I = x2[:, startinput:]
-
-        if self.typeOutput == 'ep' or self.typeOutput == 'epev' or self.typeOutput == 'epevmf':
-            if self.Log == True:
-                E[:,starterror] = np.array([10**(E[i,starterror]) for i in range(len(E[:,starterror]))])
-            if self.dataUnits == "AU":
-                E[:,starterror] *= AL_BF.AU # Normalize with AU
-        
-        if self.typeOutput == 'epev':
-            if self.Log == True:
-                E[:,starterror+1] = np.array([10**(E[i,starterror+1]) for i in range(len(E[:,starterror+1]))])
-            if self.dataUnits == "AU":
-                E[:,starterror+1] = E[:,starterror+1] * AL_BF.AU / AL_BF.year2sec(1)
-        if self.typeOutput == 'ev':
-            if self.Log == True:
-                E[:,starterror] = np.array([10**(E[i,starterror]) for i in range(len(E[:,starterror]))])
-            if self.dataUnits == "AU":
-                E[:,starterror] = E[:,starterror] * AL_BF.AU / AL_BF.year2sec(1)
-       
-        if self.typeOutput == 'epevmf' or self.typeOutput == 'mf':
-            E[:,0] *= self.Spacecraft.m_dry
-
-        return E, I
 
     def noise_gauss(self, mean, std):
         if self.inputs_conf['labelType'] == 0:
@@ -707,7 +479,78 @@ class Dataset:
             self.error_std = np.zeros(np.shape(self.error)) 
    
 
+def standardize_withoutFitting(input_vec, typeInput, path,
+                                Log = False, dataUnits = "AU", 
+                                n_outputs = 2, n_inputs = 8):
+    
+    # Adapt inputs to size of fitted database
+    if typeInput == "I": # we only know the inputs
+        if input_vec.ndim == 1:
+            database = np.array([ np.concatenate(( np.zeros( n_outputs), input_vec )) ])
+        else:   
+            database = np.column_stack(( np.zeros((len(input_vec[:,0]), n_outputs)), input_vec ))
 
+    elif typeInput == "O":
+        database = np.column_stack(( input_vec, np.zeros(len(input_vec[:,0]), n_inputs )))
+    else:
+        database = input_vec
+
+    scaler = joblib.load(path+'std_scaler.bin')
+    
+    database2 = scaler.transform(database)
+
+    if typeInput == "I": # we only know the inputs
+        return database2[:, n_outputs:]
+    elif typeInput == "O":
+        return database2[:, 0:n_outputs]
+    else:
+        return database2
+
+
+def commonInverseStandardization( y, x, path, typeOutput = 'epev',
+                                Log = False, dataUnits = "AU"):
+    database = np.column_stack((y,x))
+
+    scaler = joblib.load(path+'std_scaler.bin')
+    
+    x2 = scaler.inverse_transform(database)
+    
+    if typeOutput == 'epevmf':
+        startinput = 3
+        starterror = 1
+    elif typeOutput == 'epev':
+        startinput = 2
+        starterror = 0
+    elif typeOutput == 'objfunc' or typeOutput == 'ep' or typeOutput == 'ev' or typeOutput == 'mf':
+        startinput = 1
+        starterror = 0
+
+    E = x2[:, 0:startinput]
+    I = x2[:, startinput:]
+
+    if typeOutput == 'ep' or typeOutput == 'epev' or typeOutput == 'epevmf':
+        if Log == True:
+            E[:,starterror] = np.array([10**(E[i,starterror]) for i in range(len(E[:,starterror]))])
+        if dataUnits == "AU":
+            E[:,starterror] *= AL_BF.AU # Normalize with AU
+    
+    if typeOutput == 'epev':
+        if Log == True:
+            E[:,starterror+1] = np.array([10**(E[i,starterror+1]) for i in range(len(E[:,starterror+1]))])
+        if dataUnits == "AU":
+            E[:,starterror+1] = E[:,starterror+1] * AL_BF.AU / AL_BF.year2sec(1)
+    
+    if typeOutput == 'ev':
+        if Log == True:
+            E[:,starterror] = np.array([10**(E[i,starterror]) for i in range(len(E[:,starterror]))])
+        if dataUnits == "AU":
+            E[:,starterror] = E[:,starterror] * AL_BF.AU / AL_BF.year2sec(1)
+    
+    if typeOutput == 'epevmf' or typeOutput == 'mf':
+        Spacecraft = AL_2BP.Spacecraft( )
+        E[:,0] *= Spacecraft.m_dry
+
+    return E, I
 
 def plotInitialDataPandas(train_file_path, pairplot = False, corrplot = False, \
                             inputsplotbar = False, inputsplotbarFeas = False):
@@ -801,7 +644,6 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
 def LoadNumpy(train_file_path, save_file_path = None, \
             scaling = 0,\
             dataUnits = "AU", Log = False, \
-            outputs =  {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': 1, 'add': 'vector'},
             output_type = 'epev',
             labelType = 0,
             plotDistribution = False, plotErrors = False, 
@@ -833,19 +675,19 @@ def LoadNumpy(train_file_path, save_file_path = None, \
     # Load with numpy to see plot
     dataset_np = Dataset(train_file_path, \
         inputs = {'labelType': labelType, 'decV': decV},\
-        outputs =outputs, \
+        outputs =  {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': 1, 'add': 'vector'}, \
         actions = {'shuffle': True })
 
     if plotEpvsEv == True and save_file_path != None:
         dataset_np.statisticsError(save_file_path)
 
     if scaling == 0 or scaling == 1: # common
-        dataset_np.commonStandardization(scaling, dataUnits, Log, output_type, save_file_path)
+        dataset.normalize_outputs(scaling, dataUnits, Log, output_type)
+        dataset.select_output(output_type)
+        dataset_np.commonStandardization(save_file_path)
     else:
+        dataset.normalize_outputs(scaling, dataUnits, Log, output_type)
         dataset_np.select_output(output_type)
-    # else:
-    #     setattr(dataset_np, "Log", Log)
-    #     setattr(dataset_np, "DataUnits", dataUnits)
 
 
     if plotDistribution == True:
@@ -858,7 +700,8 @@ def LoadNumpy(train_file_path, save_file_path = None, \
         save_file_path = save_file_path +"_aumented_"+data_augmentation+"_"
 
     if data_augmentation  == 'noise_gauss':
-        dataset_np.noise_gauss(Dataset_conf.Dataset_config['dataAugmentation']['mean'], Dataset_conf.Dataset_config['dataAugmentation']['std'])
+        dataset_np.noise_gauss(Dataset_conf.Dataset_config['dataAugmentation']['mean'], 
+                                Dataset_conf.Dataset_config['dataAugmentation']['std'])
         std_Error = True
     else:
         std_Error = False # TODO: Can be modified to obtain other plots

@@ -41,12 +41,11 @@ SF = CONF.SimsFlan_config() # Load Sims-Flanagan config variables
 Fitness = Fitness(Nimp = SF.Nimp)
 
 class ANN_reg:
-    def __init__(self, dataset, save_path = False):
-        self.dataset_np = dataset
+    def __init__(self, save_path = False, n_classes = 2, n_input = 8, output_label = ['ep', 'ev']):
 
-        self.n_classes = int(dataset.n_outputs) # Outputs
-        self.n_examples = self.dataset_np.nsamples # samples
-        self.n_input = self.dataset_np.n_input #inputs
+        self.n_classes = n_classes # Outputs
+        self.n_input = n_input #inputs
+        self.output_label = output_label #labels for the outputs
 
         if save_path == False:
             self.checkpoint_path = "./trainedCNet_Reg/training/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
@@ -68,13 +67,6 @@ class ANN_reg:
         if ANN['Training']['regularization'] == True:  # https://www.tensorflow.org/tutorials/keras/overfit_and_underfit
             for layer in range(ANN['Architecture']['hidden_layers']):
                 
-                # if ANN['Training']['initializer'] == 2:
-                #     if layer == 0: 
-                #         shape = [ANN['Architecture']['neuron_hidden'], self.n_input]
-                #     else:
-                #         shape = [ANN['Architecture']['neuron_hidden'], ANN['Architecture']['neuron_hidden']]
-                #     initializer = my_init()
-
                 model.add(keras.layers.Dense(
                     ANN['Architecture']['neuron_hidden'], 
                     activation='relu', 
@@ -83,12 +75,6 @@ class ANN_reg:
                     kernel_regularizer= keras.regularizers.l2(ANN['Training']['regularizer_value']) ))
         else:
             for layer in range(ANN['Architecture']['hidden_layers']):
-                # if ANN['Training']['initializer'] == 2:
-                #     if layer == 0: 
-                #         shape = [ANN['Architecture']['neuron_hidden'], self.n_input]
-                #     else:
-                #         shape = [ANN['Architecture']['neuron_hidden'], ANN['Architecture']['neuron_hidden']]
-                #     initializer = my_init(shape)
 
                 model.add(keras.layers.Dense(
                     ANN['Architecture']['neuron_hidden'], 
@@ -148,11 +134,6 @@ class ANN_reg:
                     epochs = ANN['Training']['epochs'] )
 
 
-        # Save model and weights
-        # model_json = self.model.to_json()
-        # with open(self.checkpoint_path+"model.json", "w") as json_file:
-        #     json_file.write(model_json)
-        # self.model.save_weights(self.checkpoint_path+"cp.ckpt")
         self.model.save(self.checkpoint_path + "model.h5")
 
         self.model.summary()        
@@ -237,19 +218,8 @@ class ANN_reg:
         plt.show()
 
     def load_model_fromFile(self):
-        # model_fromFile = self.create_model()
 
-        # Load model
-        # json_file = open(self.checkpoint_path+"model.json", "r")
-        # loaded_model_json = json_file.read()
-        # json_file.close()
-        # model_fromFile = model_from_json(loaded_model_json)
-
-        model_fromFile = keras.models.load_model(self.checkpoint_path+"model.h5")
-
-        # Load weights
-        # model_fromFile.load_weights(self.checkpoint_path+"cp.ckpt").expect_partial()
-        self.model = model_fromFile
+        self.model = keras.models.load_model(self.checkpoint_path+"model.h5")
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
         """
@@ -260,7 +230,7 @@ class ANN_reg:
                     testfile = dataset to be evaluated.
             rescale: rescale the output (True) or not (False)
         """
-        if type(fromFile) == bool:
+        if fromFile == True:
             self.load_model_fromFile()
 
         if type(testfile) != bool:
@@ -268,15 +238,15 @@ class ANN_reg:
         else:
             pred_test = self.model.predict(self.testdata[0])
 
+
+        # Rescale
         if rescale == False and type(testfile) == bool: # No inverse standarization possible
 
             self.Output_pred = np.zeros((len(pred_test),self.n_classes))
             if self.n_classes > 1:
                 for i in range(len(pred_test)):
                     print('i', i)
-                    print(pred_test[i], self.testdata[1][i])
-                    # print("%e, %e, %e"%(pred_test[i,0], pred_test[i,1], pred_test[i,2]) )
-                    # print("%e, %e, %e"%(self.testdata[1][i,0], self.testdata[1][i,1], self.testdata[1][i,2] ))
+                    print(pred_test[i, :], self.testdata[1][i, :])
                     print("------------------------")
 
                     for output_i in range(self.n_classes):
@@ -288,9 +258,9 @@ class ANN_reg:
             
             return pred_test
 
-        elif type(testfile) == bool:
-            predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, self.testdata[0]) #Obtain predictions in actual 
-            true_value, inputs_unscaled = self.dataset_np.commonInverseStandardization(self.testdata[1], self.testdata[0]) #Obtain predictions in actual
+        elif rescale == True and type(testfile) == bool:
+            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, self.testdata[0], self.checkpoint_path) #Obtain predictions in actual 
+            true_value, inputs_unscaled = TD.commonInverseStandardization(self.testdata[1], self.testdata[0], self.checkpoint_path) #Obtain predictions in actual
             
             self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
             self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
@@ -308,7 +278,7 @@ class ANN_reg:
             return predictions_unscaled
 
         elif rescale == True and type(testfile) != bool:
-            predictions_unscaled, inputs_unscaled = self.dataset_np.commonInverseStandardization(pred_test, testfile) #Obtain predictions in actual 
+            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, testfile,self.checkpoint_path) #Obtain predictions in actual 
             return  predictions_unscaled
 
         else:
@@ -322,7 +292,7 @@ class ANN_reg:
             fig, ax = plt.subplots() 
             
             for i in range(self.n_classes):
-                plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,i], symbols[i], label = labels+ self.dataset_np.output_label[i])
+                plt.plot(np.arange(0, len(self.Output_pred)), self.Output_pred[:,i], symbols[i], label = labels+ self.output_label[i])
 
             plt.xlabel("Samples to predict")
             plt.grid(alpha = 0.5)
@@ -444,11 +414,13 @@ def Network(dataset_np, perceptron, save_path):
     # perceptron.plotTrainingKFold()
     
     print("EVALUATE")
-    # predictions = perceptron.predict(fromFile=True, rescale = False)
-    # perceptron.plotPredictions(std = False)
+    # rescale = False
+    # predictions = perceptron.predict(fromFile=True, rescale = rescale)
+    # perceptron.plotPredictions(std = rescale)
     print("Rescaled:")
-    predictions = perceptron.predict(fromFile=True, rescale = True)
-    perceptron.plotPredictions(std = True)
+    rescale = True
+    predictions = perceptron.predict(fromFile=True, rescale = rescale)
+    perceptron.plotPredictions(std = rescale)
 
 def Fitness_network(train = False):
     base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
@@ -458,8 +430,7 @@ def Fitness_network(train = False):
 
     dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
             scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],
             output_type = Dataset_conf.Dataset_config['Outputs'],
             labelType = 3, 
             decV = False,
@@ -477,7 +448,6 @@ def Fitness_network(train = False):
     if train == True:
         Network(dataset_np, perceptron, base)
     else:
-        perceptron.load_model_fromFile()
         evaluatePredictionsNewData(dataset_np, perceptron)
 
 def Fitness_network_join():
@@ -515,12 +485,12 @@ def Fitness_network_join():
     # PREDICT WITHOUT GAUSSIAN NOISE
 
 def evaluatePredictionsNewData(dataset_np, ANN):
-    ind = 5000
+    ind = 20
     pop_0 = np.zeros([ind, len(SF.bnds)])
     for i in range(len(SF.bnds)):
         pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
     
-    #Fitness function
+    Fitness function
     feas1 = np.zeros((ind, 2))
     t0_fit = time.time()
     for i in range(ind):
@@ -537,21 +507,26 @@ def evaluatePredictionsNewData(dataset_np, ANN):
     input_Vector = np.zeros((ind,8))
     for i in range(ind):
         DecV = pop_0[i,:]
+
         # Transform inputs
         input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
         input_Vector[i,:] = dataset_np.standardize_withoutFitting(input_Vector_i, 'I')
 
     t0_class_2 = time.time()
 
+
     # Feasibility
-    feas2_unscaled = ANN.predict(testfile = input_Vector, rescale = False)
-    feas2 = ANN.predict(testfile = input_Vector, rescale = True)
+    feas2_unscaled = ANN.predict(fromFile = True, testfile = input_Vector, rescale = False)
+    feas2 = ANN.predict(fromFile = True, testfile = input_Vector, rescale = True)
     tf_3 = (time.time() - t0_class) 
     tf_3_mid = ( t0_class_2 - t0_class) 
 
     difference = np.zeros((ind, 2))
+    print(feas2[0:10, :])
+    print(feas1[0:10, :])
     difference = np.absolute(feas2 - feas1) 
 
+    print(difference[0:10, :])
     # PLOT DIFFERENCES
     labels = 'Difference in predicted' 
     symbols = ['r-x', 'g-x', 'b-x']
@@ -583,48 +558,47 @@ def evaluatePredictionsNewData(dataset_np, ANN):
     # plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_pd_newdata_pd.png", dpi = 100)
     # plt.show()
 
+
 def checkDatabase():
     """
     Check that database provides same fitness as evaluation
     """
     base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
-    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
-    #     base+ 'Lambert_opt.txt']
-    file_path = base+ 'Random_10.txt'
+    
 
-    dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
-            scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-            outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
-            output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = 0, 
-            decV = True,
-            plotDistribution=False, plotErrors=False,
-            plotOutputDistr = False, plotEpvsEv = False,
-            # plotDistribution=True, plotErrors=True,
-            # plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+    perceptron = ANN_reg(save_path =base)
+    perceptron.load_model_fromFile()
 
-    traindata, testdata = TD.splitData_reg(dataset_np)
+    input_Vector = traindata[0][0:10,:]
+    # Feasibility
+    feas2_unscaled = perceptron.predict(testfile = input_Vector, rescale = False)
+    # feas2 = perceptron.predict(testfile = input_Vector, rescale = True)
 
-    ind = 2
-    pop = traindata[0][0:ind, :]
-    popdecv = dataset_np.decV[0:ind, :]
+    print(feas2_unscaled[0:10, :])
 
-    pop_out, non= dataset_np.commonInverseStandardization(traindata[1][0:ind,:], pop)
+    result = dataset_np.commonInverseStandardization(traindata[1][0:10,:], traindata[0][0:10,:])
+    print(traindata[1][0:10,:])
+    # print(result[0])
+    #  traindata[1][0:10,:])
 
-    # FITNESS
-    feas1 = np.zeros((ind, 2))
-    t0_fit = time.time()
-    for i in range(ind):
-        DecV = popdecv[i,:]
-        fitness = Fitness.calculateFitness(DecV)
-        feas1[i, 0] = Fitness.Epnorm
-        feas1[i, 1] = Fitness.Evnorm
+    # ind = 2
+    # pop = traindata[0][0:ind, :]
+    # popdecv = dataset_np.decV[0:ind, :]
 
-        print("=========== ============")
-        print("Fitness", feas1[i,:])
-        print("Dataset", pop_out[i])
+    # pop_out, non= dataset_np.commonInverseStandardization(traindata[1][0:ind,:], pop)
+
+    # # FITNESS
+    # feas1 = np.zeros((ind, 2))
+    # t0_fit = time.time()
+    # for i in range(ind):
+    #     DecV = popdecv[i,:]
+    #     fitness = Fitness.calculateFitness(DecV)
+    #     feas1[i, 0] = Fitness.Epnorm
+    #     feas1[i, 1] = Fitness.Evnorm
+
+    #     print("=========== ============")
+    #     print("Fitness", feas1[i,:])
+    #     print("Dataset", pop_out[i])
 
 def Opt_network():
     base = "./databaseANN/DatabaseOptimized/deltakeplerian/"
@@ -647,9 +621,9 @@ def Opt_network():
 
 if __name__ == "__main__":
     # Fitness_network(train = True)
-    Fitness_network(train = False)
+    # Fitness_network(train = False)
 
-    # checkDatabase()
+    checkDatabase()
 
     # Fitness_network_join()
     # Opt_network()
