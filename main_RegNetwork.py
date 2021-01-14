@@ -34,7 +34,7 @@ MBH_batch = opt_config.MBH_batch
 
 # Load database
 base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
-ANN = ANN_reg(dataset_np, save_path = base, 
+ANN = ANN_reg(save_path = base, 
               n_classes = 2, n_input = 8, 
               output_label= ['ep', 'ev']) # from dataset_np to not load it
 ANN.load_model_fromFile() # To speed it up later

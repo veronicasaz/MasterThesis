@@ -27,13 +27,13 @@ def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate,
     autodecV, samples_rand):
     if autodecV == True:
         if typeoutputs == "fit":
-            fileName = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
-            fileName_opt = "./databaseANN/3_DatabaseLast/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
-            matrix_file =  "./databaseANN/3_DatabaseLast/" + typeinputs + "/" 
+            fileName = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" 
         elif typeoutputs == "opt":
-            fileName = "./databaseANN/3_DatabaseLast/" + 'opt' + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
-            fileName_opt = "./databaseANN/3_DatabaseLast/" + 'opt' + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
-            matrix_file =  "./databaseANN/3_DatabaseLast/" + 'opt' + "/" 
+            fileName = "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" 
     elif typeoutputs == "opt":
         fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '_eval.txt'
         fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     appendToFile = Dataset_conf['Creation']['appendToFile'] # append instead of creating a new file. To increase the number of values
 
 
-    # sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
+    sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
     
     ####################
     # FILE CREATION
@@ -362,6 +362,7 @@ if __name__ == "__main__":
                 else:
                     print("Out of bounds")
                 
+
 
 
     ####################

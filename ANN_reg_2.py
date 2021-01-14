@@ -50,6 +50,7 @@ class ANN_reg:
         if save_path == False:
             self.checkpoint_path = "./trainedCNet_Reg/training/"+Dataset_conf.Dataset_config['Creation']['typeoutputs']+'/'+Dataset_conf.Dataset_config['Outputs']+'/'
         else:
+            self.save_path = save_path
             self.checkpoint_path = save_path +"trainedCNet_Reg/"+Dataset_conf.Dataset_config['Outputs']+'/'
 
     def create_model(self):
@@ -219,7 +220,7 @@ class ANN_reg:
 
     def load_model_fromFile(self):
 
-        self.model = keras.models.load_model(self.checkpoint_path+"model.h5")
+        self.model = keras.models.load_model(self.checkpoint_path+"1_CurrentLoadSave/model.h5")
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
         """
@@ -237,6 +238,10 @@ class ANN_reg:
             pred_test = self.model.predict(testfile)
         else:
             pred_test = self.model.predict(self.testdata[0])
+
+        pred_test = np.abs(pred_test)
+        # Apply absolute value so there are no negative values
+
 
 
         # Rescale
@@ -259,8 +264,8 @@ class ANN_reg:
             return pred_test
 
         elif rescale == True and type(testfile) == bool:
-            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, self.testdata[0], self.checkpoint_path) #Obtain predictions in actual 
-            true_value, inputs_unscaled = TD.commonInverseStandardization(self.testdata[1], self.testdata[0], self.checkpoint_path) #Obtain predictions in actual
+            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, self.testdata[0], self.save_path) #Obtain predictions in actual 
+            true_value, inputs_unscaled = TD.commonInverseStandardization(self.testdata[1], self.testdata[0], self.save_path) #Obtain predictions in actual
             
             self.Output_pred_unscale = np.zeros((len(pred_test),self.n_classes)) 
             self.Output_pred_unscale_ptg = np.zeros((len(pred_test),self.n_classes)) 
@@ -278,7 +283,7 @@ class ANN_reg:
             return predictions_unscaled
 
         elif rescale == True and type(testfile) != bool:
-            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, testfile,self.checkpoint_path) #Obtain predictions in actual 
+            predictions_unscaled, inputs_unscaled = TD.commonInverseStandardization(pred_test, testfile, self.save_path) #Obtain predictions in actual 
             return  predictions_unscaled
 
         else:
@@ -402,13 +407,13 @@ class ANN_reg:
 
 
 
-def Network(dataset_np, perceptron, save_path):
+def Network(perceptron, save_path):
     """
     Call the network to train and evaluate
     """
     
-    perceptron.training()
-    perceptron.plotTraining()
+    # perceptron.training()
+    # perceptron.plotTraining()
     
     # perceptron.trainingKFoldCross()
     # perceptron.plotTrainingKFold()
@@ -422,8 +427,7 @@ def Network(dataset_np, perceptron, save_path):
     predictions = perceptron.predict(fromFile=True, rescale = rescale)
     perceptron.plotPredictions(std = rescale)
 
-def Fitness_network(train = False):
-    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+def loadDatabase(base):
     # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
     #     base+ 'Lambert_opt.txt']
     file_path = base+ 'Together.txt'
@@ -440,15 +444,27 @@ def Fitness_network(train = False):
             # plotOutputDistr = True, plotEpvsEv = True,
             data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
 
-    traindata, testdata = TD.splitData_reg(dataset_np)
+    traindata, testdata = TD.splitData_reg(dataset_np, path = base)
 
-    perceptron = ANN_reg(dataset_np, save_path =base)
+
+def Fitness_network(base, train = False):
+    
+    # Load so that it is always the same (easier for comparisons)
+
+    traindata_x = np.load(base+"1_CurrentLoadSave/traindata_x.npy")
+    traindata_y = np.load(base+"1_CurrentLoadSave/traindata_y.npy")
+    testdata_x = np.load(base+"1_CurrentLoadSave/testdata_x.npy")
+    testdata_y = np.load(base+"1_CurrentLoadSave/testdata_y.npy")
+    traindata = [traindata_x, traindata_y]
+    testdata = [testdata_x, testdata_y]
+    
+    perceptron = ANN_reg(save_path =base)
     perceptron.get_traintestdata(traindata, testdata)
 
     if train == True:
-        Network(dataset_np, perceptron, base)
+        Network(perceptron, base)
     else:
-        evaluatePredictionsNewData(dataset_np, perceptron)
+        evaluatePredictionsNewData(base, perceptron)
 
 def Fitness_network_join():
     base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
@@ -484,13 +500,16 @@ def Fitness_network_join():
 
     # PREDICT WITHOUT GAUSSIAN NOISE
 
-def evaluatePredictionsNewData(dataset_np, ANN):
-    ind = 20
+def evaluatePredictionsNewData(base, ANN):
+    ##################################################
+    ####   DIFFERENCE IN NEW DATA ####################
+    ##################################################
+    ind = 500
     pop_0 = np.zeros([ind, len(SF.bnds)])
     for i in range(len(SF.bnds)):
         pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
     
-    Fitness function
+    # Fitness function
     feas1 = np.zeros((ind, 2))
     t0_fit = time.time()
     for i in range(ind):
@@ -499,7 +518,6 @@ def evaluatePredictionsNewData(dataset_np, ANN):
         feas1[i, 0] = Fitness.Epnorm
         feas1[i, 1] = Fitness.Evnorm
     tf_1 = (time.time() - t0_fit) 
-    
 
     # ANN batch
     feas2 = np.zeros((ind, 2))
@@ -510,10 +528,9 @@ def evaluatePredictionsNewData(dataset_np, ANN):
 
         # Transform inputs
         input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
-        input_Vector[i,:] = dataset_np.standardize_withoutFitting(input_Vector_i, 'I')
+        input_Vector[i,:] = TD.standardize_withoutFitting(input_Vector_i, 'I', base)
 
     t0_class_2 = time.time()
-
 
     # Feasibility
     feas2_unscaled = ANN.predict(fromFile = True, testfile = input_Vector, rescale = False)
@@ -521,12 +538,42 @@ def evaluatePredictionsNewData(dataset_np, ANN):
     tf_3 = (time.time() - t0_class) 
     tf_3_mid = ( t0_class_2 - t0_class) 
 
-    difference = np.zeros((ind, 2))
-    print(feas2[0:10, :])
-    print(feas1[0:10, :])
-    difference = np.absolute(feas2 - feas1) 
+    difference1 = np.zeros((ind, 2))
+    difference1 = np.abs(feas2 - feas1) 
 
-    print(difference[0:10, :])
+    ##################################################
+    ####   DIFFERENCE IN TRAIN/TEST DATA #############
+    ##################################################
+    #Test predictions for database data
+    traindata = ANN.traindata
+    testdata = ANN.testdata
+
+    feas_train1 = ANN.predict(fromFile = True, testfile = traindata[0], rescale = True)
+    feas_train2 = TD.commonInverseStandardization(traindata[1],
+                                            traindata[0], base)[0] 
+
+    difference2 = np.zeros((ind, 2))
+    difference2 = np.abs(feas_train2 - feas_train1)
+
+
+    feas_test1 = ANN.predict(fromFile = True, testfile = testdata[0], rescale = True)
+    feas_test2 = TD.commonInverseStandardization(testdata[1],
+                                            testdata[0], base)[0]
+
+    difference3 = np.zeros((ind, 2))
+    difference3 = np.abs(feas_test2 - feas_test1) 
+
+    displaynumber = 0
+    for i in range(displaynumber):
+        print("Predicted", feas2[i,:], "Fitness",feas1[i, :])
+    
+    for i in range(displaynumber):
+        print("Predicted", feas_train1, "Database", feas_train2)
+
+    for i in range(displaynumber):
+        print("Predicted", feas_test1, "Database", feas_test2)
+
+
     # PLOT DIFFERENCES
     labels = 'Difference in predicted' 
     symbols = ['r-x', 'g-x', 'b-x']
@@ -536,17 +583,43 @@ def evaluatePredictionsNewData(dataset_np, ANN):
     
     fig.subplots_adjust(wspace=0.1, hspace=0.05)
     for i in range(1):
-        ax_i[i].scatter(difference[:,0], difference[:,1], marker =  'x', label = labels+ dataset_np.output_label[i])
+        ax_i[i].scatter(difference2[:,0], difference2[:,1], color = 'green', marker =  'x', label = 'traindata')
+        ax_i[i].scatter(difference3[:,0], difference3[:,1], color = 'orange', marker =  'x', label = 'testdata')
+        ax_i[i].scatter(difference1[:,0], difference1[:,1], color = 'black', marker =  'x', label = 'newdata')
+
+        ax_i[i].set_yscale('log')
+        ax_i[i].set_xscale('log')
+
+        ax_i[i].set_xlabel("Difference in prediction position")
+        ax_i[i].set_ylabel("Difference in prediction velocity")
+        ax_i[i].grid(alpha = 0.5)
+        ax_i[i].legend()
         
+
+    # plt.tight_layout()
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata.png", dpi = 100)
+    plt.show()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax_i = [ax1, ax2]
+    
+    fig.subplots_adjust(wspace=0.1, hspace=0.05)
+    for i in range(2):
+        ax_i[i].scatter(feas_train2[:,i], difference2[:,i], color = 'green', marker =  'x', label = 'traindata')
+        ax_i[i].scatter(feas_test2[:,i], difference3[:,i], color = 'orange', marker =  'x', label = 'testdata')
+        ax_i[i].scatter(feas1[:,i], difference1[:,i], color = 'black', marker =  'x', label = 'newdata')
+
         ax_i[i].set_yscale('log')
         ax_i[i].set_xscale('log')
 
         ax_i[i].grid(alpha = 0.5)
         ax_i[i].legend()
-        ax_i[i].set_xlabel("Samples to predict")
+        ax_i[i].set_xlabel("Real value")
+        ax_i[i].set_ylabel("Difference in unscaled prediction")
+        
 
     # plt.tight_layout()
-    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata.png", dpi = 100)
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata_2.png", dpi = 100)
     plt.show()
 
      # As a pde distribution
@@ -620,10 +693,12 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    # Fitness_network(train = True)
-    # Fitness_network(train = False)
+    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+    # loadDatabase(base)
+    # Fitness_network(base, train = True)
+    Fitness_network(base, train = False)
 
-    checkDatabase()
+    # checkDatabase()
 
     # Fitness_network_join()
     # Opt_network()

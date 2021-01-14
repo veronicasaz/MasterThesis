@@ -423,7 +423,7 @@ class Dataset:
 
         # Save scaler 
         if savepath != None:
-            self.path_stand_model = savepath + 'std_scaler.bin'
+            self.path_stand_model = savepath + '1_CurrentLoadSave/std_scaler.bin'
             joblib.dump(fittedModel, self.path_stand_model, compress=True)
         else:
             self.path_stand_model = None
@@ -495,7 +495,7 @@ def standardize_withoutFitting(input_vec, typeInput, path,
     else:
         database = input_vec
 
-    scaler = joblib.load(path+'std_scaler.bin')
+    scaler = joblib.load(path+'1_CurrentLoadSave/std_scaler.bin')
     
     database2 = scaler.transform(database)
 
@@ -511,7 +511,7 @@ def commonInverseStandardization( y, x, path, typeOutput = 'epev',
                                 Log = False, dataUnits = "AU"):
     database = np.column_stack((y,x))
 
-    scaler = joblib.load(path+'std_scaler.bin')
+    scaler = joblib.load(path+'1_CurrentLoadSave/std_scaler.bin')
     
     x2 = scaler.inverse_transform(database)
     
@@ -682,8 +682,8 @@ def LoadNumpy(train_file_path, save_file_path = None, \
         dataset_np.statisticsError(save_file_path)
 
     if scaling == 0 or scaling == 1: # common
-        dataset.normalize_outputs(scaling, dataUnits, Log, output_type)
-        dataset.select_output(output_type)
+        dataset_np.normalize_outputs(scaling, dataUnits, Log, output_type)
+        dataset_np.select_output(output_type)
         dataset_np.commonStandardization(save_file_path)
     else:
         dataset.normalize_outputs(scaling, dataUnits, Log, output_type)
@@ -729,7 +729,7 @@ def splitData_class( dataset_np):
 
     return [x_train, y_train], [x_test, y_test]
 
-def splitData_reg(dataset_np, samples = False):
+def splitData_reg(dataset_np,  path = None, samples = False):
     """
         equalize: decreases the number of inputs with larger repetition
         samples: takes a certain number of samples instead of the complete file
@@ -748,6 +748,12 @@ def splitData_reg(dataset_np, samples = False):
     y_train = train_y[0:train_cnt]
     x_test = train_x[train_cnt:]  
     y_test = train_y[train_cnt:]
+
+    if path != None:
+        np.save(path+"1_CurrentLoadSave/traindata_x.npy", x_train)
+        np.save(path+"1_CurrentLoadSave/traindata_y.npy", y_train)
+        np.save(path+"1_CurrentLoadSave/testdata_x.npy", x_test)
+        np.save(path+"1_CurrentLoadSave/testdata_y.npy", y_test)
 
     return [x_train, y_train], [x_test, y_test]
 
