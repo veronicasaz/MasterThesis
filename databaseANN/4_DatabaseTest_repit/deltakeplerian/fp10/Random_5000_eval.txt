@@ -1,1 +1,0 @@
-Label M_f Ep_x Ep_y Ep_z Ev_x Ev_y Ev_z t_t m_0 |Delta_a| |Delta_e| cos(Delta_i) Delta_Omega Delta_omega Delta_theta v0 alpha0 beta0 v1 alpha1 beta1 t0 t_t i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai i alphai betai
