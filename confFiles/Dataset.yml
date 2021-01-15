@@ -1,12 +1,12 @@
 Creation:
  typeoutputs: "fit" # fit or opt
- autodecV: True
+ autodecV: False
  typeinputs: "deltakeplerian" # cartesian or deltakeplerian deltakeplerian_planet
  creationMethod: 'Random' # 'Exposin', 'Lambert', 'Random, Random_MBH
  lhypercube: True # Use latin hypercube for initial distribution of samples. 
                         #  only if creation method is Random or optimized 
  evaluate: True #evaluate and save initial samples
- samples_rand: 1000 # samples with random mor hypercube initialization
+ samples_rand: 5000 # samples with random mor hypercube initialization
  samples_L: 2000 # samples for Lambert and Exposin
  appendToFile: False # append instead of creating a new file. To increase the number of values
  
@@ -28,5 +28,5 @@ Outputs: 'epev' #objfunc gives one output with the result of the objective funct
 dataAugmentation:
  type: 'noise_gauss' #multiplication a certain number of times, noise_gauss 'False'
  times: 2 # in case type == multiplicate
- mean: 0.001 # mean and std of the gaussian distribution
- std: 0.0001
+ mean: 0.00001 # mean and std of the gaussian distribution
+ std: 0.000001

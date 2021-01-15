@@ -18,6 +18,7 @@ from sklearn.datasets import make_regression
 from sklearn.model_selection import RepeatedKFold
 
 from FitnessFunction_normalized import Fitness
+import GenerateTrainingDataFromOpt as GTD
 import LoadConfigFiles as CONF
 import TrainingData as TD
 
@@ -220,7 +221,7 @@ class ANN_reg:
 
     def load_model_fromFile(self):
 
-        self.model = keras.models.load_model(self.checkpoint_path+"1_CurrentLoadSave/model.h5")
+        self.model = keras.models.load_model(self.checkpoint_path+"model.h5")
         
     def predict(self, fromFile = False, testfile = False, rescale = False):
         """
@@ -235,13 +236,14 @@ class ANN_reg:
             self.load_model_fromFile()
 
         if type(testfile) != bool:
-            pred_test = self.model.predict(testfile)
+            inputs = testfile
         else:
-            pred_test = self.model.predict(self.testdata[0])
+            inputs = self.testdata[0]
+
+        pred_test = self.model.predict(inputs)
 
         pred_test = np.abs(pred_test)
         # Apply absolute value so there are no negative values
-
 
 
         # Rescale
@@ -407,13 +409,37 @@ class ANN_reg:
 
 
 
+
+def loadDatabase(base):
+    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
+    #     base+ 'Lambert_opt.txt']
+    file_path = base+ 'Together.txt'
+    # file_path = base+ 'Random_1000_eval.txt'
+
+    dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
+            scaling = Scaling['scaling'], 
+            dataUnits = Dataset_conf.Dataset_config['DataUnits'], 
+            Log = Dataset_conf.Dataset_config['Log'],
+            output_type = Dataset_conf.Dataset_config['Outputs'],
+            labelType = 3, 
+            decV = True,
+            plotDistribution=False, plotErrors=False,
+            plotOutputDistr = False, plotEpvsEv = False,
+            # plotDistribution=True, plotErrors=True,
+            # plotOutputDistr = True, plotEpvsEv = True,
+            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
+
+    traindata, testdata = TD.splitData_reg(dataset_np, path = base)
+
+    return dataset_np.dataset
+
 def Network(perceptron, save_path):
     """
     Call the network to train and evaluate
     """
     
-    # perceptron.training()
-    # perceptron.plotTraining()
+    perceptron.training()
+    perceptron.plotTraining()
     
     # perceptron.trainingKFoldCross()
     # perceptron.plotTrainingKFold()
@@ -427,26 +453,6 @@ def Network(perceptron, save_path):
     predictions = perceptron.predict(fromFile=True, rescale = rescale)
     perceptron.plotPredictions(std = rescale)
 
-def loadDatabase(base):
-    # file_path = [base+ 'Random.txt', base+ 'Random_opt_2.txt', base+ 'Random_opt_5.txt',\
-    #     base+ 'Lambert_opt.txt']
-    file_path = base+ 'Together.txt'
-
-    dataset_np = TD.LoadNumpy(file_path, save_file_path = base, 
-            scaling = Scaling['scaling'], 
-            dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],
-            output_type = Dataset_conf.Dataset_config['Outputs'],
-            labelType = 3, 
-            decV = False,
-            plotDistribution=False, plotErrors=False,
-            plotOutputDistr = False, plotEpvsEv = False,
-            # plotDistribution=True, plotErrors=True,
-            # plotOutputDistr = True, plotEpvsEv = True,
-            data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
-
-    traindata, testdata = TD.splitData_reg(dataset_np, path = base)
-
-
 def Fitness_network(base, train = False):
     
     # Load so that it is always the same (easier for comparisons)
@@ -457,7 +463,7 @@ def Fitness_network(base, train = False):
     testdata_y = np.load(base+"1_CurrentLoadSave/testdata_y.npy")
     traindata = [traindata_x, traindata_y]
     testdata = [testdata_x, testdata_y]
-    
+
     perceptron = ANN_reg(save_path =base)
     perceptron.get_traintestdata(traindata, testdata)
 
@@ -523,12 +529,18 @@ def evaluatePredictionsNewData(base, ANN):
     feas2 = np.zeros((ind, 2))
     t0_class = time.time()
     input_Vector = np.zeros((ind,8))
+    output_Vector = np.zeros((ind,2))
     for i in range(ind):
         DecV = pop_0[i,:]
+        fitness = Fitness.calculateFitness(DecV)
 
         # Transform inputs
         input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
-        input_Vector[i,:] = TD.standardize_withoutFitting(input_Vector_i, 'I', base)
+        print(input_Vector_i)
+        input_Vector[i,:] = TD.standardize_withoutFitting(input_Vector_i, "I", base)
+
+        output_Vector_i = np.array([Fitness.Epnorm_norm, Fitness.Evnorm_norm])
+        output_Vector[i,:] = TD.standardize_withoutFitting(output_Vector_i, "O", base)
 
     t0_class_2 = time.time()
 
@@ -540,6 +552,8 @@ def evaluatePredictionsNewData(base, ANN):
 
     difference1 = np.zeros((ind, 2))
     difference1 = np.abs(feas2 - feas1) 
+    difference1_unscaled = np.abs(feas2_unscaled, output_Vector)
+
 
     ##################################################
     ####   DIFFERENCE IN TRAIN/TEST DATA #############
@@ -549,19 +563,23 @@ def evaluatePredictionsNewData(base, ANN):
     testdata = ANN.testdata
 
     feas_train1 = ANN.predict(fromFile = True, testfile = traindata[0], rescale = True)
+    feas_train1_unscaled = ANN.predict(fromFile = True, testfile = traindata[0], rescale = False)
     feas_train2 = TD.commonInverseStandardization(traindata[1],
                                             traindata[0], base)[0] 
 
     difference2 = np.zeros((ind, 2))
     difference2 = np.abs(feas_train2 - feas_train1)
+    difference2_unscaled = np.abs(traindata[1], feas_train1_unscaled)
 
 
     feas_test1 = ANN.predict(fromFile = True, testfile = testdata[0], rescale = True)
+    feas_test1_unscaled = ANN.predict(fromFile = True, testfile = testdata[0], rescale = False)
     feas_test2 = TD.commonInverseStandardization(testdata[1],
                                             testdata[0], base)[0]
 
     difference3 = np.zeros((ind, 2))
     difference3 = np.abs(feas_test2 - feas_test1) 
+    difference3_unscaled = np.abs(testdata[1], feas_test1_unscaled)
 
     displaynumber = 0
     for i in range(displaynumber):
@@ -583,6 +601,26 @@ def evaluatePredictionsNewData(base, ANN):
     
     fig.subplots_adjust(wspace=0.1, hspace=0.05)
     for i in range(1):
+
+        ax_i[i].scatter(difference2_unscaled[:,0], difference2_unscaled[:,1], color = 'green', marker =  'x', label = 'traindata')
+        ax_i[i].scatter(difference3_unscaled[:,0], difference3_unscaled[:,1], color = 'orange', marker =  'x', label = 'testdata')
+        ax_i[i].scatter(difference1_unscaled[:,0], difference1_unscaled[:,1], color = 'black', marker =  'x', label = 'newdata')
+
+        ax_i[i].set_yscale('log')
+        ax_i[i].set_xscale('log')
+
+        ax_i[i].set_xlabel("Difference in prediction position")
+        ax_i[i].set_ylabel("Difference in prediction velocity")
+        ax_i[i].grid(alpha = 0.5)
+        ax_i[i].legend()
+        
+
+    # plt.tight_layout()
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata.png", dpi = 100)
+    plt.show()
+
+    fig.subplots_adjust(wspace=0.1, hspace=0.05)
+    for i in range(1):
         ax_i[i].scatter(difference2[:,0], difference2[:,1], color = 'green', marker =  'x', label = 'traindata')
         ax_i[i].scatter(difference3[:,0], difference3[:,1], color = 'orange', marker =  'x', label = 'testdata')
         ax_i[i].scatter(difference1[:,0], difference1[:,1], color = 'black', marker =  'x', label = 'newdata')
@@ -597,8 +635,36 @@ def evaluatePredictionsNewData(base, ANN):
         
 
     # plt.tight_layout()
-    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata.png", dpi = 100)
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_newdata.png", dpi = 100)
     plt.show()
+
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax_i = [ax1, ax2]
+    
+    fig.subplots_adjust(wspace=0.1, hspace=0.05)
+    for i in range(2):
+        ax_i[i].scatter(feas_train2[:,i], feas_train1[:,i], color = 'green', marker =  'x', label = 'traindata')
+        ax_i[i].scatter(feas_test2[:,i], feas_test1[:,i], color = 'orange', marker =  'x', label = 'testdata')
+        ax_i[i].scatter(feas1[:,i], feas2[:,i], color = 'black', marker =  'x', label = 'newdata')
+
+        ax_i[i].plot([0,0], [max(feas_train2[:,i]), max(feas_train2[:,i])])
+        ax_i[i].set_yscale('log')
+        ax_i[i].set_xscale('log')
+
+        ax_i[i].grid(alpha = 0.5)
+        ax_i[i].legend()
+        ax_i[i].set_xlabel("Real value")
+        ax_i[i].set_ylabel("Predicted value")
+
+
+
+    # plt.tight_layout()
+    plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata_real.png", dpi = 100)
+    plt.show()
+
+
+
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax_i = [ax1, ax2]
@@ -616,7 +682,8 @@ def evaluatePredictionsNewData(base, ANN):
         ax_i[i].legend()
         ax_i[i].set_xlabel("Real value")
         ax_i[i].set_ylabel("Difference in unscaled prediction")
-        
+
+
 
     # plt.tight_layout()
     plt.savefig(ANN.checkpoint_path+"TestPredictionDifference_std_newdata_2.png", dpi = 100)
@@ -632,25 +699,88 @@ def evaluatePredictionsNewData(base, ANN):
     # plt.show()
 
 
-def checkDatabase():
+def checkDatabase(database):
     """
     Check that database provides same fitness as evaluation
     """
-    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+    base =  "./databaseANN/4_DatabaseTest_repit/deltakeplerian/"
+
+    # Test 1
+    ind = 500
+    dataset1 = GTD.latinhypercube(len(SF.bnds), len(SF.bnds), 500)
     
+    pop_0 = np.zeros([ind, len(SF.bnds)])
+    for i in range(len(SF.bnds)):
+        pop_0[:,i] = np.random.rand(ind) * (SF.bnds[i][1]-SF.bnds[i][0]) + SF.bnds[i][0]
+    
+        # plt.scatter(np.arange(0,ind,1),pop_0[:,i], color = 'red')
+        # plt.scatter(np.arange(0,ind,1), dataset1[:,i], color = 'blue')
+        # plt.show()
+    # for i in range(len(SF.bnds)):
+        # print(i, max(dataset1[:,i]), max(pop_0[:,i]))
 
-    perceptron = ANN_reg(save_path =base)
-    perceptron.load_model_fromFile()
+    # plots equally distributed
+    # same ranges
 
-    input_Vector = traindata[0][0:10,:]
-    # Feasibility
-    feas2_unscaled = perceptron.predict(testfile = input_Vector, rescale = False)
-    # feas2 = perceptron.predict(testfile = input_Vector, rescale = True)
+    # # Test2 
+    # for i in range(1):
+    #     fit1 = Fitness.calculateFitness(dataset1[i,:])
+    #     v1 = Fitness.DecV2inputV('deltakeplerian', )
+    #     v2 = Fitness.DecV2inputV('deltakeplerian', newDecV=dataset1[i,:]) 
+    #     print(v1)
+    #     print(v2)
 
-    print(feas2_unscaled[0:10, :])
+    # # It works
 
-    result = dataset_np.commonInverseStandardization(traindata[1][0:10,:], traindata[0][0:10,:])
-    print(traindata[1][0:10,:])
+
+
+
+    traindata_x = np.load(base+"1_CurrentLoadSave/traindata_x.npy")
+    traindata_y = np.load(base+"1_CurrentLoadSave/traindata_y.npy")
+
+    decV_data = database[:,16:-1]
+
+    # # Test3
+    # for i in range(1):
+    #     fit1 = Fitness.calculateFitness(dataset1[i,:])
+    #     v1 = Fitness.DecV2inputV('deltakeplerian', )
+    #     v2 = Fitness.DecV2inputV('deltakeplerian', newDecV=dataset1[i,:]) 
+    #     print(decV_data[i,:])
+    #     print(v2)
+
+    # Test4
+    for i in range(6):
+        DecV = decV_data[i,:]
+        input_Vector_i = Fitness.DecV2inputV('deltakeplerian', newDecV = DecV)
+        print(input_Vector_i)
+        input_Vector_j = TD.standardize_withoutFitting(input_Vector_i, "I", base)
+
+        print("Traindata", traindata_x[i,:])
+        print("New _data", input_Vector_j)
+        print('===========================')
+
+
+        Fitness.calculateFitness(DecV)
+        Ep = Fitness.Epnorm_norm
+        Ev = Fitness.Evnorm_norm
+        E = np.array([Ep, Ev])
+        Er = TD.standardize_withoutFitting(E, "O", base)
+        print(Er)
+        print(traindata_y[i])
+        print('===========================')
+
+    # perceptron = ANN_reg(save_path =base)
+    # perceptron.load_model_fromFile()
+
+    # input_Vector = traindata[0][0:10,:]
+    # # Feasibility
+    # feas2_unscaled = perceptron.predict(testfile = input_Vector, rescale = False)
+    # # feas2 = perceptron.predict(testfile = input_Vector, rescale = True)
+
+    # print(feas2_unscaled[0:10, :])
+
+    # result = dataset_np.commonInverseStandardization(traindata[1][0:10,:], traindata[0][0:10,:])
+    # print(traindata[1][0:10,:])
     # print(result[0])
     #  traindata[1][0:10,:])
 
@@ -693,12 +823,12 @@ def Opt_network():
 
 
 if __name__ == "__main__":
-    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
-    # loadDatabase(base)
+    base = "./databaseANN/4_DatabaseTest_repit/deltakeplerian/"
+    # dataset= loadDatabase(base)
     # Fitness_network(base, train = True)
     Fitness_network(base, train = False)
 
-    # checkDatabase()
+    # checkDatabase(dataset)
 
     # Fitness_network_join()
     # Opt_network()

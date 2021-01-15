@@ -27,21 +27,22 @@ def createFile(typeoutputs, typeinputs, creationMethod, appendToFile, evaluate,
     autodecV, samples_rand):
     if autodecV == True:
         if typeoutputs == "fit":
-            fileName = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
-            fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            fileName = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp10/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp10/" + creationMethod +'_' + str(samples_rand) + '.txt'
             matrix_file =  "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" 
         elif typeoutputs == "opt":
             fileName = "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
             fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
             matrix_file =  "./databaseANN/4_DatabaseTest_repit/" + 'opt' + "/" 
-    elif typeoutputs == "opt":
-        fileName = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) + '_eval.txt'
-        fileName_opt = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'
-        matrix_file = "./databaseANN/DatabaseOptimized/" + typeinputs + "/" 
-    elif typeoutputs == "fit":
-        fileName = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
-        fileName_opt = "./databaseANN/DatabaseFitness/" + typeinputs + "/" + creationMethod +'_' + str(samples_rand) +'.txt'
-        matrix_file = "./databaseANN/DatabaseFitness/" + typeinputs + "/" 
+    else:
+        if typeoutputs == "fit":
+            fileName = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/4_DatabaseTest_repit/" + typeinputs + "/fp100/" 
+        elif typeoutputs == "opt":
+            fileName = "./databaseANN/4_DatabaseTest_repit/autodecV_false/" + 'opt' + "/" + creationMethod + '_' + str(samples_rand) +'_eval.txt'
+            fileName_opt = "./databaseANN/4_DatabaseTest_repit/autodecV_false/" + 'opt' + "/" + creationMethod +'_' + str(samples_rand) + '.txt'
+            matrix_file =  "./databaseANN/4_DatabaseTest_repit/autodecV_false/" + 'opt' + "/" 
 
     if typeinputs == 'deltakeplerian' or 'deltakeplerian_planet':
         Heading = [ "Label", "M_f", "Ep_x", "Ep_y", "Ep_z", "Ev_x", "Ev_y", "Ev_z","t_t", "m_0", "|Delta_a|", \
@@ -202,7 +203,7 @@ if __name__ == "__main__":
     appendToFile = Dataset_conf['Creation']['appendToFile'] # append instead of creating a new file. To increase the number of values
 
 
-    sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
+    # sys.exit(0) # to make sure I don't do it accidentaly and have to create files over again
     
     ####################
     # FILE CREATION
@@ -353,6 +354,7 @@ if __name__ == "__main__":
                 solutionLocal = spy.minimize(f_autodecV, sample[8:], args = (sample[0:8]), method = 'SLSQP', \
                         tol = MBH['tolLocal'], bounds = SF.bnds[8:], options = {'maxiter': MBH['niter_local']} )
 
+        
                 fvalue = f_autodecV(solutionLocal.x, sample[0:8])
                 feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds[8:])
                 if feasible == True: 
@@ -361,6 +363,12 @@ if __name__ == "__main__":
                     # Fit.printResult()
                 else:
                     print("Out of bounds")
+
+            else:
+                Fit.calculateFitness(sample)
+                Fit.savetoFile(typeinputs, feasibilityFileName)
+
+
                 
 
 
@@ -407,7 +415,6 @@ if __name__ == "__main__":
 
             fvalue = f(solutionLocal.x)
             fvalue = Fit.calculateFitness(solutionLocal.x)
-
             feasible = AL_OPT.check_feasibility(solutionLocal.x, SF.bnds)
             if feasible == True: 
                 if typeoutputs == 'fit':

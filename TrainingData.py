@@ -491,7 +491,10 @@ def standardize_withoutFitting(input_vec, typeInput, path,
             database = np.column_stack(( np.zeros((len(input_vec[:,0]), n_outputs)), input_vec ))
 
     elif typeInput == "O":
-        database = np.column_stack(( input_vec, np.zeros(len(input_vec[:,0]), n_inputs )))
+        if input_vec.ndim == 1:
+            database = np.array([ np.concatenate(( input_vec, np.zeros( n_inputs) )) ])
+        else:
+            database = np.column_stack(( input_vec, np.zeros(len(input_vec[:,0]), n_inputs )))
     else:
         database = input_vec
 
@@ -612,18 +615,20 @@ def plotInitialDataPandasError(train_file_path, save_file_path, pairplot = False
     
     Err = np.column_stack((Ep, Ev))
     database_2 = np.column_stack((database[:,1], Err))
-    database_2 = np.column_stack((database_2, database[:,8:-1]))
+    database_2 = np.column_stack((database_2, database[:,8:16]))
+    database_2 = np.column_stack((database_2, database[:,-1]))
     # database_2 = np.column_stack((database_2, database[:,8:]))
 
     labels =['Mf','Ep', 'Ev']
     # labels.extend(labels_feas[8:])
-    labels.extend(labels_feas[8:-1])
+    labels.extend(labels_feas[8:16])
+    labels.extend([labels_feas[-1]])
 
     df = pd.DataFrame(data=database_2, columns =  labels)
 
     if pairplot == True: # pairplot
         # g = sns.pairplot(df, hue = 'Datatype') # TODO: change if not using file "Together"
-        g = sns.pairplot(df)
+        g = sns.pairplot(df, hue = 'Datatype')
         # g.set(yscale = 'log', xscale= 'log')
         plt.tight_layout()
         plt.savefig(save_file_path+"Pairplot.png", dpi = 100)
@@ -761,15 +766,18 @@ def splitData_reg(dataset_np,  path = None, samples = False):
 if __name__ == "__main__":
 
     # Choose which ones to choose:
-    base = "./databaseANN/3_DatabaseLast/deltakeplerian/"
+    base = "./databaseANN/4_DatabaseTest_repit/deltakeplerian/"
     # file_path = [base + 'Random.txt']
     # file_path = [base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
                 # base +'Random_MBH_eval.txt', base +'Random_MBH.txt']
 
     file_path = [
-                base+ 'databaseSaved_fp10/Random_MBH_5000_fp10.txt',
-                base+ 'databaseSaved_fp100/Random_MBH_5000.txt',
-                base+ 'databaseSaved_fp100/Random_MBH_1000_eval.txt'# base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
+                # base+ 'autodecV_True/fp10/Random_5000.txt',
+                # base+ 'autodecV_True/fp100/Random_5000.txt',
+                # base+ 'autodecV_True/fp100/Random_1000_eval.txt',# base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
+                base+ 'autodecV_False/fp10/Random_5000.txt',
+                base+ 'autodecV_False/fp100/Random_5000.txt',
+                base+ 'autodecV_False/fp100/Random_5000_eval.txt'# base+ 'databaseSaved_fp100/Random_MBH_200_3.txt',
                 
     #             # base+ 'databaseSaved_fp100/Random_MBH_1000.txt',
                 
@@ -787,19 +795,17 @@ if __name__ == "__main__":
     # file_path_together =  base +'Results/StudyNSamples/scripts_compare/5000_5000_1000_mixed.txt'
     join_files(file_path, file_path_together)
 
-
     # dataset_np = LoadNumpy(file_path_together, save_file_path = base, 
     #         scaling = Scaling['scaling'], 
-    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],\
-    #         outputs = {'outputs_class': [0,1], 'outputs_err': [2, 8], 'outputs_mf': False, 'add': 'vector'},
+    #         dataUnits = Dataset_conf.Dataset_config['DataUnits'], Log = Dataset_conf.Dataset_config['Log'],
     #         output_type = Dataset_conf.Dataset_config['Outputs'],
-    #         labelType = len(file_path),
+    #         labelType = 6, 
+    #         decV = True,
     #         plotDistribution=False, plotErrors=False,
     #         # plotOutputDistr = False, plotEpvsEv = False,
     #         # plotDistribution=True, plotErrors=True,
     #         plotOutputDistr = True, plotEpvsEv = True,
     #         data_augmentation = Dataset_conf.Dataset_config['dataAugmentation']['type'])
-
 
     # See inputs
     # plotInitialDataPandasError(file_path_together, base,  pairplot= True, corrplot= True)
